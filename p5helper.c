@@ -27,3 +27,15 @@ PerlInterpreter *init_perl() {
 int Perl_SvIOK(PerlInterpreter *my_perl, SV* sv) {
     return SvIOK(sv);
 }
+
+int Perl_SvPOK(PerlInterpreter *my_perl, SV* sv) {
+    return SvPOK(sv);
+}
+
+
+char* sv_to_char_star(PerlInterpreter *my_perl, SV *sv) {
+    STRLEN len;
+    char *ptr;
+    ptr = SvPV(sv, len);
+    return ptr;
+}
