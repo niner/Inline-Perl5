@@ -35,9 +35,16 @@ class PerlInterpreter is repr('CPointer') {
 sub init_perl() is native("%*ENV<HOME>/interop/p5helper.so") returns PerlInterpreter { * }
 
 my $i = init_perl();
-say $i.run('
-$| = 1;
-print "Hello world from Perl ";
-5');
+say 'Hello world from Perl ' ~ $i.run(q:heredoc/PERL5/);
+use Inline Python => <<PYTHON;
+def name():
+    return "Python";
+PYTHON
+name();
+PERL5
+
+say 'Hello world from Perl ' ~ $i.run(q:heredoc/PERL5/);
+1 + 1 + 1 + 1 + 1
+PERL5
 
 # vim: ft=perl6
