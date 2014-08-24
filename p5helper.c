@@ -13,3 +13,7 @@ PerlInterpreter *init_perl() {
     perl_run(my_perl);
     return my_perl;
 }
+
+int Perl_SvIOK(PerlInterpreter *my_perl, SV* sv) {
+    return SvIOK(sv);
+}
