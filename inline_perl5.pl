@@ -11,7 +11,7 @@ class PerlInterpreter is repr('CPointer') {
         is native('/usr/lib/perl5/5.18.1/x86_64-linux-thread-multi/CORE/libperl.so') { * }
     sub perl_run(PerlInterpreter)
         is native('/usr/lib/perl5/5.18.1/x86_64-linux-thread-multi/CORE/libperl.so') { * }
-    sub Perl_eval_sv(Str, Int)
+    sub Perl_eval_sv(PerlInterpreter, Str, Int)
         is native('/usr/lib/perl5/5.18.1/x86_64-linux-thread-multi/CORE/libperl.so') { * }
     sub set_perl_exit_flags()
         is native('/home/nine/interop/p5helper.so') { * }
@@ -26,7 +26,7 @@ class PerlInterpreter is repr('CPointer') {
         perl_run(self);
     }
     method run($perl) {
-        Perl_eval_sv($perl, 1);
+        Perl_eval_sv(self, $perl, 1);
     }
 }
 
@@ -35,6 +35,6 @@ sub perl_alloc() is native('/usr/lib/perl5/5.18.1/x86_64-linux-thread-multi/CORE
 perl_sys_init3();
 my $i = perl_alloc();
 $i.init();
-$i.run('say "hello world"');
+$i.run('print "hello world\n"');
 
 say 'test';
