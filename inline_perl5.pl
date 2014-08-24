@@ -6,8 +6,16 @@ use Inline::Perl5;
 
 my $i = init_perl();
 say $i.run('
+use 5.10.0;
+
+sub test {
+    say time;
+}
+
 $| = 1;
 print "Hello world from Perl ";
 5');
+print 'It is now ';
+$i.call('test');
 
 # vim: ft=perl6

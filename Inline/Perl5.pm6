@@ -18,6 +18,9 @@ class PerlInterpreter is repr('CPointer') {
     sub Perl_eval_pv(PerlInterpreter, Str, Int)
         is native('/usr/lib/perl5/5.18.1/x86_64-linux-thread-multi/CORE/libperl.so')
         returns OpaquePointer { * }
+    sub Perl_call_pv(PerlInterpreter, Str, Int)
+        is native('/usr/lib/perl5/5.18.1/x86_64-linux-thread-multi/CORE/libperl.so')
+        returns OpaquePointer { * }
 
     method run($perl) {
         my $res = Perl_eval_pv(self, $perl, 1);
@@ -28,6 +31,10 @@ class PerlInterpreter is repr('CPointer') {
             return sv_to_char_star(self, $res);
         }
         return $res;
+    }
+
+    method call(Str $function) {
+        Perl_call_pv(self, $function, 4 + 16 + 1);
     }
 }
 
