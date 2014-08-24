@@ -2,39 +2,15 @@
 use v6;
 use NativeCall;
 
-    sub perl_sys_init3()
-        is native('/home/nine/interop/p5helper.so') { * }
 class PerlInterpreter is repr('CPointer') {
-    sub perl_construct(PerlInterpreter)
+    sub Perl_eval_pv(PerlInterpreter, Str, Int)
         is native('/usr/lib/perl5/5.18.1/x86_64-linux-thread-multi/CORE/libperl.so') { * }
-    sub perl_parse(PerlInterpreter, OpaquePointer, Int, CArray[Str], OpaquePointer)
-        is native('/usr/lib/perl5/5.18.1/x86_64-linux-thread-multi/CORE/libperl.so') { * }
-    sub perl_run(PerlInterpreter)
-        is native('/usr/lib/perl5/5.18.1/x86_64-linux-thread-multi/CORE/libperl.so') { * }
-    sub Perl_eval_sv(PerlInterpreter, Str, Int)
-        is native('/usr/lib/perl5/5.18.1/x86_64-linux-thread-multi/CORE/libperl.so') { * }
-    sub set_perl_exit_flags()
-        is native('/home/nine/interop/p5helper.so') { * }
-    method init() {
-        perl_construct(self);
-        my @args := CArray[Str].new();
-        @args[0] = '';
-        @args[1] = '-e';
-        @args[2] = '0';
-        perl_parse(self, Any, 3, @args, Any);
-        set_perl_exit_flags();
-        perl_run(self);
-    }
     method run($perl) {
-        Perl_eval_sv(self, $perl, 1);
+        Perl_eval_pv(self, $perl, 1);
     }
 }
 
-sub perl_alloc() is native('/usr/lib/perl5/5.18.1/x86_64-linux-thread-multi/CORE/libperl.so') returns PerlInterpreter { * }
+sub init_perl() is native('/home/nine/interop/p5helper.so') returns PerlInterpreter { * }
 
-perl_sys_init3();
-my $i = perl_alloc();
-$i.init();
+my $i = init_perl();
 $i.run('print "hello world\n"');
-
-say 'test';
