@@ -97,8 +97,20 @@ SV *p5_hv_iterval(PerlInterpreter *my_perl, HV *hv, HE *entry) {
     return hv_iterval(hv, entry);
 }
 
+void p5_hv_store_ent(PerlInterpreter *my_perl, HV *hv, SV *key, SV *val) {
+    hv_store_ent(hv, key, val, 0);
+}
+
 SV *p5_undef(PerlInterpreter *my_perl) {
     return &PL_sv_undef;
+}
+
+HV *p5_newHV(PerlInterpreter *my_perl) {
+    return newHV();
+}
+
+SV *p5_newRV_noinc(PerlInterpreter *my_perl, SV *sv) {
+    return newRV_noinc(sv);
 }
 
 AV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]) {

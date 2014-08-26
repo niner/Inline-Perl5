@@ -3,7 +3,7 @@
 use v6;
 use Inline::Perl5;
 
-say "1..12";
+say "1..13";
 
 my $i = p5_init_perl();
 say $i.run('
@@ -55,6 +55,21 @@ sub test_undef {
     my ($self, $undef) = @_;
 
     return (@_ == 2 and $self eq "main" and not defined $undef);
+}
+
+sub test_hash {
+    my ($self, $h) = @_;
+
+    return (
+        ref $h eq "HASH"
+        and keys %$h == 2
+        and exists $h->{a}
+        and exists $h->{b}
+        and $h->{a} == 2
+        and ref $h->{b}
+        and ref $h->{b} eq "HASH"
+        and $h->{b}{c} == 3
+    );
 }
 
 package Foo;
@@ -142,6 +157,13 @@ if ($i.call('test_undef', 'main', Any) == 1) {
 }
 else {
     say "not ok 12 - Any converted to undef";
+}
+
+if ($i.call('test_hash', 'main', {a => 2, b => {c => 3}}) == 1) {
+    say "ok 13 - Passing hashes to Perl 5";
+}
+else {
+    say "not ok 13 - Passing hashes to Perl 5";
 }
 
 $i.DESTROY;
