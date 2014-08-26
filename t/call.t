@@ -3,7 +3,7 @@
 use v6;
 use Inline::Perl5;
 
-say "1..8";
+say "1..10";
 
 my $i = p5_init_perl();
 say $i.run('
@@ -62,6 +62,11 @@ sub test {
     my ($self) = @_;
     return $$self;
 }
+
+sub sum {
+    my ($self, $a, $b) = @_;
+    return $a + $b;
+}
 ');
 
 $i.call('main::test');
@@ -98,11 +103,25 @@ else {
     say "    expected: 'Hello', 'Perl', 6";
 }
 
-if ($i.call('Foo::test', $i.call('Foo::new', 'Foo', 1)) == 1) {
+if ($i.call('test', $i.call('new', 'Foo', 1).ptr) == 1) {
     say "ok 8 - Perl 5 object";
 }
 else {
     say "not ok 8 - Perl 5 object";
+}
+
+if ($i.call('new', 'Foo', 1).call('test') == 1) {
+    say "ok 9 - Perl 5 method call";
+}
+else {
+    say "not ok 9 - Perl 5 method call";
+}
+
+if ($i.call('new', 'Foo', 1).call('sum', 3, 1) == 4) {
+    say "ok 10 - Perl 5 method call with parameters";
+}
+else {
+    say "not ok 10 - Perl 5 method call with parameters";
 }
 
 $i.DESTROY;

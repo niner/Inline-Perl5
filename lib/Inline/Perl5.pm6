@@ -7,6 +7,8 @@ BEGIN {
     $p5helper = IO::Path.new($?FILE).directory ~ '/p5helper.so';
 }
 
+class Perl5Object { ... }
+
 class PerlInterpreter is repr('CPointer') {
     sub p5_SvIOK(PerlInterpreter, OpaquePointer)
         is native($p5helper)
@@ -66,7 +68,7 @@ class PerlInterpreter is repr('CPointer') {
             return p5_sv_to_char_star(self, $value);
         }
         elsif Perl_sv_isobject(self, $value) {
-            return $value;
+            return Perl5Object.new(perl5 => self, ptr => $value);
         }
         die "Unsupported type $value in p5_to_p6";
     }
@@ -85,6 +87,11 @@ class PerlInterpreter is repr('CPointer') {
 
         my $av = p5_call_function(self, $function, $len, @svs);
         my $av_len = p5_av_top_index(self, $av);
+        return
+            if $av_len == -1;
+        return self.p5_to_p6(p5_av_fetch(self, $av, 0))
+            if $av_len == 0;
+
         my @retvals;
         loop ($i = 0; $i <= $av_len; $i++) {
             @retvals.push(self.p5_to_p6(p5_av_fetch(self, $av, $i)));
@@ -94,6 +101,15 @@ class PerlInterpreter is repr('CPointer') {
 
     submethod DESTROY {
         p5_destruct_perl(self);
+    }
+}
+
+class Perl5Object {
+    has OpaquePointer $.ptr;
+    has PerlInterpreter $.perl5;
+
+    method call(Str $function, *@args) {
+        return $.perl5.call($function, $.ptr, @args.list);
     }
 }
 
