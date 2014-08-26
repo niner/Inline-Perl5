@@ -38,6 +38,13 @@ int p5_SvPOK(PerlInterpreter *my_perl, SV* sv) {
     return SvPOK(sv);
 }
 
+int p5_is_array(PerlInterpreter *my_perl, SV* sv) {
+    return (SvROK(sv) && SvTYPE(SvRV(sv)) == SVt_PVAV);
+}
+
+AV *p5_sv_to_av(PerlInterpreter *my_perl, SV* sv) {
+    return (AV *) SvRV(sv);
+}
 
 char *p5_sv_to_char_star(PerlInterpreter *my_perl, SV *sv) {
     STRLEN len;

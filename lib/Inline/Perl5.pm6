@@ -16,9 +16,15 @@ class PerlInterpreter is repr('CPointer') {
     sub p5_SvPOK(PerlInterpreter, OpaquePointer)
         is native($p5helper)
         returns Int { * }
+    sub p5_is_array(PerlInterpreter, OpaquePointer)
+        is native($p5helper)
+        returns Int { * }
     sub p5_sv_to_char_star(PerlInterpreter, OpaquePointer)
         is native($p5helper)
         returns Str { * }
+    sub p5_sv_to_av(PerlInterpreter, OpaquePointer)
+        is native($p5helper)
+        returns OpaquePointer { * }
     sub p5_int_to_sv(PerlInterpreter, Int)
         is native($p5helper)
         returns OpaquePointer { * }
@@ -60,15 +66,29 @@ class PerlInterpreter is repr('CPointer') {
         return $value;
     }
 
+    method !p5_array_to_p6_array(OpaquePointer $sv) {
+        my $av = p5_sv_to_av(self, $sv);
+        my $av_len = p5_av_top_index(self, $av);
+
+        my $arr = [];
+        loop (my $i = 0; $i <= $av_len; $i++) {
+            $arr.push(self.p5_to_p6(p5_av_fetch(self, $av, $i)));
+        }
+        return $arr;
+    }
+
     method p5_to_p6(OpaquePointer $value) {
-        if p5_SvIOK(self, $value) {
+        if Perl_sv_isobject(self, $value) {
+            return Perl5Object.new(perl5 => self, ptr => $value);
+        }
+        elsif p5_SvIOK(self, $value) {
             return Perl_sv_iv(self, $value);
         }
         elsif p5_SvPOK(self, $value) {
             return p5_sv_to_char_star(self, $value);
         }
-        elsif Perl_sv_isobject(self, $value) {
-            return Perl5Object.new(perl5 => self, ptr => $value);
+        elsif p5_is_array(self, $value) {
+            return self!p5_array_to_p6_array($value);
         }
         die "Unsupported type $value in p5_to_p6";
     }
