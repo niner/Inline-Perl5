@@ -3,7 +3,7 @@
 use v6;
 use Inline::Perl5;
 
-say "1..10";
+say "1..11";
 
 my $i = p5_init_perl();
 say $i.run('
@@ -122,6 +122,13 @@ if ($i.call('new', 'Foo', 1).call('sum', 3, 1) == 4) {
 }
 else {
     say "not ok 10 - Perl 5 method call with parameters";
+}
+
+if (try { $i.call('new', 'Foo', 1).sum(3, 1) == 4 }) {
+    say "ok 11 - method call on Perl5Object";
+}
+else {
+    say "not ok 11 - method call on Perl5Object # TODO";
 }
 
 $i.DESTROY;
