@@ -50,6 +50,10 @@ SV *p5_int_to_sv(PerlInterpreter *my_perl, int value) {
     return newSViv(value);
 }
 
+SV *p5_str_to_sv(PerlInterpreter *my_perl, char* value) {
+    return newSVpv(value, 0);
+}
+
 void *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]) {
     dSP;
     int i;
@@ -72,7 +76,6 @@ void *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]
 
     count = perl_call_method(name, flags);
     SPAGAIN;
-
 
     for (i = count - 1; i >= 0; i--) {
         SvREFCNT_inc(POPs);

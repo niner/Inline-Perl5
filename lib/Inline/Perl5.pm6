@@ -23,6 +23,9 @@ class PerlInterpreter is repr('CPointer') {
     sub p5_int_to_sv(PerlInterpreter, Int)
         is native($p5helper)
         returns OpaquePointer { * }
+    sub p5_str_to_sv(PerlInterpreter, Str)
+        is native($p5helper)
+        returns OpaquePointer { * }
     sub p5_call_function(PerlInterpreter, Str, Int, CArray[OpaquePointer])
         is native($p5helper)
         { * }
@@ -38,6 +41,9 @@ class PerlInterpreter is repr('CPointer') {
 
     multi method p6_to_p5(Int $value) returns OpaquePointer {
         return p5_int_to_sv(self, $value);
+    }
+    multi method p6_to_p5(Str $value) returns OpaquePointer {
+        return p5_str_to_sv(self, $value);
     }
 
     method run($perl) {
