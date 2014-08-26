@@ -45,3 +45,32 @@ char *p5_sv_to_char_star(PerlInterpreter *my_perl, SV *sv) {
     ptr = SvPV(sv, len);
     return ptr;
 }
+
+void *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]) {
+    dSP;
+    int i;
+    int count;
+    void *retval;
+    int flags = G_ARRAY;
+
+    ENTER;
+    SAVETMPS;
+
+    PUSHMARK(SP);
+
+    PUTBACK;
+
+    count = perl_call_method(name, flags);
+    SPAGAIN;
+
+
+    for (i = count - 1; i >= 0; i--) {
+        SvREFCNT_inc(POPs);
+    }
+
+    PUTBACK;
+    FREETMPS;
+    LEAVE;
+
+    return retval;
+}

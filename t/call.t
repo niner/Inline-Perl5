@@ -14,7 +14,7 @@ sub test {
 }
 ');
 
-$i.call('test');
+$i.call('main::test');
 
 $i.DESTROY;
 

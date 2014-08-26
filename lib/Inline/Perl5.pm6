@@ -20,6 +20,9 @@ class PerlInterpreter is repr('CPointer') {
     sub p5_sv_to_char_star(PerlInterpreter, OpaquePointer)
         is native($p5helper)
         returns Str { * }
+    sub p5_call_function(PerlInterpreter, Str, Int, CArray[OpaquePointer])
+        is native($p5helper)
+        { * }
     sub p5_destruct_perl(PerlInterpreter)
         is native($p5helper)
         { * }
@@ -41,8 +44,11 @@ class PerlInterpreter is repr('CPointer') {
         return $res;
     }
 
-    method call(Str $function) {
-        Perl_call_pv(self, $function, 4 + 16 + 1);
+    method call(Str $function, *@args) {
+        my $len = @args.elems;
+        my @svs := CArray[OpaquePointer].new();
+
+        p5_call_function(self, $function, $len, @svs);
     }
 
     submethod DESTROY {
