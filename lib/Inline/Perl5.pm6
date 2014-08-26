@@ -38,6 +38,9 @@ class PerlInterpreter is repr('CPointer') {
     sub Perl_sv_iv(PerlInterpreter, OpaquePointer)
         is native('/usr/lib/perl5/5.18.1/x86_64-linux-thread-multi/CORE/libperl.so')
         returns Int { * }
+    sub Perl_sv_isobject(PerlInterpreter, OpaquePointer)
+        is native('/usr/lib/perl5/5.18.1/x86_64-linux-thread-multi/CORE/libperl.so')
+        returns Int { * }
     sub Perl_eval_pv(PerlInterpreter, Str, Int)
         is native('/usr/lib/perl5/5.18.1/x86_64-linux-thread-multi/CORE/libperl.so')
         returns OpaquePointer { * }
@@ -51,6 +54,9 @@ class PerlInterpreter is repr('CPointer') {
     multi method p6_to_p5(Str $value) returns OpaquePointer {
         return p5_str_to_sv(self, $value);
     }
+    multi method p6_to_p5(OpaquePointer $value) returns OpaquePointer {
+        return $value;
+    }
 
     method p5_to_p6(OpaquePointer $value) {
         if p5_SvIOK(self, $value) {
@@ -59,7 +65,10 @@ class PerlInterpreter is repr('CPointer') {
         elsif p5_SvPOK(self, $value) {
             return p5_sv_to_char_star(self, $value);
         }
-        die "Unsupported type in p5_to_p6";
+        elsif Perl_sv_isobject(self, $value) {
+            return $value;
+        }
+        die "Unsupported type $value in p5_to_p6";
     }
 
     method run($perl) {

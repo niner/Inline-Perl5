@@ -3,7 +3,7 @@
 use v6;
 use Inline::Perl5;
 
-say "1..7";
+say "1..8";
 
 my $i = p5_init_perl();
 say $i.run('
@@ -50,6 +50,18 @@ sub test_str_retval {
 sub test_mixed_retvals {
     return ("Hello", "Perl", 6);
 }
+
+package Foo;
+
+sub new {
+    my ($class, $val) = @_;
+    return bless \$val, $class;
+}
+
+sub test {
+    my ($self) = @_;
+    return $$self;
+}
 ');
 
 $i.call('main::test');
@@ -84,6 +96,13 @@ else {
     say "not ok 7 - return mixed values";
     say "    got: {@retvals}";
     say "    expected: 'Hello', 'Perl', 6";
+}
+
+if ($i.call('Foo::test', $i.call('Foo::new', 'Foo', 1)) == 1) {
+    say "ok 8 - Perl 5 object";
+}
+else {
+    say "not ok 8 - Perl 5 object";
 }
 
 $i.DESTROY;
