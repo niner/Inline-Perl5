@@ -20,6 +20,9 @@ class PerlInterpreter is repr('CPointer') {
     sub p5_sv_to_char_star(PerlInterpreter, OpaquePointer)
         is native($p5helper)
         returns Str { * }
+    sub p5_destruct_perl(PerlInterpreter)
+        is native($p5helper)
+        { * }
     sub Perl_eval_pv(PerlInterpreter, Str, Int)
         is native('/usr/lib/perl5/5.18.1/x86_64-linux-thread-multi/CORE/libperl.so')
         returns OpaquePointer { * }
@@ -40,6 +43,10 @@ class PerlInterpreter is repr('CPointer') {
 
     method call(Str $function) {
         Perl_call_pv(self, $function, 4 + 16 + 1);
+    }
+
+    submethod DESTROY {
+        p5_destruct_perl(self);
     }
 }
 

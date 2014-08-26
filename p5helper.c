@@ -24,6 +24,12 @@ PerlInterpreter *p5_init_perl() {
     return my_perl;
 }
 
+void p5_destruct_perl(PerlInterpreter *my_perl) {
+    perl_destruct(my_perl);
+    perl_free(my_perl);
+    PERL_SYS_TERM();
+}
+
 int p5_SvIOK(PerlInterpreter *my_perl, SV* sv) {
     return SvIOK(sv);
 }

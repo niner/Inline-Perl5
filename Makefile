@@ -1,6 +1,8 @@
-.PHONY: clean
-all: Inline/p5helper.so
+.PHONY: clean test
+all: lib/Inline/p5helper.so
 clean:
-	rm Inline/p5helper.so
-Inline/p5helper.so: p5helper.c
-	gcc p5helper.c `perl -MExtUtils::Embed -e ccopts -e ldopts` -shared -o Inline/p5helper.so -fPIC
+	rm lib/Inline/p5helper.so
+lib/Inline/p5helper.so: p5helper.c
+	gcc p5helper.c `perl -MExtUtils::Embed -e ccopts -e ldopts` -shared -o lib/Inline/p5helper.so -fPIC
+test:
+	prove -e 'perl6 -Ilib' t
