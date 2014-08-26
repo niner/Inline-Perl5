@@ -46,6 +46,9 @@ class PerlInterpreter is repr('CPointer') {
     sub p5_av_fetch(PerlInterpreter, OpaquePointer, Int)
         is native($p5helper)
         returns OpaquePointer { * }
+    sub p5_av_push(PerlInterpreter, OpaquePointer, OpaquePointer)
+        is native($p5helper)
+        { * }
     sub p5_hv_iterinit(PerlInterpreter, OpaquePointer)
         is native($p5helper)
         returns Int { * }
@@ -62,6 +65,9 @@ class PerlInterpreter is repr('CPointer') {
         is native($p5helper)
         returns OpaquePointer { * }
     sub p5_newHV(PerlInterpreter)
+        is native($p5helper)
+        returns OpaquePointer { * }
+    sub p5_newAV(PerlInterpreter)
         is native($p5helper)
         returns OpaquePointer { * }
     sub p5_newRV_noinc(PerlInterpreter, OpaquePointer)
@@ -109,6 +115,13 @@ class PerlInterpreter is repr('CPointer') {
             p5_hv_store_ent(self, $hv, $key, $value);
         }
         return p5_newRV_noinc(self, $hv);
+    }
+    multi method p6_to_p5(Array $value) returns OpaquePointer {
+        my $av = p5_newAV(self);
+        for @$value -> $item {
+            p5_av_push(self, $av, self.p6_to_p5($item));
+        }
+        return p5_newRV_noinc(self, $av);
     }
 
     method !p5_array_to_p6_array(OpaquePointer $sv) {

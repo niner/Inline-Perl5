@@ -81,6 +81,10 @@ SV *p5_av_fetch(PerlInterpreter *my_perl, AV *av, int key) {
     return *av_fetch(av, key, 0);
 }
 
+void p5_av_push(PerlInterpreter *my_perl, AV *av, SV *sv) {
+    av_push(av, sv);
+}
+
 int p5_hv_iterinit(PerlInterpreter *my_perl, HV *hv) {
     return hv_iterinit(hv);
 }
@@ -107,6 +111,10 @@ SV *p5_undef(PerlInterpreter *my_perl) {
 
 HV *p5_newHV(PerlInterpreter *my_perl) {
     return newHV();
+}
+
+AV *p5_newAV(PerlInterpreter *my_perl) {
+    return newAV();
 }
 
 SV *p5_newRV_noinc(PerlInterpreter *my_perl, SV *sv) {

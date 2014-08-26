@@ -68,7 +68,11 @@ sub test_hash {
         and $h->{a} == 2
         and ref $h->{b}
         and ref $h->{b} eq "HASH"
-        and $h->{b}{c} == 3
+        and ref $h->{b}{c}
+        and ref $h->{b}{c} eq "ARRAY"
+        and @{ $h->{b}{c} } == 2
+        and $h->{b}{c}[0] == 4
+        and $h->{b}{c}[1] == 3
     );
 }
 
@@ -159,7 +163,7 @@ else {
     say "not ok 12 - Any converted to undef";
 }
 
-if ($i.call('test_hash', 'main', {a => 2, b => {c => 3}}) == 1) {
+if ($i.call('test_hash', 'main', {a => 2, b => {c => [4, 3]}}) == 1) {
     say "ok 13 - Passing hashes to Perl 5";
 }
 else {
