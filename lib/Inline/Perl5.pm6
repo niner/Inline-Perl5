@@ -14,9 +14,6 @@ class PerlInterpreter is repr('CPointer') {
     sub p5_SvPOK(PerlInterpreter, OpaquePointer)
         is native($p5helper)
         returns Int { * }
-    sub Perl_sv_iv(PerlInterpreter, OpaquePointer)
-        is native('/usr/lib/perl5/5.18.1/x86_64-linux-thread-multi/CORE/libperl.so')
-        returns Int { * }
     sub p5_sv_to_char_star(PerlInterpreter, OpaquePointer)
         is native($p5helper)
         returns Str { * }
@@ -26,12 +23,21 @@ class PerlInterpreter is repr('CPointer') {
     sub p5_str_to_sv(PerlInterpreter, Str)
         is native($p5helper)
         returns OpaquePointer { * }
+    sub p5_av_top_index(PerlInterpreter, OpaquePointer)
+        is native($p5helper)
+        returns Int { * }
+    sub p5_av_fetch(PerlInterpreter, OpaquePointer, Int)
+        is native($p5helper)
+        returns OpaquePointer { * }
     sub p5_call_function(PerlInterpreter, Str, Int, CArray[OpaquePointer])
         is native($p5helper)
-        { * }
+        returns OpaquePointer { * }
     sub p5_destruct_perl(PerlInterpreter)
         is native($p5helper)
         { * }
+    sub Perl_sv_iv(PerlInterpreter, OpaquePointer)
+        is native('/usr/lib/perl5/5.18.1/x86_64-linux-thread-multi/CORE/libperl.so')
+        returns Int { * }
     sub Perl_eval_pv(PerlInterpreter, Str, Int)
         is native('/usr/lib/perl5/5.18.1/x86_64-linux-thread-multi/CORE/libperl.so')
         returns OpaquePointer { * }
@@ -46,15 +52,19 @@ class PerlInterpreter is repr('CPointer') {
         return p5_str_to_sv(self, $value);
     }
 
+    method p5_to_p6(OpaquePointer $value) {
+        if p5_SvIOK(self, $value) {
+            return Perl_sv_iv(self, $value);
+        }
+        elsif p5_SvPOK(self, $value) {
+            return p5_sv_to_char_star(self, $value);
+        }
+        die "Unsupported type in p5_to_p6";
+    }
+
     method run($perl) {
         my $res = Perl_eval_pv(self, $perl, 1);
-        if p5_SvIOK(self, $res) {
-            return Perl_sv_iv(self, $res);
-        }
-        if p5_SvPOK(self, $res) {
-            return p5_sv_to_char_star(self, $res);
-        }
-        return $res;
+        return self.p5_to_p6($res);
     }
 
     method call(Str $function, *@args) {
@@ -64,7 +74,13 @@ class PerlInterpreter is repr('CPointer') {
             @svs[$i] = self.p6_to_p5(@args[$i]);
         }
 
-        p5_call_function(self, $function, $len, @svs);
+        my $av = p5_call_function(self, $function, $len, @svs);
+        my $av_len = p5_av_top_index(self, $av);
+        my @retvals;
+        loop ($i = 0; $i <= $av_len; $i++) {
+            @retvals.push(self.p5_to_p6(p5_av_fetch(self, $av, $i)));
+        }
+        return @retvals;
     }
 
     submethod DESTROY {

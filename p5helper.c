@@ -54,11 +54,19 @@ SV *p5_str_to_sv(PerlInterpreter *my_perl, char* value) {
     return newSVpv(value, 0);
 }
 
-void *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]) {
+int p5_av_top_index(PerlInterpreter *my_perl, AV *av) {
+    return av_top_index(av);
+}
+
+SV *p5_av_fetch(PerlInterpreter *my_perl, AV *av, int key) {
+    return *av_fetch(av, key, 0);
+}
+
+AV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]) {
     dSP;
     int i;
     int count;
-    void *retval;
+    AV * const retval = newAV();
     int flags = G_ARRAY;
 
     ENTER;
@@ -77,8 +85,13 @@ void *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]
     count = perl_call_method(name, flags);
     SPAGAIN;
 
+    av_extend(retval, count - 1);
     for (i = count - 1; i >= 0; i--) {
-        SvREFCNT_inc(POPs);
+        SV * const next = POPs;
+        SvREFCNT_inc(next);
+
+        if (av_store(retval, i, next) == NULL)
+            SvREFCNT_dec(next); /* see perlguts Working with AVs */
     }
 
     PUTBACK;
