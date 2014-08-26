@@ -46,6 +46,10 @@ int p5_is_hash(PerlInterpreter *my_perl, SV* sv) {
     return (SvROK(sv) && SvTYPE(SvRV(sv)) == SVt_PVHV);
 }
 
+int p5_is_undef(PerlInterpreter *my_perl, SV* sv) {
+    return !SvOK(sv);
+}
+
 AV *p5_sv_to_av(PerlInterpreter *my_perl, SV* sv) {
     return (AV *) SvRV(sv);
 }

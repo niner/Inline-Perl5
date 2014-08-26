@@ -22,6 +22,9 @@ class PerlInterpreter is repr('CPointer') {
     sub p5_is_hash(PerlInterpreter, OpaquePointer)
         is native($p5helper)
         returns Int { * }
+    sub p5_is_undef(PerlInterpreter, OpaquePointer)
+        is native($p5helper)
+        returns Int { * }
     sub p5_sv_to_char_star(PerlInterpreter, OpaquePointer)
         is native($p5helper)
         returns Str { * }
@@ -128,6 +131,9 @@ class PerlInterpreter is repr('CPointer') {
         }
         elsif p5_is_hash(self, $value) {
             return self!p5_hash_to_p6_hash($value);
+        }
+        elsif p5_is_undef(self, $value) {
+            return Any;
         }
         die "Unsupported type $value in p5_to_p6";
     }
