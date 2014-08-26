@@ -13,7 +13,7 @@ EXTERN_C void xs_init(pTHX) {
     newXS("DynaLoader::boot_DynaLoader", boot_DynaLoader, file);
 }
 
-PerlInterpreter *init_perl() {
+PerlInterpreter *p5_init_perl() {
     char *embedding[] = { "", "-e", "0" };
     PERL_SYS_INIT3(0, NULL, NULL);
     my_perl = perl_alloc();
@@ -24,16 +24,16 @@ PerlInterpreter *init_perl() {
     return my_perl;
 }
 
-int Perl_SvIOK(PerlInterpreter *my_perl, SV* sv) {
+int p5_SvIOK(PerlInterpreter *my_perl, SV* sv) {
     return SvIOK(sv);
 }
 
-int Perl_SvPOK(PerlInterpreter *my_perl, SV* sv) {
+int p5_SvPOK(PerlInterpreter *my_perl, SV* sv) {
     return SvPOK(sv);
 }
 
 
-char* sv_to_char_star(PerlInterpreter *my_perl, SV *sv) {
+char *p5_sv_to_char_star(PerlInterpreter *my_perl, SV *sv) {
     STRLEN len;
     char *ptr;
     ptr = SvPV(sv, len);

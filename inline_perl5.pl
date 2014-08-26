@@ -4,7 +4,7 @@ use v6;
 use lib '.';
 use Inline::Perl5;
 
-my $i = init_perl();
+my $i = p5_init_perl();
 say $i.run('
 use 5.10.0;
 
