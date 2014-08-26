@@ -10,6 +10,9 @@ is $i.run('5'), 5;
 is $i.run('"Perl 5"'), 'Perl 5';
 is_deeply $i.run('[1, 2]'), [1, 2];
 is_deeply $i.run('[1, [2, 3]]'), [1, [2, 3]];
+is_deeply $i.run('{a => 1, b => 2}'), {a => 1, b => 2};
+is_deeply $i.run('{a => 1, b => {c => 3}}'), {a => 1, b => {c => 3}};
+is_deeply $i.run('[1, {b => {c => 3}}]'), [1, {b => {c => 3}}];
 
 $i.DESTROY;
 

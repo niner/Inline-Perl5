@@ -19,10 +19,16 @@ class PerlInterpreter is repr('CPointer') {
     sub p5_is_array(PerlInterpreter, OpaquePointer)
         is native($p5helper)
         returns Int { * }
+    sub p5_is_hash(PerlInterpreter, OpaquePointer)
+        is native($p5helper)
+        returns Int { * }
     sub p5_sv_to_char_star(PerlInterpreter, OpaquePointer)
         is native($p5helper)
         returns Str { * }
     sub p5_sv_to_av(PerlInterpreter, OpaquePointer)
+        is native($p5helper)
+        returns OpaquePointer { * }
+    sub p5_sv_to_hv(PerlInterpreter, OpaquePointer)
         is native($p5helper)
         returns OpaquePointer { * }
     sub p5_int_to_sv(PerlInterpreter, Int)
@@ -35,6 +41,18 @@ class PerlInterpreter is repr('CPointer') {
         is native($p5helper)
         returns Int { * }
     sub p5_av_fetch(PerlInterpreter, OpaquePointer, Int)
+        is native($p5helper)
+        returns OpaquePointer { * }
+    sub p5_hv_iterinit(PerlInterpreter, OpaquePointer)
+        is native($p5helper)
+        returns Int { * }
+    sub p5_hv_iternext(PerlInterpreter, OpaquePointer)
+        is native($p5helper)
+        returns OpaquePointer { * }
+    sub p5_hv_iterkeysv(PerlInterpreter, OpaquePointer)
+        is native($p5helper)
+        returns OpaquePointer { * }
+    sub p5_hv_iterval(PerlInterpreter, OpaquePointer, OpaquePointer)
         is native($p5helper)
         returns OpaquePointer { * }
     sub p5_call_function(PerlInterpreter, Str, Int, CArray[OpaquePointer])
@@ -76,6 +94,24 @@ class PerlInterpreter is repr('CPointer') {
         }
         return $arr;
     }
+    method !p5_hash_to_p6_hash(OpaquePointer $sv) {
+        my OpaquePointer $hv = p5_sv_to_hv(self, $sv);
+
+        my Int $len = p5_hv_iterinit(self, $hv);
+
+        my $hash = {};
+
+        for 0 .. $len - 1 {
+            my OpaquePointer $next = p5_hv_iternext(self, $hv);
+            my OpaquePointer $key = p5_hv_iterkeysv(self, $next);
+            die 'Hash entry without key!?' unless $key;
+            my Str $p6_key = p5_sv_to_char_star(self, $key);
+            my $val = self.p5_to_p6(p5_hv_iterval(self, $hv, $next));
+            $hash{$p6_key} = $val;
+        }
+
+        return $hash;
+    }
 
     method p5_to_p6(OpaquePointer $value) {
         if Perl_sv_isobject(self, $value) {
@@ -89,6 +125,9 @@ class PerlInterpreter is repr('CPointer') {
         }
         elsif p5_is_array(self, $value) {
             return self!p5_array_to_p6_array($value);
+        }
+        elsif p5_is_hash(self, $value) {
+            return self!p5_hash_to_p6_hash($value);
         }
         die "Unsupported type $value in p5_to_p6";
     }

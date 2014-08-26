@@ -42,8 +42,16 @@ int p5_is_array(PerlInterpreter *my_perl, SV* sv) {
     return (SvROK(sv) && SvTYPE(SvRV(sv)) == SVt_PVAV);
 }
 
+int p5_is_hash(PerlInterpreter *my_perl, SV* sv) {
+    return (SvROK(sv) && SvTYPE(SvRV(sv)) == SVt_PVHV);
+}
+
 AV *p5_sv_to_av(PerlInterpreter *my_perl, SV* sv) {
     return (AV *) SvRV(sv);
+}
+
+HV *p5_sv_to_hv(PerlInterpreter *my_perl, SV* sv) {
+    return (HV *) SvRV(sv);
 }
 
 char *p5_sv_to_char_star(PerlInterpreter *my_perl, SV *sv) {
@@ -67,6 +75,22 @@ int p5_av_top_index(PerlInterpreter *my_perl, AV *av) {
 
 SV *p5_av_fetch(PerlInterpreter *my_perl, AV *av, int key) {
     return *av_fetch(av, key, 0);
+}
+
+int p5_hv_iterinit(PerlInterpreter *my_perl, HV *hv) {
+    return hv_iterinit(hv);
+}
+
+HE *p5_hv_iternext(PerlInterpreter *my_perl, HV *hv) {
+    return hv_iternext(hv);
+}
+
+SV *p5_hv_iterkeysv(PerlInterpreter *my_perl, HE *entry) {
+    return hv_iterkeysv(entry);
+}
+
+SV *p5_hv_iterval(PerlInterpreter *my_perl, HV *hv, HE *entry) {
+    return hv_iterval(hv, entry);
 }
 
 AV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]) {
