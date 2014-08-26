@@ -97,6 +97,10 @@ SV *p5_hv_iterval(PerlInterpreter *my_perl, HV *hv, HE *entry) {
     return hv_iterval(hv, entry);
 }
 
+SV *p5_undef(PerlInterpreter *my_perl) {
+    return &PL_sv_undef;
+}
+
 AV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]) {
     dSP;
     int i;

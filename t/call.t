@@ -3,7 +3,7 @@
 use v6;
 use Inline::Perl5;
 
-say "1..11";
+say "1..12";
 
 my $i = p5_init_perl();
 say $i.run('
@@ -49,6 +49,12 @@ sub test_str_retval {
 
 sub test_mixed_retvals {
     return ("Hello", "Perl", 6);
+}
+
+sub test_undef {
+    my ($self, $undef) = @_;
+
+    return (@_ == 2 and $self eq "main" and not defined $undef);
 }
 
 package Foo;
@@ -129,6 +135,13 @@ if (try { $i.call('new', 'Foo', 1).sum(3, 1) == 4 }) {
 }
 else {
     say "not ok 11 - method call on Perl5Object # TODO";
+}
+
+if ($i.call('test_undef', 'main', Any) == 1) {
+    say "ok 12 - Any converted to undef";
+}
+else {
+    say "not ok 12 - Any converted to undef";
 }
 
 $i.DESTROY;

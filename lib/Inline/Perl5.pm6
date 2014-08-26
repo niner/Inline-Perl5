@@ -58,6 +58,9 @@ class PerlInterpreter is repr('CPointer') {
     sub p5_hv_iterval(PerlInterpreter, OpaquePointer, OpaquePointer)
         is native($p5helper)
         returns OpaquePointer { * }
+    sub p5_undef(PerlInterpreter)
+        is native($p5helper)
+        returns OpaquePointer { * }
     sub p5_call_function(PerlInterpreter, Str, Int, CArray[OpaquePointer])
         is native($p5helper)
         returns OpaquePointer { * }
@@ -85,6 +88,9 @@ class PerlInterpreter is repr('CPointer') {
     }
     multi method p6_to_p5(OpaquePointer $value) returns OpaquePointer {
         return $value;
+    }
+    multi method p6_to_p5(Any $value) returns OpaquePointer {
+        return p5_undef(self);
     }
 
     method !p5_array_to_p6_array(OpaquePointer $sv) {
