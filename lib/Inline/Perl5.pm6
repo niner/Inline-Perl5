@@ -20,6 +20,9 @@ class PerlInterpreter is repr('CPointer') {
     sub p5_sv_to_char_star(PerlInterpreter, OpaquePointer)
         is native($p5helper)
         returns Str { * }
+    sub p5_int_to_sv(PerlInterpreter, Int)
+        is native($p5helper)
+        returns OpaquePointer { * }
     sub p5_call_function(PerlInterpreter, Str, Int, CArray[OpaquePointer])
         is native($p5helper)
         { * }
@@ -32,6 +35,10 @@ class PerlInterpreter is repr('CPointer') {
     sub Perl_call_pv(PerlInterpreter, Str, Int)
         is native('/usr/lib/perl5/5.18.1/x86_64-linux-thread-multi/CORE/libperl.so')
         returns OpaquePointer { * }
+
+    multi method p6_to_p5(Int $value) returns OpaquePointer {
+        return p5_int_to_sv(self, $value);
+    }
 
     method run($perl) {
         my $res = Perl_eval_pv(self, $perl, 1);
@@ -47,6 +54,9 @@ class PerlInterpreter is repr('CPointer') {
     method call(Str $function, *@args) {
         my $len = @args.elems;
         my @svs := CArray[OpaquePointer].new();
+        loop (my $i = 0; $i < $len; $i++) {
+            @svs[$i] = self.p6_to_p5(@args[$i]);
+        }
 
         p5_call_function(self, $function, $len, @svs);
     }

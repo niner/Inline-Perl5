@@ -46,6 +46,10 @@ char *p5_sv_to_char_star(PerlInterpreter *my_perl, SV *sv) {
     return ptr;
 }
 
+SV *p5_int_to_sv(PerlInterpreter *my_perl, int value) {
+    return newSViv(value);
+}
+
 void *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]) {
     dSP;
     int i;
@@ -57,6 +61,12 @@ void *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]
     SAVETMPS;
 
     PUSHMARK(SP);
+
+    for (i = 0; i < len; i++) {
+        XPUSHs(args[i]);
+        if (! sv_isobject(args[i]))
+            sv_2mortal(args[i]);
+    }
 
     PUTBACK;
 
