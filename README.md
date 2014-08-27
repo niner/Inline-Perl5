@@ -25,13 +25,13 @@ methods on Perl 5 objects from Perl 6.
 # BUILDING
 
 You will need a perl 5 build with the -fPIC option (position independent
-code). Most distributions build their Perl 5 that way, when you use perlbrew,
-you have to build it as
+code). Most distributions build their Perl 5 that way. When you use perlbrew,
+you have to build it as:
 
-    perlbrew install perl-5.20.0 -Duseshrplib
+    perlbrew install perl-5.20.0 -Duseshrplib --multi
 
 Once you have a position independet perl 5, find the shared library, and
-export its path as an environemnt variable
+export its path as an environemnt variable:
 
     export P5SO=/usr/lib/libperl.so.5.20
 
