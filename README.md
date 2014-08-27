@@ -22,6 +22,28 @@ Supports Perl 5 modules including XS modules. Allows passing integers,
 strings, arrays and hashes between Perl 5 and Perl 6. Also supports calling
 methods on Perl 5 objects from Perl 6.
 
+# BUILDING
+
+You will need a perl 5 build with the -fPIC option (position independent
+code). Most distributions build their Perl 5 that way, when you use perlbrew,
+you have to build it as
+
+    perlbrew install perl-5.20.0 -Duseshrplib
+
+Once you have a position independet perl 5, find the shared library, and
+export its path as an environemnt variable
+
+    export P5SO=/usr/lib/libperl.so.5.20
+
+and then build Inline::Perl6 with
+
+    make
+
+and test with
+
+    make test
+
+
 # AUTHOR
 
 Stefan Seifert <nine@detonation.org>
