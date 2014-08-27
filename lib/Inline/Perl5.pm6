@@ -215,6 +215,13 @@ class Perl5Object {
     method call(Str $function, *@args) {
         return $.perl5.call($function, $.ptr, @args.list);
     }
+    Perl5Object.^add_fallback(-> $, $ { True },
+        method ($name ) {
+            -> \self, |args {
+                $.perl5.call($name, $.ptr, args.list);
+            }
+        }
+    );
 }
 
 sub p5_init_perl() is export is native($p5helper) returns PerlInterpreter { * }
