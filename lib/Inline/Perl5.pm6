@@ -11,6 +11,13 @@ BEGIN {
 
 class Perl5Object { ... }
 
+class X::Inline::Perl5::Unmarshallable is Exception {
+    has Mu $.object;
+    method message() {
+        "Don't know how to pass object of type {$.object.^name} to Perl 5 code";
+    }
+}
+
 class PerlInterpreter is repr('CPointer') {
     sub p5_SvIOK(PerlInterpreter, OpaquePointer)
         is native($p5helper)
@@ -108,6 +115,11 @@ class PerlInterpreter is repr('CPointer') {
     }
     multi method p6_to_p5(Any:U $value) returns OpaquePointer {
         return p5_undef(self);
+    }
+    multi method p6_to_p5(Any:D $value) {
+        X::Inline::Perl5::Unmarshallable.new(
+            :object($value),
+        ).throw;
     }
     multi method p6_to_p5(Hash:D $value) returns OpaquePointer {
         my $hv = p5_newHV(self);
