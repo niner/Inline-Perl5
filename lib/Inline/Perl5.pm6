@@ -209,13 +209,16 @@ class PerlInterpreter is repr('CPointer') {
 }
 
 class Perl5Object {
-    has OpaquePointer $.ptr;
-    has PerlInterpreter $.perl5;
+    has OpaquePointer $!ptr;
+    has PerlInterpreter $!perl5;
+
+    submethod BUILD(:$!ptr, :$!perl5) {
+    }
 
     Perl5Object.^add_fallback(-> $, $ { True },
         method ($name ) {
             -> \self, |args {
-                $.perl5.call($name, $.ptr, args.list);
+                $!perl5.call($name, $!ptr, args.list);
             }
         }
     );
