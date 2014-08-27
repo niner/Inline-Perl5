@@ -3,7 +3,7 @@
 use v6;
 use Inline::Perl5;
 
-say "1..11";
+say "1..13";
 
 my $i = p5_init_perl();
 say $i.run('
@@ -92,6 +92,23 @@ sub sum {
     my ($self, $a, $b) = @_;
     return $a + $b;
 }
+
+sub bar {
+    return Bar->new;
+}
+
+package Bar;
+
+sub new {
+    my ($class) = @_;
+
+    return bless {}, $class;
+}
+
+sub test {
+    return 1;
+}
+
 ');
 
 $i.call('main::test');
@@ -155,6 +172,18 @@ if ($i.call('test_hash', 'main', {a => 2, b => {c => [4, 3]}}) == 1) {
 else {
     say "not ok 11 - Passing hashes to Perl 5";
 }
+
+my $foo = $i.call('new', 'Foo', 1);
+say (
+    ($foo.test == 1 ?? '' !! 'not ')
+    ~ 'ok 12 - Calling methods on P5 objects saved in variables'
+);
+
+my $bar = $foo.bar;
+say (
+    ($bar.test == 1 ?? '' !! 'not ')
+    ~ 'ok 13 - Calling methods on P5 objects returned by P5 methods'
+);
 
 $i.DESTROY;
 
