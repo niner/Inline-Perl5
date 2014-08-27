@@ -2,6 +2,8 @@ module Inline::Perl5;
 
 use NativeCall;
 
+constant P5SO = %*ENV<P5SO> // '/usr/lib/perl5/5.18.1/x86_64-linux-thread-multi/CORE/libperl.so';
+
 my Str $p5helper;
 BEGIN {
     $p5helper = IO::Path.new($?FILE).directory ~ '/p5helper.so';
@@ -83,16 +85,16 @@ class PerlInterpreter is repr('CPointer') {
         is native($p5helper)
         { * }
     sub Perl_sv_iv(PerlInterpreter, OpaquePointer)
-        is native('/usr/lib/perl5/5.18.1/x86_64-linux-thread-multi/CORE/libperl.so')
+        is native(P5SO)
         returns Int { * }
     sub Perl_sv_isobject(PerlInterpreter, OpaquePointer)
-        is native('/usr/lib/perl5/5.18.1/x86_64-linux-thread-multi/CORE/libperl.so')
+        is native(P5SO)
         returns Int { * }
     sub Perl_eval_pv(PerlInterpreter, Str, Int)
-        is native('/usr/lib/perl5/5.18.1/x86_64-linux-thread-multi/CORE/libperl.so')
+        is native(P5SO)
         returns OpaquePointer { * }
     sub Perl_call_pv(PerlInterpreter, Str, Int)
-        is native('/usr/lib/perl5/5.18.1/x86_64-linux-thread-multi/CORE/libperl.so')
+        is native(P5SO)
         returns OpaquePointer { * }
 
     multi method p6_to_p5(Int $value) returns OpaquePointer {
