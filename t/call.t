@@ -3,7 +3,7 @@
 use v6;
 use Inline::Perl5;
 
-say "1..13";
+say "1..11";
 
 my $i = p5_init_perl();
 say $i.run('
@@ -128,46 +128,32 @@ else {
     say "    expected: 'Hello', 'Perl', 6";
 }
 
-if ($i.call('test', $i.call('new', 'Foo', 1).ptr) == 1) {
-    say "ok 8 - Perl 5 object";
+if ($i.call('new', 'Foo', 1).test() == 1) {
+    say "ok 8 - Perl 5 method call";
 }
 else {
-    say "not ok 8 - Perl 5 object";
+    say "not ok 8 - Perl 5 method call";
 }
 
-if ($i.call('new', 'Foo', 1).call('test') == 1) {
-    say "ok 9 - Perl 5 method call";
+if ($i.call('new', 'Foo', 1).sum(3, 1) == 4) {
+    say "ok 9 - Perl 5 method call with parameters";
 }
 else {
-    say "not ok 9 - Perl 5 method call";
-}
-
-if ($i.call('new', 'Foo', 1).call('sum', 3, 1) == 4) {
-    say "ok 10 - Perl 5 method call with parameters";
-}
-else {
-    say "not ok 10 - Perl 5 method call with parameters";
-}
-
-if (try { $i.call('new', 'Foo', 1).sum(3, 1) == 4 }) {
-    say "ok 11 - method call on Perl5Object";
-}
-else {
-    say "not ok 11 - method call on Perl5Object # TODO";
+    say "not ok 9 - Perl 5 method call with parameters";
 }
 
 if ($i.call('test_undef', 'main', Any) == 1) {
-    say "ok 12 - Any converted to undef";
+    say "ok 10 - Any converted to undef";
 }
 else {
-    say "not ok 12 - Any converted to undef";
+    say "not ok 10 - Any converted to undef";
 }
 
 if ($i.call('test_hash', 'main', {a => 2, b => {c => [4, 3]}}) == 1) {
-    say "ok 13 - Passing hashes to Perl 5";
+    say "ok 11 - Passing hashes to Perl 5";
 }
 else {
-    say "not ok 13 - Passing hashes to Perl 5";
+    say "not ok 11 - Passing hashes to Perl 5";
 }
 
 $i.DESTROY;

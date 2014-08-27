@@ -212,9 +212,6 @@ class Perl5Object {
     has OpaquePointer $.ptr;
     has PerlInterpreter $.perl5;
 
-    method call(Str $function, *@args) {
-        return $.perl5.call($function, $.ptr, @args.list);
-    }
     Perl5Object.^add_fallback(-> $, $ { True },
         method ($name ) {
             -> \self, |args {
