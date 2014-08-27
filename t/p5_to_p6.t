@@ -13,7 +13,7 @@ is_deeply $i.run('[1, [2, 3]]'), [1, [2, 3]];
 is_deeply $i.run('{a => 1, b => 2}'), {a => 1, b => 2};
 is_deeply $i.run('{a => 1, b => {c => 3}}'), {a => 1, b => {c => 3}};
 is_deeply $i.run('[1, {b => {c => 3}}]'), [1, {b => {c => 3}}];
-is $i.run('undef'), Any;
+ok $i.run('undef') === Any, 'p5 undef maps to p6 Any';
 
 $i.DESTROY;
 
