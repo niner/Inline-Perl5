@@ -97,19 +97,19 @@ class PerlInterpreter is repr('CPointer') {
         is native(P5SO)
         returns OpaquePointer { * }
 
-    multi method p6_to_p5(Int $value) returns OpaquePointer {
+    multi method p6_to_p5(Int:D $value) returns OpaquePointer {
         return p5_int_to_sv(self, $value);
     }
-    multi method p6_to_p5(Str $value) returns OpaquePointer {
+    multi method p6_to_p5(Str:D $value) returns OpaquePointer {
         return p5_str_to_sv(self, $value);
     }
     multi method p6_to_p5(OpaquePointer $value) returns OpaquePointer {
         return $value;
     }
-    multi method p6_to_p5(Any $value) returns OpaquePointer {
+    multi method p6_to_p5(Any:U $value) returns OpaquePointer {
         return p5_undef(self);
     }
-    multi method p6_to_p5(Hash $value) returns OpaquePointer {
+    multi method p6_to_p5(Hash:D $value) returns OpaquePointer {
         my $hv = p5_newHV(self);
         for %$value -> $item {
             my $key = p5_str_to_sv(self, $item.key);
@@ -118,7 +118,7 @@ class PerlInterpreter is repr('CPointer') {
         }
         return p5_newRV_noinc(self, $hv);
     }
-    multi method p6_to_p5(Array $value) returns OpaquePointer {
+    multi method p6_to_p5(Positional:D $value) returns OpaquePointer {
         my $av = p5_newAV(self);
         for @$value -> $item {
             p5_av_push(self, $av, self.p6_to_p5($item));
