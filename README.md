@@ -28,12 +28,7 @@ You will need a perl 5 build with the -fPIC option (position independent
 code). Most distributions build their Perl 5 that way. When you use perlbrew,
 you have to build it as:
 
-    perlbrew install perl-5.20.0 -Duseshrplib --multi
-
-Once you have a position independet perl 5, find the shared library, and
-export its path as an environemnt variable:
-
-    export P5SO=/usr/lib/libperl.so.5.20
+    perlbrew install perl-5.20.0 -Duseshrplib
 
 and then build Inline::Perl6 with
 

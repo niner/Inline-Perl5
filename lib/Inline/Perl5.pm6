@@ -2,8 +2,6 @@ module Inline::Perl5;
 
 use NativeCall;
 
-constant P5SO = %*ENV<P5SO> // '/usr/lib/perl5/5.18.1/x86_64-linux-thread-multi/CORE/libperl.so';
-
 my Str $p5helper;
 BEGIN {
     $p5helper = IO::Path.new($?FILE).directory ~ '/p5helper.so';
@@ -91,17 +89,14 @@ class PerlInterpreter is repr('CPointer') {
     sub p5_destruct_perl(PerlInterpreter)
         is native($p5helper)
         { * }
-    sub Perl_sv_iv(PerlInterpreter, OpaquePointer)
-        is native(P5SO)
+    sub p5_sv_iv(PerlInterpreter, OpaquePointer)
+        is native($p5helper)
         returns Int { * }
-    sub Perl_sv_isobject(PerlInterpreter, OpaquePointer)
-        is native(P5SO)
+    sub p5_is_object(PerlInterpreter, OpaquePointer)
+        is native($p5helper)
         returns Int { * }
-    sub Perl_eval_pv(PerlInterpreter, Str, Int)
-        is native(P5SO)
-        returns OpaquePointer { * }
-    sub Perl_call_pv(PerlInterpreter, Str, Int)
-        is native(P5SO)
+    sub p5_eval_pv(PerlInterpreter, Str, Int)
+        is native($p5helper)
         returns OpaquePointer { * }
 
     multi method p6_to_p5(Int:D $value) returns OpaquePointer {
@@ -168,11 +163,11 @@ class PerlInterpreter is repr('CPointer') {
     }
 
     method p5_to_p6(OpaquePointer $value) {
-        if Perl_sv_isobject(self, $value) {
+        if p5_is_object(self, $value) {
             return Perl5Object.new(perl5 => self, ptr => $value);
         }
         elsif p5_SvIOK(self, $value) {
-            return Perl_sv_iv(self, $value);
+            return p5_sv_iv(self, $value);
         }
         elsif p5_SvPOK(self, $value) {
             return p5_sv_to_char_star(self, $value);
@@ -190,7 +185,7 @@ class PerlInterpreter is repr('CPointer') {
     }
 
     method run($perl) {
-        my $res = Perl_eval_pv(self, $perl, 1);
+        my $res = p5_eval_pv(self, $perl, 1);
         return self.p5_to_p6($res);
     }
 

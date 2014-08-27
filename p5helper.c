@@ -38,6 +38,14 @@ int p5_SvPOK(PerlInterpreter *my_perl, SV* sv) {
     return SvPOK(sv);
 }
 
+int p5_sv_iv(PerlInterpreter *my_perl, SV* sv) {
+    return SvIV(sv);
+}
+
+int p5_is_object(PerlInterpreter *my_perl, SV* sv) {
+    return sv_isobject(sv);
+}
+
 int p5_is_array(PerlInterpreter *my_perl, SV* sv) {
     return (SvROK(sv) && SvTYPE(SvRV(sv)) == SVt_PVAV);
 }
@@ -119,6 +127,10 @@ AV *p5_newAV(PerlInterpreter *my_perl) {
 
 SV *p5_newRV_noinc(PerlInterpreter *my_perl, SV *sv) {
     return newRV_noinc(sv);
+}
+
+SV *p5_eval_pv(PerlInterpreter *my_perl, const char* p, I32 croak_on_error) {
+    return eval_pv(p, croak_on_error);
 }
 
 AV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]) {
