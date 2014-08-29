@@ -251,6 +251,8 @@ class Perl5Object {
             }
         }
     );
+
+    method sink() { self }
 }
 
 sub p5_init_perl() is export is native($p5helper) returns PerlInterpreter { * }
