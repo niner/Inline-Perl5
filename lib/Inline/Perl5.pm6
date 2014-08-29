@@ -227,6 +227,10 @@ class Perl5Object {
     submethod BUILD(:$!ptr, :$!perl5) {
     }
 
+    method sink() {
+        self;
+    }
+
     Perl5Object.^add_fallback(-> $, $ { True },
         method ($name ) {
             -> \self, |args {
