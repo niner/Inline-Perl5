@@ -98,6 +98,15 @@ class PerlInterpreter is repr('CPointer') {
     sub p5_eval_pv(PerlInterpreter, Str, Int)
         is native($p5helper)
         returns OpaquePointer { * }
+    sub p5_wrap_p6_object(PerlInterpreter, &unwrap())
+        is native($p5helper)
+        returns OpaquePointer { * }
+    sub p5_is_wrapped_p6_object(PerlInterpreter, OpaquePointer)
+        is native($p5helper)
+        returns Int { * }
+    sub p5_unwrap_p6_object(PerlInterpreter, OpaquePointer)
+        is native($p5helper)
+        { * }
 
     multi method p6_to_p5(Int:D $value) returns OpaquePointer {
         return p5_int_to_sv(self, $value);
@@ -111,7 +120,14 @@ class PerlInterpreter is repr('CPointer') {
     multi method p6_to_p5(Any:U $value) returns OpaquePointer {
         return p5_undef(self);
     }
+    my $unwrapped;
     multi method p6_to_p5(Any:D $value) {
+        return p5_wrap_p6_object(
+            self,
+            -> {
+                $unwrapped = $value
+            },
+        );
         X::Inline::Perl5::Unmarshallable.new(
             :object($value),
         ).throw;
@@ -164,7 +180,13 @@ class PerlInterpreter is repr('CPointer') {
 
     method p5_to_p6(OpaquePointer $value) {
         if p5_is_object(self, $value) {
-            return Perl5Object.new(perl5 => self, ptr => $value);
+            if p5_is_wrapped_p6_object(self, $value) {
+                p5_unwrap_p6_object(self, $value);
+                return $unwrapped;
+            }
+            else {
+                return Perl5Object.new(perl5 => self, ptr => $value);
+            }
         }
         elsif p5_SvIOK(self, $value) {
             return p5_sv_iv(self, $value);

@@ -171,3 +171,38 @@ AV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]) 
 
     return retval;
 }
+
+typedef struct {
+    I32 key; /* to make sure it came from Inline */
+    void *(*unwrap)();
+} _perl6_magic;
+
+#define PERL6_MAGIC_KEY 0x0DD515FE
+
+SV *p5_wrap_p6_object(PerlInterpreter *my_perl, void *(*unwrap)()) {
+    SV * const inst_ptr = newSViv(0);
+    SV * const inst = newSVrv(inst_ptr, "Perl6::Object");;
+    _perl6_magic priv;
+
+    /* set up magic */
+    priv.key = PERL6_MAGIC_KEY;
+    priv.unwrap = unwrap;
+    sv_magic(inst, inst, PERL_MAGIC_ext, (char *) &priv, sizeof(priv));
+    MAGIC * const mg = mg_find(inst, PERL_MAGIC_ext);
+
+    return inst_ptr;
+}
+
+int p5_is_wrapped_p6_object(PerlInterpreter *my_perl, SV *obj) {
+    SV * const obj_deref = SvRV(obj);
+    /* check for magic! */
+    MAGIC * const mg = mg_find(obj_deref, '~');
+    return (mg && ((_perl6_magic*)(mg->mg_ptr))->key == PERL6_MAGIC_KEY);
+}
+
+void p5_unwrap_p6_object(PerlInterpreter *my_perl, SV *obj) {
+    SV * const obj_deref = SvRV(obj);
+    /* check for magic! */
+    MAGIC * const mg = mg_find(obj_deref, '~');
+    ((_perl6_magic*)(mg->mg_ptr))->unwrap();
+}

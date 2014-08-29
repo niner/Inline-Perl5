@@ -9,11 +9,12 @@ plan 6;
 my $i = p5_init_perl();
 $i.run(q[ sub identity { return $_[1] }; ]);
 
-for ('abc', 24, [1, 2], { a=> 1, b => 2}, Any) -> $obj {
-    is_deeply $i.call('identity', 'main', $obj), $obj, "Can round-trip " ~ $obj.^name;
+class Foo {
 }
 
-throws_like { $i.call('dummy', 'main', Any.new) }, X::Inline::Perl5::Unmarshallable, object => Any;
+for ('abc', 24, [1, 2], { a=> 1, b => 2}, Any, Foo.new) -> $obj {
+    is_deeply $i.call('identity', 'main', $obj), $obj, "Can round-trip " ~ $obj.^name;
+}
 
 $i.DESTROY;
 
