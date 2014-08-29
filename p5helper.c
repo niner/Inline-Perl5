@@ -179,12 +179,12 @@ AV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]) 
 typedef struct {
     I32 key; /* to make sure it came from Inline */
     void *(*unwrap)();
-    void (*call_p6_method)(char * /*, SV **/);
+    void (*call_p6_method)(char * , SV *);
 } _perl6_magic;
 
 #define PERL6_MAGIC_KEY 0x0DD515FE
 
-SV *p5_wrap_p6_object(PerlInterpreter *my_perl, void *(*unwrap)(), void (*call_p6_method)(char * /*, SV **/)) {
+SV *p5_wrap_p6_object(PerlInterpreter *my_perl, void *(*unwrap)(), void (*call_p6_method)(char * , SV *)) {
     SV * const inst_ptr = newSViv(0);
     SV * const inst = newSVrv(inst_ptr, "Perl6::Object");;
     _perl6_magic priv;
@@ -217,12 +217,20 @@ XS(p5_call_p6_method) {
     dXSARGS;
     SV * name = ST(0);
     SV * obj = ST(1);
+
     AV * args = newAV();
+    av_extend(args, items - 2);
+    int i;
+    for (i = 0; i < items - 2; i++)
+        if (av_store(args, i, ST(i + 2)) == NULL)
+            SvREFCNT_dec(ST(i + 2)); /* see perlguts Working with AVs */
+
     STRLEN len;
     char *name_str = SvPV(name, len);
+
     SV * const obj_deref = SvRV(obj);
     MAGIC * const mg = mg_find(obj_deref, '~');
-    ((_perl6_magic*)(mg->mg_ptr))->call_p6_method(name_str);
+    ((_perl6_magic*)(mg->mg_ptr))->call_p6_method(name_str, newRV_noinc((SV *) args));
     SPAGAIN; /* refresh local stack pointer, could have been modified by Perl 5 code called from Perl 6 */
     XSRETURN(0);
 }

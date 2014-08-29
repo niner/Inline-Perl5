@@ -98,7 +98,7 @@ class PerlInterpreter is repr('CPointer') {
     sub p5_eval_pv(PerlInterpreter, Str, Int)
         is native($p5helper)
         returns OpaquePointer { * }
-    sub p5_wrap_p6_object(PerlInterpreter, &unwrap(), &call_method(Str))
+    sub p5_wrap_p6_object(PerlInterpreter, &unwrap(), &call_method(Str, OpaquePointer))
         is native($p5helper)
         returns OpaquePointer { * }
     sub p5_is_wrapped_p6_object(PerlInterpreter, OpaquePointer)
@@ -127,8 +127,9 @@ class PerlInterpreter is repr('CPointer') {
             -> {
                 $unwrapped = $value
             },
-            -> $name {
-                $value."$name"("Perl6");
+            -> $name, $args {
+                $value."$name"(|self!p5_array_to_p6_array($args));
+                CATCH { default { note $_; } }
             },
         );
         X::Inline::Perl5::Unmarshallable.new(
@@ -254,16 +255,13 @@ class PerlInterpreter is repr('CPointer') {
 }
 
 class Perl5Object {
-    has OpaquePointer $!ptr;
-    has PerlInterpreter $!perl5;
-
-    submethod BUILD(:$!ptr, :$!perl5) {
-    }
+    has OpaquePointer $.ptr;
+    has PerlInterpreter $.perl5;
 
     Perl5Object.^add_fallback(-> $, $ { True },
         method ($name ) {
             -> \self, |args {
-                $!perl5.call($name, $!ptr, args.list);
+                $.perl5.call($name, $.ptr, args.list);
             }
         }
     );
