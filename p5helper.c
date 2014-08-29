@@ -1,4 +1,5 @@
 #include <EXTERN.h>
+#include <XSUB.h>
 #include <perl.h>
 
 static PerlInterpreter *my_perl;
@@ -7,10 +8,13 @@ static void xs_init (pTHX);
 EXTERN_C void boot_DynaLoader (pTHX_ CV* cv);
 EXTERN_C void boot_Socket (pTHX_ CV* cv);
 
+XS(p5_call_p6_method);
+
 EXTERN_C void xs_init(pTHX) {
     char *file = __FILE__;
     /* DynaLoader is a special case */
     newXS("DynaLoader::boot_DynaLoader", boot_DynaLoader, file);
+    newXS("Perl6::Object::call_method", p5_call_p6_method, file);
 }
 
 PerlInterpreter *p5_init_perl() {
@@ -175,11 +179,12 @@ AV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]) 
 typedef struct {
     I32 key; /* to make sure it came from Inline */
     void *(*unwrap)();
+    void (*call_p6_method)(char * /*, SV **/);
 } _perl6_magic;
 
 #define PERL6_MAGIC_KEY 0x0DD515FE
 
-SV *p5_wrap_p6_object(PerlInterpreter *my_perl, void *(*unwrap)()) {
+SV *p5_wrap_p6_object(PerlInterpreter *my_perl, void *(*unwrap)(), void (*call_p6_method)(char * /*, SV **/)) {
     SV * const inst_ptr = newSViv(0);
     SV * const inst = newSVrv(inst_ptr, "Perl6::Object");;
     _perl6_magic priv;
@@ -187,6 +192,7 @@ SV *p5_wrap_p6_object(PerlInterpreter *my_perl, void *(*unwrap)()) {
     /* set up magic */
     priv.key = PERL6_MAGIC_KEY;
     priv.unwrap = unwrap;
+    priv.call_p6_method = call_p6_method;
     sv_magic(inst, inst, PERL_MAGIC_ext, (char *) &priv, sizeof(priv));
     MAGIC * const mg = mg_find(inst, PERL_MAGIC_ext);
 
@@ -205,4 +211,18 @@ void p5_unwrap_p6_object(PerlInterpreter *my_perl, SV *obj) {
     /* check for magic! */
     MAGIC * const mg = mg_find(obj_deref, '~');
     ((_perl6_magic*)(mg->mg_ptr))->unwrap();
+}
+
+XS(p5_call_p6_method) {
+    dXSARGS;
+    SV * name = ST(0);
+    SV * obj = ST(1);
+    AV * args = newAV();
+    STRLEN len;
+    char *name_str = SvPV(name, len);
+    SV * const obj_deref = SvRV(obj);
+    MAGIC * const mg = mg_find(obj_deref, '~');
+    ((_perl6_magic*)(mg->mg_ptr))->call_p6_method(name_str);
+    SPAGAIN; /* refresh local stack pointer, could have been modified by Perl 5 code called from Perl 6 */
+    XSRETURN(0);
 }

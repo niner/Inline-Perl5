@@ -98,7 +98,7 @@ class PerlInterpreter is repr('CPointer') {
     sub p5_eval_pv(PerlInterpreter, Str, Int)
         is native($p5helper)
         returns OpaquePointer { * }
-    sub p5_wrap_p6_object(PerlInterpreter, &unwrap())
+    sub p5_wrap_p6_object(PerlInterpreter, &unwrap(), &call_method(Str))
         is native($p5helper)
         returns OpaquePointer { * }
     sub p5_is_wrapped_p6_object(PerlInterpreter, OpaquePointer)
@@ -126,6 +126,9 @@ class PerlInterpreter is repr('CPointer') {
             self,
             -> {
                 $unwrapped = $value
+            },
+            -> $name {
+                $value."$name"("Perl6");
             },
         );
         X::Inline::Perl5::Unmarshallable.new(
@@ -230,6 +233,19 @@ class PerlInterpreter is repr('CPointer') {
             @retvals.push(self.p5_to_p6(p5_av_fetch(self, $av, $i)));
         }
         return @retvals;
+    }
+
+    method init_callbacks {
+        self.run(q[
+            package Perl6::Object;
+
+            our $AUTOLOAD;
+            sub AUTOLOAD {
+                my ($self) = @_;
+                my $name = $AUTOLOAD =~ s/.*:://r;
+                Perl6::Object::call_method($name, @_);
+            }
+        ]);
     }
 
     submethod DESTROY {
