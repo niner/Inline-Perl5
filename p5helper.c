@@ -73,6 +73,7 @@ HV *p5_sv_to_hv(PerlInterpreter *my_perl, SV* sv) {
 char *p5_sv_to_char_star(PerlInterpreter *my_perl, SV *sv) {
     STRLEN len;
     char *ptr;
+    SvREFCNT_inc(sv);
     ptr = SvPV(sv, len);
     return ptr;
 }
@@ -90,10 +91,11 @@ int p5_av_top_index(PerlInterpreter *my_perl, AV *av) {
 }
 
 SV *p5_av_fetch(PerlInterpreter *my_perl, AV *av, int key) {
-    return *av_fetch(av, key, 0);
+    return SvREFCNT_inc(*av_fetch(av, key, 0));
 }
 
 void p5_av_push(PerlInterpreter *my_perl, AV *av, SV *sv) {
+    SvREFCNT_inc(sv);
     av_push(av, sv);
 }
 
@@ -150,6 +152,7 @@ AV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]) 
     PUSHMARK(SP);
 
     for (i = 0; i < len; i++) {
+        SvREFCNT_inc(args[i]);
         XPUSHs(args[i]);
     }
 
@@ -177,12 +180,12 @@ AV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]) 
 typedef struct {
     I32 key; /* to make sure it came from Inline */
     void *(*unwrap)();
-    void (*call_p6_method)(char * , SV *);
+    SV *(*call_p6_method)(char * , SV *);
 } _perl6_magic;
 
 #define PERL6_MAGIC_KEY 0x0DD515FE
 
-SV *p5_wrap_p6_object(PerlInterpreter *my_perl, void *(*unwrap)(), void (*call_p6_method)(char * , SV *)) {
+SV *p5_wrap_p6_object(PerlInterpreter *my_perl, void *(*unwrap)(), SV *(*call_p6_method)(char * , SV *)) {
     SV * const inst_ptr = newSViv(0);
     SV * const inst = newSVrv(inst_ptr, "Perl6::Object");;
     _perl6_magic priv;
@@ -194,7 +197,7 @@ SV *p5_wrap_p6_object(PerlInterpreter *my_perl, void *(*unwrap)(), void (*call_p
     sv_magic(inst, inst, PERL_MAGIC_ext, (char *) &priv, sizeof(priv));
     MAGIC * const mg = mg_find(inst, PERL_MAGIC_ext);
 
-    return inst_ptr;
+    return SvREFCNT_inc(inst_ptr);
 }
 
 int p5_is_wrapped_p6_object(PerlInterpreter *my_perl, SV *obj) {
@@ -232,7 +235,26 @@ XS(p5_call_p6_method) {
 
     SV * const obj_deref = SvRV(obj);
     MAGIC * const mg = mg_find(obj_deref, '~');
-    ((_perl6_magic*)(mg->mg_ptr))->call_p6_method(name_str, newRV((SV *) args));
+    SV * retval = ((_perl6_magic*)(mg->mg_ptr))->call_p6_method(name_str, newRV((SV *) args)); //FIXME: should be newRV_noinc! args already has refcnt of 1
     SPAGAIN; /* refresh local stack pointer, could have been modified by Perl 5 code called from Perl 6 */
-    XSRETURN(0);
+    sp -= items;
+
+    if (GIMME_V == G_VOID) {
+        SvREFCNT_dec(retval);
+        XSRETURN_EMPTY;
+    }
+    if (GIMME_V == G_ARRAY) {
+        AV* const av = (AV*)SvRV(retval);
+        int const len = av_len(av) + 1;
+        int i;
+        for (i = 0; i < len; i++) {
+            XPUSHs(SvREFCNT_inc(av_shift(av)));
+        }
+        XSRETURN(len);
+    }
+    else {
+        AV* const av = (AV*)SvRV(retval);
+        XPUSHs(SvREFCNT_inc(av_shift(av)));
+        XSRETURN(1);
+    }
 }

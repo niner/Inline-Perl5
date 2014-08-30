@@ -1,27 +1,35 @@
 #!/usr/bin/env perl6
 
 use v6;
-use Test;
 use Inline::Perl5;
-
-plan 2;
 
 my $i = p5_init_perl();
 $i.init_callbacks();
 $i.run(q/
+    use Test::More;
+
     sub test {
-        $_[1]->test('Perl6');
-        $_[1]->test('Perl6');
+        my ($self, $perl6) = @_;
+        my @retval = $perl6->test('Perl6');
+        is_deeply \@retval, ['Perl6'];
+        my @retval = $perl6->test('Perl', 6);
+        is_deeply \@retval, ['Perl', 6];
     };
 /);
 
 class Foo {
-    method test(Str $name) {
-        is $name, 'Perl6';
+    method test(*@args) {
+        return @args;
     }
 }
 
-$i.call('test', 'main', Foo.new);
+my $foo = Foo.new;
+
+$i.call('test', 'main', $foo);
+
+$i.run(q/
+    done_testing;
+/);
 
 $i.DESTROY;
 
