@@ -151,8 +151,6 @@ AV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]) 
 
     for (i = 0; i < len; i++) {
         XPUSHs(args[i]);
-        if (! sv_isobject(args[i]))
-            sv_2mortal(args[i]);
     }
 
     PUTBACK;
@@ -216,21 +214,25 @@ void p5_unwrap_p6_object(PerlInterpreter *my_perl, SV *obj) {
 XS(p5_call_p6_method) {
     dXSARGS;
     SV * name = ST(0);
+    SvREFCNT_inc(name);
     SV * obj = ST(1);
+    SvREFCNT_inc(obj);
 
     AV * args = newAV();
     av_extend(args, items - 2);
     int i;
-    for (i = 0; i < items - 2; i++)
-        if (av_store(args, i, ST(i + 2)) == NULL)
-            SvREFCNT_dec(ST(i + 2)); /* see perlguts Working with AVs */
+    for (i = 0; i < items - 2; i++) {
+        SV * const next = SvREFCNT_inc(ST(i + 2));
+        if (av_store(args, i, next) == NULL)
+            SvREFCNT_dec(next); /* see perlguts Working with AVs */
+    }
 
     STRLEN len;
     char *name_str = SvPV(name, len);
 
     SV * const obj_deref = SvRV(obj);
     MAGIC * const mg = mg_find(obj_deref, '~');
-    ((_perl6_magic*)(mg->mg_ptr))->call_p6_method(name_str, newRV_noinc((SV *) args));
+    ((_perl6_magic*)(mg->mg_ptr))->call_p6_method(name_str, newRV((SV *) args));
     SPAGAIN; /* refresh local stack pointer, could have been modified by Perl 5 code called from Perl 6 */
     XSRETURN(0);
 }
