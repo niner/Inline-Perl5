@@ -3,7 +3,7 @@
 use v6;
 use Inline::Perl5;
 
-say "1..11";
+say "1..12";
 
 my $i = p5_init_perl();
 say $i.run('
@@ -74,6 +74,11 @@ sub test_hash {
         and $h->{b}{c}[0] == 4
         and $h->{b}{c}[1] == 3
     );
+}
+
+sub test_foo {
+    my ($self, $foo) = @_;
+    return $foo->test;
 }
 
 package Foo;
@@ -154,6 +159,13 @@ if ($i.call('test_hash', 'main', {a => 2, b => {c => [4, 3]}}) == 1) {
 }
 else {
     say "not ok 11 - Passing hashes to Perl 5";
+}
+
+if ($i.call('test_foo', 'main', $i.call('new', 'Foo', 6)) == 6) {
+    say "ok 12 - Passing Perl 5 objects back from Perl 6";
+}
+else {
+    say "not ok 12 - Passing Perl 5 objects back from Perl 6";
 }
 
 $i.DESTROY;

@@ -114,6 +114,9 @@ class PerlInterpreter is repr('CPointer') {
     multi method p6_to_p5(Str:D $value) returns OpaquePointer {
         return p5_str_to_sv(self, $value);
     }
+    multi method p6_to_p5(Perl5Object $value) returns OpaquePointer {
+        return $value.ptr;
+    }
     multi method p6_to_p5(OpaquePointer $value) returns OpaquePointer {
         return $value;
     }
