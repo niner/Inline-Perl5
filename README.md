@@ -30,7 +30,7 @@ you have to build it as:
 
     perlbrew install perl-5.20.0 -Duseshrplib
 
-and then build Inline::Perl6 with
+and then build Inline::Perl5 with
 
     make
 
