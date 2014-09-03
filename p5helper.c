@@ -231,7 +231,8 @@ XS(p5_call_p6_method) {
     }
 
     STRLEN len;
-    char *name_str = SvPV(name, len);
+    char * const name_pv  = SvPV(name, len);
+    char * const name_str = savepvn(name_pv, len);
 
     SV * const obj_deref = SvRV(obj);
     MAGIC * const mg = mg_find(obj_deref, '~');

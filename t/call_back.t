@@ -10,10 +10,12 @@ $i.run(q/
 
     sub test {
         my ($self, $perl6) = @_;
-        my @retval = $perl6->test('Perl6');
-        is_deeply \@retval, ['Perl6'];
-        my @retval = $perl6->test('Perl', 6);
-        is_deeply \@retval, ['Perl', 6];
+        for (1 .. 100) {
+            my @retval = $perl6->test('Perl6');
+            is_deeply \@retval, ['Perl6'];
+            my @retval = $perl6->test('Perl', 6);
+            is_deeply \@retval, ['Perl', 6];
+        }
     };
 /);
 
