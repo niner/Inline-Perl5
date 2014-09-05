@@ -6,7 +6,7 @@ use Inline::Perl5;
 
 plan 2;
 
-my $i = p5_init_perl();
+my $i = Inline::Perl5.new();
 is $i.run('5;'), 5;
 is $i.run('"Perl 5";'), 'Perl 5';
 $i.DESTROY;

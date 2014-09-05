@@ -6,7 +6,7 @@ use Inline::Perl5;
 
 plan 6;
 
-my $i = p5_init_perl();
+my $i = Inline::Perl5.new();
 $i.run(q[ sub identity { return $_[1] }; ]);
 
 class Foo {

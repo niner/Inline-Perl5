@@ -5,7 +5,7 @@ use Inline::Perl5;
 
 say '1..2';
 
-my $i = p5_init_perl();
+my $i = Inline::Perl5.new();
 
 $i.run('
     use 5.10.0;

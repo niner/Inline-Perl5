@@ -3,8 +3,7 @@
 use v6;
 use Inline::Perl5;
 
-my $i = p5_init_perl();
-$i.init_callbacks();
+my $i = Inline::Perl5.new();
 $i.run(q/
     use Test::More;
 
