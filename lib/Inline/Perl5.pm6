@@ -2,9 +2,17 @@ class Inline::Perl5 is repr('CPointer');
 
 use NativeCall;
 
-my Str $p5helper;
-BEGIN {
-    $p5helper = IO::Path.new($?FILE).directory ~ '/p5helper.so';
+sub native(Sub $sub) {
+    my $so = 'p5helper.so';
+    my Str $path;
+    for @*INC {
+        if ($_ ~ "/Inline/$so").IO ~~ :f {
+            $path = $_ ~ "/Inline/$so";
+            trait_mod:<is>($sub, :native($path));
+            return;
+        }
+    }
+    die "unable to find $so";
 }
 
 class Perl5Object { ... }
@@ -17,98 +25,98 @@ class X::Inline::Perl5::Unmarshallable is Exception {
 }
 
 sub p5_init_perl()
-    is native($p5helper)
     returns Inline::Perl5 { * }
+    native(&p5_init_perl);
 sub p5_SvIOK(Inline::Perl5, OpaquePointer)
-    is native($p5helper)
     returns Int { * }
+    native(&p5_SvIOK);
 sub p5_SvPOK(Inline::Perl5, OpaquePointer)
-    is native($p5helper)
     returns Int { * }
+    native(&p5_SvPOK);
 sub p5_is_array(Inline::Perl5, OpaquePointer)
-    is native($p5helper)
     returns Int { * }
+    native(&p5_is_array);
 sub p5_is_hash(Inline::Perl5, OpaquePointer)
-    is native($p5helper)
     returns Int { * }
+    native(&p5_is_hash);
 sub p5_is_undef(Inline::Perl5, OpaquePointer)
-    is native($p5helper)
     returns Int { * }
+    native(&p5_is_undef);
 sub p5_sv_to_char_star(Inline::Perl5, OpaquePointer)
-    is native($p5helper)
     returns Str { * }
+    native(&p5_sv_to_char_star);
 sub p5_sv_to_av(Inline::Perl5, OpaquePointer)
-    is native($p5helper)
     returns OpaquePointer { * }
+    native(&p5_sv_to_av);
 sub p5_sv_to_hv(Inline::Perl5, OpaquePointer)
-    is native($p5helper)
     returns OpaquePointer { * }
+    native(&p5_sv_to_hv);
 sub p5_int_to_sv(Inline::Perl5, Int)
-    is native($p5helper)
     returns OpaquePointer { * }
+    native(&p5_int_to_sv);
 sub p5_str_to_sv(Inline::Perl5, Str)
-    is native($p5helper)
     returns OpaquePointer { * }
+    native(&p5_str_to_sv);
 sub p5_av_top_index(Inline::Perl5, OpaquePointer)
-    is native($p5helper)
     returns Int { * }
+    native(&p5_av_top_index);
 sub p5_av_fetch(Inline::Perl5, OpaquePointer, Int)
-    is native($p5helper)
     returns OpaquePointer { * }
+    native(&p5_av_fetch);
 sub p5_av_push(Inline::Perl5, OpaquePointer, OpaquePointer)
-    is native($p5helper)
     { * }
+    native(&p5_av_push);
 sub p5_hv_iterinit(Inline::Perl5, OpaquePointer)
-    is native($p5helper)
     returns Int { * }
+    native(&p5_hv_iterinit);
 sub p5_hv_iternext(Inline::Perl5, OpaquePointer)
-    is native($p5helper)
     returns OpaquePointer { * }
+    native(&p5_hv_iternext);
 sub p5_hv_iterkeysv(Inline::Perl5, OpaquePointer)
-    is native($p5helper)
     returns OpaquePointer { * }
+    native(&p5_hv_iterkeysv);
 sub p5_hv_iterval(Inline::Perl5, OpaquePointer, OpaquePointer)
-    is native($p5helper)
     returns OpaquePointer { * }
+    native(&p5_hv_iterval);
 sub p5_undef(Inline::Perl5)
-    is native($p5helper)
     returns OpaquePointer { * }
+    native(&p5_undef);
 sub p5_newHV(Inline::Perl5)
-    is native($p5helper)
     returns OpaquePointer { * }
+    native(&p5_newHV);
 sub p5_newAV(Inline::Perl5)
-    is native($p5helper)
     returns OpaquePointer { * }
+    native(&p5_newAV);
 sub p5_newRV_noinc(Inline::Perl5, OpaquePointer)
-    is native($p5helper)
     returns OpaquePointer { * }
+    native(&p5_newRV_noinc);
 sub p5_hv_store_ent(Inline::Perl5, OpaquePointer, OpaquePointer, OpaquePointer)
-    is native($p5helper)
     { * }
+    native(&p5_hv_store_ent);
 sub p5_call_function(Inline::Perl5, Str, Int, CArray[OpaquePointer])
-    is native($p5helper)
     returns OpaquePointer { * }
+    native(&p5_call_function);
 sub p5_destruct_perl(Inline::Perl5)
-    is native($p5helper)
     { * }
+    native(&p5_destruct_perl);
 sub p5_sv_iv(Inline::Perl5, OpaquePointer)
-    is native($p5helper)
     returns Int { * }
+    native(&p5_sv_iv);
 sub p5_is_object(Inline::Perl5, OpaquePointer)
-    is native($p5helper)
     returns Int { * }
+    native(&p5_is_object);
 sub p5_eval_pv(Inline::Perl5, Str, Int)
-    is native($p5helper)
     returns OpaquePointer { * }
+    native(&p5_eval_pv);
 sub p5_wrap_p6_object(Inline::Perl5, &unwrap(), &call_method(Str, OpaquePointer --> OpaquePointer))
-    is native($p5helper)
     returns OpaquePointer { * }
+    native(&p5_wrap_p6_object);
 sub p5_is_wrapped_p6_object(Inline::Perl5, OpaquePointer)
-    is native($p5helper)
     returns Int { * }
+    native(&p5_is_wrapped_p6_object);
 sub p5_unwrap_p6_object(Inline::Perl5, OpaquePointer)
-    is native($p5helper)
     { * }
+    native(&p5_unwrap_p6_object);
 
 multi method p6_to_p5(Int:D $value) returns OpaquePointer {
     return p5_int_to_sv(self, $value);

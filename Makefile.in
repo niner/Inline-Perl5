@@ -1,0 +1,8 @@
+.PHONY: clean test
+all: %DESTDIR%/Inline/p5helper.so
+clean:
+	rm %DESTDIR%/Inline/p5helper.so
+%DESTDIR%/Inline/p5helper.so: p5helper.c
+	gcc p5helper.c `perl -MExtUtils::Embed -e ccopts -e ldopts` -shared -o %DESTDIR%/Inline/p5helper.so -fPIC -g
+test: all
+	prove -e 'perl6 -Ilib' t
