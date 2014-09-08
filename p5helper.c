@@ -72,10 +72,17 @@ HV *p5_sv_to_hv(PerlInterpreter *my_perl, SV* sv) {
 
 char *p5_sv_to_char_star(PerlInterpreter *my_perl, SV *sv) {
     STRLEN len;
-    char *ptr;
+    char * const pv  = SvPV(sv, len);
+    char * const str = savepvn(pv, len);
+    return str;
+}
+
+void p5_sv_refcnt_dec(PerlInterpreter *my_perl, SV *sv) {
+    SvREFCNT_dec(sv);
+}
+
+void p5_sv_refcnt_inc(PerlInterpreter *my_perl, SV *sv) {
     SvREFCNT_inc(sv);
-    ptr = SvPV(sv, len);
-    return ptr;
 }
 
 SV *p5_int_to_sv(PerlInterpreter *my_perl, int value) {
@@ -91,7 +98,7 @@ int p5_av_top_index(PerlInterpreter *my_perl, AV *av) {
 }
 
 SV *p5_av_fetch(PerlInterpreter *my_perl, AV *av, int key) {
-    return SvREFCNT_inc(*av_fetch(av, key, 0));
+    return *av_fetch(av, key, 0);
 }
 
 void p5_av_push(PerlInterpreter *my_perl, AV *av, SV *sv) {

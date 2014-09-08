@@ -51,6 +51,12 @@ sub p5_sv_to_av(Inline::Perl5, OpaquePointer)
 sub p5_sv_to_hv(Inline::Perl5, OpaquePointer)
     returns OpaquePointer { ... }
     native(&p5_sv_to_hv);
+sub p5_sv_refcnt_dec(Inline::Perl5, OpaquePointer)
+    { ... }
+    native(&p5_sv_refcnt_dec);
+sub p5_sv_refcnt_inc(Inline::Perl5, OpaquePointer)
+    { ... }
+    native(&p5_sv_refcnt_inc);
 sub p5_int_to_sv(Inline::Perl5, Int)
     returns OpaquePointer { ... }
     native(&p5_int_to_sv);
@@ -205,6 +211,7 @@ method p5_to_p6(OpaquePointer $value) {
             return $unwrapped;
         }
         else {
+            p5_sv_refcnt_inc(self, $value);
             return Perl5Object.new(perl5 => self, ptr => $value);
         }
     }
@@ -240,15 +247,23 @@ method call(Str $function, *@args) {
 
     my $av = p5_call_function(self, $function, $len, @svs);
     my $av_len = p5_av_top_index(self, $av);
-    return
-        if $av_len == -1;
-    return self.p5_to_p6(p5_av_fetch(self, $av, 0))
-        if $av_len == 0;
+
+    if $av_len == -1 {
+        p5_sv_refcnt_dec(self, $av);
+        return;
+    }
+
+    if $av_len == 0 {
+        my $retval = self.p5_to_p6(p5_av_fetch(self, $av, 0));
+        p5_sv_refcnt_dec(self, $av);
+        return $retval;
+    }
 
     my @retvals;
     loop ($i = 0; $i <= $av_len; $i++) {
         @retvals.push(self.p5_to_p6(p5_av_fetch(self, $av, $i)));
     }
+    p5_sv_refcnt_dec(self, $av);
     return @retvals;
 }
 
