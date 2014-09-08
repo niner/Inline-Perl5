@@ -101,7 +101,6 @@ SV *p5_av_fetch(PerlInterpreter *my_perl, AV *av, int key) {
 }
 
 void p5_av_push(PerlInterpreter *my_perl, AV *av, SV *sv) {
-    SvREFCNT_inc(sv);
     av_push(av, sv);
 }
 
