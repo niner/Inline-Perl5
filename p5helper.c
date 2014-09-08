@@ -120,8 +120,8 @@ SV *p5_hv_iterval(PerlInterpreter *my_perl, HV *hv, HE *entry) {
     return hv_iterval(hv, entry);
 }
 
-void p5_hv_store_ent(PerlInterpreter *my_perl, HV *hv, SV *key, SV *val) {
-    hv_store_ent(hv, key, val, 0);
+void p5_hv_store(PerlInterpreter *my_perl, HV *hv, const char *key, SV *val) {
+    hv_store(hv, key, strlen(key), val, 0);
 }
 
 SV *p5_undef(PerlInterpreter *my_perl) {

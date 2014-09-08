@@ -96,9 +96,9 @@ sub p5_newAV(Inline::Perl5)
 sub p5_newRV_noinc(Inline::Perl5, OpaquePointer)
     returns OpaquePointer { ... }
     native(&p5_newRV_noinc);
-sub p5_hv_store_ent(Inline::Perl5, OpaquePointer, OpaquePointer, OpaquePointer)
+sub p5_hv_store(Inline::Perl5, OpaquePointer, Str, OpaquePointer)
     { ... }
-    native(&p5_hv_store_ent);
+    native(&p5_hv_store);
 sub p5_call_function(Inline::Perl5, Str, Int, CArray[OpaquePointer])
     returns OpaquePointer { ... }
     native(&p5_call_function);
@@ -161,9 +161,8 @@ multi method p6_to_p5(Any:D $value) {
 multi method p6_to_p5(Hash:D $value) returns OpaquePointer {
     my $hv = p5_newHV(self);
     for %$value -> $item {
-        my $key = p5_str_to_sv(self, $item.key);
         my $value = self.p6_to_p5($item.value);
-        p5_hv_store_ent(self, $hv, $key, $value);
+        p5_hv_store(self, $hv, $item.key, $value);
     }
     return p5_newRV_noinc(self, $hv);
 }
