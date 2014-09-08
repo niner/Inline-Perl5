@@ -158,8 +158,7 @@ AV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]) 
     PUSHMARK(SP);
 
     for (i = 0; i < len; i++) {
-        SvREFCNT_inc(args[i]);
-        XPUSHs(args[i]);
+        XPUSHs(sv_2mortal(args[i]));
     }
 
     PUTBACK;
