@@ -73,8 +73,7 @@ HV *p5_sv_to_hv(PerlInterpreter *my_perl, SV* sv) {
 char *p5_sv_to_char_star(PerlInterpreter *my_perl, SV *sv) {
     STRLEN len;
     char * const pv  = SvPV(sv, len);
-    char * const str = savepvn(pv, len);
-    return str;
+    return pv;
 }
 
 void p5_sv_refcnt_dec(PerlInterpreter *my_perl, SV *sv) {
