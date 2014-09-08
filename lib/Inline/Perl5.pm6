@@ -140,9 +140,7 @@ multi method p6_to_p5(Any:U $value) returns OpaquePointer {
     return p5_undef(self);
 }
 my $unwrapped;
-my @objects;
 multi method p6_to_p5(Any:D $value) {
-    @objects.push($value);
     return p5_wrap_p6_object(
         self,
         -> {

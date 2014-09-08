@@ -201,7 +201,7 @@ SV *p5_wrap_p6_object(PerlInterpreter *my_perl, void *(*unwrap)(), SV *(*call_p6
     sv_magic(inst, inst, PERL_MAGIC_ext, (char *) &priv, sizeof(priv));
     MAGIC * const mg = mg_find(inst, PERL_MAGIC_ext);
 
-    return SvREFCNT_inc(inst_ptr);
+    return inst_ptr;
 }
 
 int p5_is_wrapped_p6_object(PerlInterpreter *my_perl, SV *obj) {
