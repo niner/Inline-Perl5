@@ -221,9 +221,7 @@ void p5_unwrap_p6_object(PerlInterpreter *my_perl, SV *obj) {
 XS(p5_call_p6_method) {
     dXSARGS;
     SV * name = ST(0);
-    SvREFCNT_inc(name);
     SV * obj = ST(1);
-    SvREFCNT_inc(obj);
 
     AV * args = newAV();
     av_extend(args, items - 2);
@@ -240,12 +238,13 @@ XS(p5_call_p6_method) {
 
     SV * const obj_deref = SvRV(obj);
     MAGIC * const mg = mg_find(obj_deref, '~');
-    SV * retval = ((_perl6_magic*)(mg->mg_ptr))->call_p6_method(name_str, newRV((SV *) args)); //FIXME: should be newRV_noinc! args already has refcnt of 1
+    SV * retval = ((_perl6_magic*)(mg->mg_ptr))->call_p6_method(name_str, newRV_noinc((SV *) args));
     SPAGAIN; /* refresh local stack pointer, could have been modified by Perl 5 code called from Perl 6 */
+    SvREFCNT_dec(args);
+    sv_2mortal(retval);
     sp -= items;
 
     if (GIMME_V == G_VOID) {
-        SvREFCNT_dec(retval);
         XSRETURN_EMPTY;
     }
     if (GIMME_V == G_ARRAY) {
@@ -253,13 +252,13 @@ XS(p5_call_p6_method) {
         int const len = av_len(av) + 1;
         int i;
         for (i = 0; i < len; i++) {
-            XPUSHs(SvREFCNT_inc(av_shift(av)));
+            XPUSHs(sv_2mortal(av_shift(av)));
         }
         XSRETURN(len);
     }
     else {
         AV* const av = (AV*)SvRV(retval);
-        XPUSHs(SvREFCNT_inc(av_shift(av)));
+        XPUSHs(sv_2mortal(av_shift(av)));
         XSRETURN(1);
     }
 }
