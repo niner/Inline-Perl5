@@ -294,6 +294,10 @@ class Perl5Object {
     );
 
     method sink() { self }
+
+    method DESTROY {
+        p5_sv_refcnt_dec($.perl5, $.ptr);
+    }
 }
 
 
