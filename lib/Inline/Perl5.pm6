@@ -158,6 +158,9 @@ sub p5_is_wrapped_p6_object(Perl5Interpreter, OpaquePointer)
 sub p5_unwrap_p6_object(Perl5Interpreter, OpaquePointer)
     returns Int { ... }
     native(&p5_unwrap_p6_object);
+sub p5_terminate()
+    { ... }
+    native(&p5_terminate);
 
 multi method p6_to_p5(Int:D $value) returns OpaquePointer {
     return p5_int_to_sv($!p5, $value);
@@ -354,4 +357,8 @@ method BUILD {
         return self.p6_to_p5(@retvals);
         CATCH { default { say $_; } }
     }
+}
+
+END {
+    p5_terminate;
 }

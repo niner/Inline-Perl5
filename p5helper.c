@@ -15,9 +15,12 @@ EXTERN_C void xs_init(pTHX) {
     newXS("Perl6::Object::call_method", p5_call_p6_method, file);
 }
 
+static int inited = 0;
+
 PerlInterpreter *p5_init_perl() {
     char *embedding[] = { "", "-e", "0" };
-    PERL_SYS_INIT3(0, NULL, NULL);
+    if (!inited++)
+        PERL_SYS_INIT3(0, NULL, NULL);
     PerlInterpreter *my_perl = perl_alloc();
     perl_construct( my_perl );
     perl_parse(my_perl, xs_init, 3, embedding, NULL);
@@ -29,7 +32,11 @@ PerlInterpreter *p5_init_perl() {
 void p5_destruct_perl(PerlInterpreter *my_perl) {
     perl_destruct(my_perl);
     perl_free(my_perl);
-    PERL_SYS_TERM();
+}
+
+void p5_terminate() {
+    if (inited)
+        PERL_SYS_TERM();
 }
 
 int p5_SvIOK(PerlInterpreter *my_perl, SV* sv) {
