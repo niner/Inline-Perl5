@@ -320,7 +320,8 @@ method sv_refcnt_dec($obj) {
 }
 
 submethod DESTROY {
-    p5_destruct_perl($!p5);
+    p5_destruct_perl($!p5) if $!p5;
+    $!p5 = Perl5Interpreter;
 }
 
 class Perl5Object {
