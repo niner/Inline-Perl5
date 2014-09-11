@@ -1,5 +1,7 @@
 class Inline::Perl5 is repr('CPointer');
 
+my $i;
+
 use NativeCall;
 
 sub native(Sub $sub) {
@@ -21,6 +23,33 @@ class X::Inline::Perl5::Unmarshallable is Exception {
     has Mu $.object;
     method message() {
         "Don't know how to pass object of type {$.object.^name} to Perl 5 code";
+    }
+}
+
+class ObjectKeeper {
+    has @!objects;
+    has $!last_free = -1;
+
+    method keep(Any:D $value) returns Int {
+        if $!last_free != -1 {
+            my $index = $!last_free;
+            $!last_free = @!objects[$!last_free];
+            @!objects[$index] = $value;
+            return $index;
+        }
+        else {
+            @!objects.push($value);
+            return @!objects.end;
+        }
+    }
+
+    method get(Int $index) returns Any:D {
+        return @!objects[$index];
+    }
+
+    method free(Int $index) {
+        @!objects[$index] = $!last_free;
+        $!last_free = $index;
     }
 }
 
@@ -140,23 +169,27 @@ multi method p6_to_p5(Any:U $value) returns OpaquePointer {
     return p5_undef(self);
 }
 
-my @objects;
+my $objects = ObjectKeeper.new;
+
+my $call_method = sub (Int $index, Str $name, OpaquePointer $args) returns OpaquePointer {
+    my $p6obj = $objects.get($index);
+    my @retvals = $p6obj."$name"(|$i.p5_array_to_p6_array($args));
+    return $i.p6_to_p5(@retvals);
+    CATCH { default { say $_; } }
+}
+
+sub free_p6_object(Int $index) {
+    $objects.free($index);
+}
 
 multi method p6_to_p5(Any:D $value) {
-    @objects.push($value);
-    my $index = @objects.elems - 1;
+    my $index = $objects.keep($value);
 
     return p5_wrap_p6_object(
         self,
         $index,
-        sub (Int $index, Str $name, OpaquePointer $args) returns OpaquePointer {
-            my @retvals = @objects[$index]."$name"(|self!p5_array_to_p6_array($args));
-            return self.p6_to_p5(@retvals);
-            CATCH { default { say $_; } }
-        },
-        -> Int $index {
-            @objects[$index] = Any;
-        },
+        $call_method,
+        &free_p6_object,
     );
 
     X::Inline::Perl5::Unmarshallable.new(
@@ -179,7 +212,7 @@ multi method p6_to_p5(Positional:D $value) returns OpaquePointer {
     return p5_newRV_noinc(self, $av);
 }
 
-method !p5_array_to_p6_array(OpaquePointer $sv) {
+method p5_array_to_p6_array(OpaquePointer $sv) {
     my $av = p5_sv_to_av(self, $sv);
     my $av_len = p5_av_top_index(self, $av);
 
@@ -211,7 +244,7 @@ method !p5_hash_to_p6_hash(OpaquePointer $sv) {
 method p5_to_p6(OpaquePointer $value) {
     if p5_is_object(self, $value) {
         if p5_is_wrapped_p6_object(self, $value) {
-            return @objects[p5_unwrap_p6_object(self, $value)];
+            return $objects.get(p5_unwrap_p6_object(self, $value));
         }
         else {
             p5_sv_refcnt_inc(self, $value);
@@ -225,7 +258,7 @@ method p5_to_p6(OpaquePointer $value) {
         return p5_sv_to_char_star(self, $value);
     }
     elsif p5_is_array(self, $value) {
-        return self!p5_array_to_p6_array($value);
+        return self.p5_array_to_p6_array($value);
     }
     elsif p5_is_hash(self, $value) {
         return self!p5_hash_to_p6_hash($value);
@@ -308,7 +341,7 @@ class Perl5Object {
 
 
 method new() returns Inline::Perl5 {
-    my $i = p5_init_perl();
+    $i = p5_init_perl();
     $i.init_callbacks();
     return $i;
 }
