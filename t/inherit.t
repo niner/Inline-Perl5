@@ -5,16 +5,19 @@ use Inline::Perl5;
 use Test;
 use NativeCall;
 
-plan 1;
+plan 2;
 
 my $i = Inline::Perl5.new();
 $i.run(q:heredoc/PERL5/);
 package Foo;
 
-sub new {
-    my ($class) = @_;
-    return bless {}, $class;
-}
+use Moose;
+
+has foo => (
+    is      => 'ro',
+    isa     => 'Str',
+    default => 'Moose!',
+);
 
 sub test {
     my ($self) = @_;
@@ -47,6 +50,7 @@ class Bar {
     );
 }
 
+is(Bar.new.foo, 'Moose!');
 is(Bar.new.test, 'Perl6');
 
 # vim: ft=perl6
