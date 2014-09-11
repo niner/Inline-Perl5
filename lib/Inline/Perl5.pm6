@@ -137,6 +137,9 @@ sub p5_hv_store(Perl5Interpreter, OpaquePointer, Str, OpaquePointer)
 sub p5_call_function(Perl5Interpreter, Str, Int, CArray[OpaquePointer])
     returns OpaquePointer { ... }
     native(&p5_call_function);
+sub p5_call_method(Perl5Interpreter, Str, OpaquePointer, Int, CArray[OpaquePointer])
+    returns OpaquePointer { ... }
+    native(&p5_call_method);
 sub p5_destruct_perl(Perl5Interpreter)
     { ... }
     native(&p5_destruct_perl);
@@ -284,6 +287,35 @@ method call(Str $function, *@args) {
     }
 
     my $av = p5_call_function($!p5, $function, $len, @svs);
+    my $av_len = p5_av_top_index($!p5, $av);
+
+    if $av_len == -1 {
+        p5_sv_refcnt_dec($!p5, $av);
+        return;
+    }
+
+    if $av_len == 0 {
+        my $retval = self.p5_to_p6(p5_av_fetch($!p5, $av, 0));
+        p5_sv_refcnt_dec($!p5, $av);
+        return $retval;
+    }
+
+    my @retvals;
+    loop ($i = 0; $i <= $av_len; $i++) {
+        @retvals.push(self.p5_to_p6(p5_av_fetch($!p5, $av, $i)));
+    }
+    p5_sv_refcnt_dec($!p5, $av);
+    return @retvals;
+}
+
+method invoke(Str $function, $obj, *@args) {
+    my $len = @args.elems;
+    my @svs := CArray[OpaquePointer].new();
+    loop (my $i = 0; $i < $len; $i++) {
+        @svs[$i] = self.p6_to_p5(@args[$i]);
+    }
+
+    my $av = p5_call_method($!p5, $function, $obj, $len, @svs);
     my $av_len = p5_av_top_index($!p5, $av);
 
     if $av_len == -1 {

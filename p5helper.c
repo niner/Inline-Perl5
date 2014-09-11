@@ -149,6 +149,47 @@ SV *p5_eval_pv(PerlInterpreter *my_perl, const char* p, I32 croak_on_error) {
     return eval_pv(p, croak_on_error);
 }
 
+AV *p5_call_method(PerlInterpreter *my_perl, char *name, SV *obj, int len, SV *args[]) {
+    dSP;
+    int i;
+    int count;
+    AV * const retval = newAV();
+    int flags = G_ARRAY;
+
+    ENTER;
+    SAVETMPS;
+
+    PUSHMARK(SP);
+
+    for (i = 0; i < len; i++) {
+        XPUSHs(sv_2mortal(args[i]));
+    }
+
+    PUTBACK;
+
+    HV * const pkg = SvSTASH((SV*)SvRV(obj));
+    GV * const gv = Perl_gv_fetchmethod_autoload(aTHX_ pkg, name, FALSE);
+    SV * const rv = sv_2mortal(newRV((SV*)GvCV(gv)));
+
+    count = call_sv(rv, flags);
+    SPAGAIN;
+
+    av_extend(retval, count - 1);
+    for (i = count - 1; i >= 0; i--) {
+        SV * const next = POPs;
+        SvREFCNT_inc(next);
+
+        if (av_store(retval, i, next) == NULL)
+            SvREFCNT_dec(next); /* see perlguts Working with AVs */
+    }
+
+    PUTBACK;
+    FREETMPS;
+    LEAVE;
+
+    return retval;
+}
+
 AV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]) {
     dSP;
     int i;
