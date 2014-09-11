@@ -114,14 +114,14 @@ sub p5_is_object(Inline::Perl5, OpaquePointer)
 sub p5_eval_pv(Inline::Perl5, Str, Int)
     returns OpaquePointer { ... }
     native(&p5_eval_pv);
-sub p5_wrap_p6_object(Inline::Perl5, &unwrap(), &call_method(Str, OpaquePointer --> OpaquePointer))
+sub p5_wrap_p6_object(Inline::Perl5, Int, &call_method(Int, Str, OpaquePointer --> OpaquePointer), &free_p6_object(Int))
     returns OpaquePointer { ... }
     native(&p5_wrap_p6_object);
 sub p5_is_wrapped_p6_object(Inline::Perl5, OpaquePointer)
     returns Int { ... }
     native(&p5_is_wrapped_p6_object);
 sub p5_unwrap_p6_object(Inline::Perl5, OpaquePointer)
-    { ... }
+    returns Int { ... }
     native(&p5_unwrap_p6_object);
 
 multi method p6_to_p5(Int:D $value) returns OpaquePointer {
@@ -139,19 +139,26 @@ multi method p6_to_p5(OpaquePointer $value) returns OpaquePointer {
 multi method p6_to_p5(Any:U $value) returns OpaquePointer {
     return p5_undef(self);
 }
-my $unwrapped;
+
+my @objects;
+
 multi method p6_to_p5(Any:D $value) {
+    @objects.push($value);
+    my $index = @objects.elems - 1;
+
     return p5_wrap_p6_object(
         self,
-        -> {
-            $unwrapped = $value
-        },
-        sub (Str $name, OpaquePointer $args) returns OpaquePointer {
-            my @retvals = $value."$name"(|self!p5_array_to_p6_array($args));
+        $index,
+        sub (Int $index, Str $name, OpaquePointer $args) returns OpaquePointer {
+            my @retvals = @objects[$index]."$name"(|self!p5_array_to_p6_array($args));
             return self.p6_to_p5(@retvals);
             CATCH { default { say $_; } }
         },
+        -> Int $index {
+            @objects[$index] = Any;
+        },
     );
+
     X::Inline::Perl5::Unmarshallable.new(
         :object($value),
     ).throw;
@@ -204,8 +211,7 @@ method !p5_hash_to_p6_hash(OpaquePointer $sv) {
 method p5_to_p6(OpaquePointer $value) {
     if p5_is_object(self, $value) {
         if p5_is_wrapped_p6_object(self, $value) {
-            p5_unwrap_p6_object(self, $value);
-            return $unwrapped;
+            return @objects[p5_unwrap_p6_object(self, $value)];
         }
         else {
             p5_sv_refcnt_inc(self, $value);

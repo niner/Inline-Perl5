@@ -183,23 +183,46 @@ AV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]) 
 
 typedef struct {
     I32 key; /* to make sure it came from Inline */
-    void *(*unwrap)();
-    SV *(*call_p6_method)(char * , SV *);
+    SV *(*call_p6_method)(int, char * , SV *);
+    void (*free_p6_object)(int);
 } _perl6_magic;
 
 #define PERL6_MAGIC_KEY 0x0DD515FE
 
-SV *p5_wrap_p6_object(PerlInterpreter *my_perl, void *(*unwrap)(), SV *(*call_p6_method)(char * , SV *)) {
+int p5_free_perl6_obj(pTHX_ SV* obj, MAGIC *mg)
+{
+    if (mg) {
+        int index = SvIV(obj);
+        ((_perl6_magic*)(mg->mg_ptr))->free_p6_object(index);
+    }
+    return 0;
+}
+
+MGVTBL p5_inline_mg_vtbl = {
+    0x0,
+    0x0,
+    0x0,
+    0x0,
+    &p5_free_perl6_obj,
+    0x0,
+    0x0,
+    0x0
+};
+
+SV *p5_wrap_p6_object(PerlInterpreter *my_perl, int i, SV *(*call_p6_method)(int, char * , SV *), void (*free_p6_object)(int)) {
     SV * const inst_ptr = newSViv(0);
     SV * const inst = newSVrv(inst_ptr, "Perl6::Object");;
     _perl6_magic priv;
 
+    sv_setiv(inst, (IV) i);
+
     /* set up magic */
     priv.key = PERL6_MAGIC_KEY;
-    priv.unwrap = unwrap;
     priv.call_p6_method = call_p6_method;
+    priv.free_p6_object = free_p6_object;
     sv_magic(inst, inst, PERL_MAGIC_ext, (char *) &priv, sizeof(priv));
     MAGIC * const mg = mg_find(inst, PERL_MAGIC_ext);
+    mg->mg_virtual = &p5_inline_mg_vtbl;
 
     return inst_ptr;
 }
@@ -211,11 +234,9 @@ int p5_is_wrapped_p6_object(PerlInterpreter *my_perl, SV *obj) {
     return (mg && ((_perl6_magic*)(mg->mg_ptr))->key == PERL6_MAGIC_KEY);
 }
 
-void p5_unwrap_p6_object(PerlInterpreter *my_perl, SV *obj) {
+int p5_unwrap_p6_object(PerlInterpreter *my_perl, SV *obj) {
     SV * const obj_deref = SvRV(obj);
-    /* check for magic! */
-    MAGIC * const mg = mg_find(obj_deref, '~');
-    ((_perl6_magic*)(mg->mg_ptr))->unwrap();
+    return SvIV(obj_deref);
 }
 
 XS(p5_call_p6_method) {
@@ -238,7 +259,7 @@ XS(p5_call_p6_method) {
 
     SV * const obj_deref = SvRV(obj);
     MAGIC * const mg = mg_find(obj_deref, '~');
-    SV * retval = ((_perl6_magic*)(mg->mg_ptr))->call_p6_method(name_str, newRV_noinc((SV *) args));
+    SV * retval = ((_perl6_magic*)(mg->mg_ptr))->call_p6_method(SvIV(obj_deref), name_str, newRV_noinc((SV *) args));
     SPAGAIN; /* refresh local stack pointer, could have been modified by Perl 5 code called from Perl 6 */
     SvREFCNT_dec(args);
     sv_2mortal(retval);
