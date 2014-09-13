@@ -149,7 +149,45 @@ SV *p5_eval_pv(PerlInterpreter *my_perl, const char* p, I32 croak_on_error) {
     return eval_pv(p, croak_on_error);
 }
 
-AV *p5_call_method(PerlInterpreter *my_perl, char *name, SV *obj, int len, SV *args[]) {
+AV *p5_call_package_method(PerlInterpreter *my_perl, char *package, char *name, int len, SV *args[]) {
+    dSP;
+    int i;
+    int count;
+    AV * const retval = newAV();
+    int flags = G_ARRAY;
+
+    ENTER;
+    SAVETMPS;
+
+    PUSHMARK(SP);
+
+    XPUSHs(newSVpv(package, 0));
+    for (i = 0; i < len; i++) {
+        XPUSHs(sv_2mortal(args[i]));
+    }
+
+    PUTBACK;
+
+    count = call_method(name, flags);
+    SPAGAIN;
+
+    av_extend(retval, count - 1);
+    for (i = count - 1; i >= 0; i--) {
+        SV * const next = POPs;
+        SvREFCNT_inc(next);
+
+        if (av_store(retval, i, next) == NULL)
+            SvREFCNT_dec(next); /* see perlguts Working with AVs */
+    }
+
+    PUTBACK;
+    FREETMPS;
+    LEAVE;
+
+    return retval;
+}
+
+AV *p5_call_method(PerlInterpreter *my_perl, SV *obj, char *name, int len, SV *args[]) {
     dSP;
     int i;
     int count;
@@ -208,7 +246,7 @@ AV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]) 
 
     PUTBACK;
 
-    count = perl_call_method(name, flags);
+    count = call_pv(name, flags);
     SPAGAIN;
 
     av_extend(retval, count - 1);

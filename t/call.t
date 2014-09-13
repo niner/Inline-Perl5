@@ -99,16 +99,16 @@ sub sum {
 }
 ');
 
-$i.call('main::test');
-$i.call('main::test_int_params', 2, 1);
-$i.call('main::test_str_params', 'Hello', 'Perl 5');
-if ($i.call('main::test_int_retval') == 1) {
+$i.call('test');
+$i.call('test_int_params', 2, 1);
+$i.call('test_str_params', 'Hello', 'Perl 5');
+if ($i.call('test_int_retval') == 1) {
     say "ok 4 - return one int";
 }
 else {
     say "not ok 4 - return one int";
 }
-my @retvals = $i.call('main::test_int_retvals');
+my @retvals = $i.call('test_int_retvals');
 if (@retvals == 3 and @retvals[0] == 3 and @retvals[1] == 1 and @retvals[2] == 2) {
     say "ok 5 - return one int";
 }
@@ -117,13 +117,13 @@ else {
     say "    got: {@retvals}";
     say "    expected: 3, 1, 2";
 }
-if ($i.call('main::test_str_retval') eq 'Hello Perl 6!') {
+if ($i.call('test_str_retval') eq 'Hello Perl 6!') {
     say "ok 6 - return one string";
 }
 else {
     say "not ok 6 - return one string";
 }
-@retvals = $i.call('main::test_mixed_retvals');
+@retvals = $i.call('test_mixed_retvals');
 if (@retvals == 3 and @retvals[0] eq 'Hello' and @retvals[1] eq 'Perl' and @retvals[2] == 6) {
     say "ok 7 - return mixed values";
 }
@@ -133,14 +133,14 @@ else {
     say "    expected: 'Hello', 'Perl', 6";
 }
 
-if ($i.call('new', 'Foo', 1).test() == 1) {
+if ($i.call('Foo::new', 'Foo', 1).test() == 1) {
     say "ok 8 - Perl 5 method call";
 }
 else {
     say "not ok 8 - Perl 5 method call";
 }
 
-if ($i.call('new', 'Foo', 1).sum(3, 1) == 4) {
+if ($i.call('Foo::new', 'Foo', 1).sum(3, 1) == 4) {
     say "ok 9 - Perl 5 method call with parameters";
 }
 else {
@@ -161,7 +161,7 @@ else {
     say "not ok 11 - Passing hashes to Perl 5";
 }
 
-if ($i.call('test_foo', 'main', $i.call('new', 'Foo', 6)) == 6) {
+if ($i.call('test_foo', 'main', $i.call('Foo::new', 'Foo', 6)) == 6) {
     say "ok 12 - Passing Perl 5 objects back from Perl 6";
 }
 else {

@@ -8,7 +8,7 @@ $i.run(q/
     use Test::More;
 
     sub test {
-        my ($self, $perl6) = @_;
+        my ($perl6) = @_;
         for (1 .. 100) {
             my @retval = $perl6->test('Perl6');
             is_deeply \@retval, ['Perl6'];
@@ -26,7 +26,7 @@ class Foo {
 
 my $foo = Foo.new;
 
-$i.call('test', 'main', $foo);
+$i.call('test', $foo);
 
 $i.run(q/
     done_testing;

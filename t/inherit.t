@@ -34,7 +34,7 @@ class Bar {
     has $.parent is rw;
 
     method BUILD() {
-        $.parent = $i.call('new', 'Foo');
+        $.parent = $i.invoke('Foo', 'new');
     }
 
     method bar {
@@ -44,7 +44,7 @@ class Bar {
     Bar.^add_fallback(-> $, $ { True },
         method ($name) {
             -> \self, |args {
-                $.parent.perl5.invoke($name, $.parent.ptr, self, args.list);
+                $.parent.perl5.invoke($.parent.ptr, $name, self, args.list);
             }
         }
     );

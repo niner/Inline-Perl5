@@ -137,9 +137,12 @@ sub p5_hv_store(Perl5Interpreter, OpaquePointer, Str, OpaquePointer)
 sub p5_call_function(Perl5Interpreter, Str, Int, CArray[OpaquePointer])
     returns OpaquePointer { ... }
     native(&p5_call_function);
-sub p5_call_method(Perl5Interpreter, Str, OpaquePointer, Int, CArray[OpaquePointer])
+sub p5_call_method(Perl5Interpreter, OpaquePointer, Str, Int, CArray[OpaquePointer])
     returns OpaquePointer { ... }
     native(&p5_call_method);
+sub p5_call_package_method(Perl5Interpreter, Str, Str, Int, CArray[OpaquePointer])
+    returns OpaquePointer { ... }
+    native(&p5_call_package_method);
 sub p5_destruct_perl(Perl5Interpreter)
     { ... }
     native(&p5_destruct_perl);
@@ -311,11 +314,21 @@ method !unpack_return_values($av) {
 }
 
 method call(Str $function, *@args) {
-    return self!unpack_return_values(p5_call_function($!p5, $function, |self!setup_arguments(@args)));
+    return self!unpack_return_values(
+        p5_call_function($!p5, $function, |self!setup_arguments(@args))
+    );
 }
 
-method invoke(Str $function, $obj, *@args) {
-    return self!unpack_return_values(p5_call_method($!p5, $function, $obj, |self!setup_arguments(@args)));
+multi method invoke(Str $package, Str $function, *@args) {
+    return self!unpack_return_values(
+        p5_call_package_method($!p5, $package, $function, |self!setup_arguments(@args))
+    );
+}
+
+multi method invoke(OpaquePointer $obj, Str $function, *@args) {
+    return self!unpack_return_values(
+        p5_call_method($!p5, $obj, $function, |self!setup_arguments(@args))
+    );
 }
 
 method init_callbacks {
@@ -347,7 +360,7 @@ class Perl5Object {
     Perl5Object.^add_fallback(-> $, $ { True },
         method ($name ) {
             -> \self, |args {
-                $.perl5.call($name, $.ptr, args.list);
+                $.perl5.invoke($.ptr, $name, self, args.list);
             }
         }
     );
