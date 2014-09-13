@@ -5,7 +5,7 @@ use Inline::Perl5;
 use Test;
 use NativeCall;
 
-plan 4;
+plan 5;
 
 my $i = Inline::Perl5.new();
 
@@ -46,6 +46,17 @@ sub test_inherited {
 sub baz {
     return "Perl5";
 }
+
+package Bar;
+
+use Moose;
+
+sub test {
+    my ($self) = @_;
+
+    return $self->qux;
+}
+
 PERL5
 
 class Bar does Inline::Perl5::Perl5Parent['Foo'] {
@@ -67,6 +78,15 @@ class Baz does Inline::Perl5::Perl5Parent['Foo'] {
 }
 
 is(Baz.new(perl5 => $i).test, 'Perl6!');
+
+class Qux does Inline::Perl5::Perl5Parent['Bar'] {
+    method qux {
+        return "Perl6!!";
+    }
+
+}
+
+is(Qux.new(perl5 => $i).test, 'Perl6!!');
 
 # vim: ft=perl6
 

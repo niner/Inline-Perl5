@@ -411,7 +411,7 @@ role Perl5Parent[$package] {
 
     submethod BUILD(:$perl5) {
         $!perl5 = $perl5;
-        $!parent = $perl5.invoke('Foo', 'new');
+        $!parent = $perl5.invoke($package, 'new');
         $perl5.rebless($!parent);
 
         unless $fallback_added {
@@ -419,7 +419,7 @@ role Perl5Parent[$package] {
             ::?CLASS.^add_fallback(-> $, $ { True },
                 method ($name) {
                     -> \self, |args {
-                        $.parent.perl5.invoke('Foo', $.parent.ptr, $name, self, args.list);
+                        $.parent.perl5.invoke($package, $.parent.ptr, $name, self, args.list);
                     }
                 }
             );
