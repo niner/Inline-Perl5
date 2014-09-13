@@ -407,24 +407,20 @@ method BUILD {
 role Perl5Parent[$package] {
     has $.parent is rw;
     has Inline::Perl5 $.perl5;
-    my $fallback_added = 0;
 
     submethod BUILD(:$perl5) {
         $!perl5 = $perl5;
         $!parent = $perl5.invoke($package, 'new');
         $perl5.rebless($!parent);
-
-        unless $fallback_added {
-            $fallback_added = 1;
-            ::?CLASS.^add_fallback(-> $, $ { True },
-                method ($name) {
-                    -> \self, |args {
-                        $.parent.perl5.invoke($package, $.parent.ptr, $name, self, args.list);
-                    }
-                }
-            );
-        }
     }
+
+    ::?CLASS.HOW.add_fallback(::?CLASS, -> $, $ { True },
+        method ($name) {
+            -> \self, |args {
+                $.parent.perl5.invoke($package, $.parent.ptr, $name, self, args.list);
+            }
+        }
+    );
 }
 
 END {
