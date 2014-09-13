@@ -367,6 +367,10 @@ method rebless(Perl5Object $obj) {
     p5_rebless_object($!p5, $obj.ptr);
 }
 
+method use(Str $module) {
+    self.run("use $module;");
+}
+
 submethod DESTROY {
     p5_destruct_perl($!p5) if $!p5;
     $!p5 = Perl5Interpreter;
