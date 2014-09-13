@@ -2,16 +2,14 @@
 
 Inline::Perl5
 
-
 # SYNOPSIS
 
 ```
     use Inline::Perl5;
     my $i = Inline::Perl5.new();
-    $i.run('use DBI; 1;');
-    my $dbh = $i.call('connect', 'DBI', 'dbi:Pg:database=timemngt');
-    say $dbh.selectall_arrayref('select * from products', {Slice => {}}).perl;
-    $i.DESTROY;
+    $i.use('DBI');
+    my $dbh = $i.invoke('DBI', 'connect', 'dbi:Pg:database=test');
+    my $products = $dbh.selectall_arrayref('select * from products', {Slice => {}});
 ```
 
 # DESCRIPTION
