@@ -5,7 +5,7 @@ use Inline::Perl5;
 use Test;
 use NativeCall;
 
-plan 3;
+plan 4;
 
 my $i = Inline::Perl5.new();
 
@@ -48,30 +48,25 @@ sub baz {
 }
 PERL5
 
-class Bar {
-    has $.parent is rw;
-
-    method BUILD() {
-        $.parent = $i.invoke('Foo', 'new');
-        $i.rebless($.parent);
-    }
-
+class Bar does Inline::Perl5::Perl5Parent['Foo'] {
     method bar {
         return "Perl6";
     }
 
-    Bar.^add_fallback(-> $, $ { True },
-        method ($name) {
-            -> \self, |args {
-                $.parent.perl5.invoke('Foo', $.parent.ptr, $name, self, args.list);
-            }
-        }
-    );
 }
 
-is(Bar.new.test, 'Perl6');
-is(Bar.new.test_inherited, 'Perl5');
-is(Bar.new.foo, 'Moose!');
+is(Bar.new(perl5 => $i).test, 'Perl6');
+is(Bar.new(perl5 => $i).test_inherited, 'Perl5');
+is(Bar.new(perl5 => $i).foo, 'Moose!');
+
+class Baz does Inline::Perl5::Perl5Parent['Foo'] {
+    method bar {
+        return "Perl6!";
+    }
+
+}
+
+is(Baz.new(perl5 => $i).test, 'Perl6!');
 
 # vim: ft=perl6
 
