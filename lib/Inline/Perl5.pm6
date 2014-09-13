@@ -425,6 +425,16 @@ role Perl5Parent[$package] {
     );
 }
 
+my role Perl5Sub[Routine $r, Inline::Perl5 $i] {
+    method postcircumfix:<( )>($args) {
+        $i.call($r.name, $args.list);
+    }
+}
+
+multi trait_mod:<is>(Routine $declarand!, :$p5!) is export(:DEFAULT, :traits) {
+    $declarand does Perl5Sub[$declarand, $p5];
+}
+
 END {
     p5_terminate;
 }
