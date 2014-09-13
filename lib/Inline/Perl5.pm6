@@ -406,10 +406,8 @@ method BUILD {
 
 role Perl5Parent[$package] {
     has $.parent is rw;
-    has Inline::Perl5 $.perl5;
 
     submethod BUILD(:$perl5) {
-        $!perl5 = $perl5;
         $!parent = $perl5.invoke($package, 'new');
         $perl5.rebless($!parent);
     }
