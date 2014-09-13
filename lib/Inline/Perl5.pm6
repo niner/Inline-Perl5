@@ -387,8 +387,8 @@ class Perl5Object {
     method sink() { self }
 
     method DESTROY {
-        $.perl5.sv_refcnt_dec($.ptr) if $.ptr;
-        $.ptr = Any;
+        $!perl5.sv_refcnt_dec($.ptr) if $.ptr;
+        $!ptr = Any;
     }
 }
 
