@@ -279,14 +279,16 @@ method run($perl) {
     return self.p5_to_p6($res);
 }
 
-method call(Str $function, *@args) {
+method !setup_arguments(@args) {
     my $len = @args.elems;
     my @svs := CArray[OpaquePointer].new();
     loop (my $i = 0; $i < $len; $i++) {
         @svs[$i] = self.p6_to_p5(@args[$i]);
     }
+    return $len, @svs;
+}
 
-    my $av = p5_call_function($!p5, $function, $len, @svs);
+method !unpack_return_values($av) {
     my $av_len = p5_av_top_index($!p5, $av);
 
     if $av_len == -1 {
@@ -301,40 +303,19 @@ method call(Str $function, *@args) {
     }
 
     my @retvals;
-    loop ($i = 0; $i <= $av_len; $i++) {
+    loop (my $i = 0; $i <= $av_len; $i++) {
         @retvals.push(self.p5_to_p6(p5_av_fetch($!p5, $av, $i)));
     }
     p5_sv_refcnt_dec($!p5, $av);
     return @retvals;
 }
 
+method call(Str $function, *@args) {
+    return self!unpack_return_values(p5_call_function($!p5, $function, |self!setup_arguments(@args)));
+}
+
 method invoke(Str $function, $obj, *@args) {
-    my $len = @args.elems;
-    my @svs := CArray[OpaquePointer].new();
-    loop (my $i = 0; $i < $len; $i++) {
-        @svs[$i] = self.p6_to_p5(@args[$i]);
-    }
-
-    my $av = p5_call_method($!p5, $function, $obj, $len, @svs);
-    my $av_len = p5_av_top_index($!p5, $av);
-
-    if $av_len == -1 {
-        p5_sv_refcnt_dec($!p5, $av);
-        return;
-    }
-
-    if $av_len == 0 {
-        my $retval = self.p5_to_p6(p5_av_fetch($!p5, $av, 0));
-        p5_sv_refcnt_dec($!p5, $av);
-        return $retval;
-    }
-
-    my @retvals;
-    loop ($i = 0; $i <= $av_len; $i++) {
-        @retvals.push(self.p5_to_p6(p5_av_fetch($!p5, $av, $i)));
-    }
-    p5_sv_refcnt_dec($!p5, $av);
-    return @retvals;
+    return self!unpack_return_values(p5_call_method($!p5, $function, $obj, |self!setup_arguments(@args)));
 }
 
 method init_callbacks {
