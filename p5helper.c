@@ -267,6 +267,7 @@ AV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]) 
 
 typedef struct {
     I32 key; /* to make sure it came from Inline */
+    IV index;
     SV *(*call_p6_method)(int, char * , SV *);
     void (*free_p6_object)(int);
 } _perl6_magic;
@@ -276,8 +277,8 @@ typedef struct {
 int p5_free_perl6_obj(pTHX_ SV* obj, MAGIC *mg)
 {
     if (mg) {
-        int index = SvIV(obj);
-        ((_perl6_magic*)(mg->mg_ptr))->free_p6_object(index);
+        _perl6_magic* const p6mg = mg->mg_ptr;
+        p6mg->free_p6_object(p6mg->index);
     }
     return 0;
 }
@@ -293,15 +294,14 @@ MGVTBL p5_inline_mg_vtbl = {
     0x0
 };
 
-SV *p5_wrap_p6_object(PerlInterpreter *my_perl, int i, SV *(*call_p6_method)(int, char * , SV *), void (*free_p6_object)(int)) {
+SV *p5_wrap_p6_object(PerlInterpreter *my_perl, IV i, SV *(*call_p6_method)(int, char * , SV *), void (*free_p6_object)(int)) {
     SV * const inst_ptr = newSViv(0);
     SV * const inst = newSVrv(inst_ptr, "Perl6::Object");;
     _perl6_magic priv;
 
-    sv_setiv(inst, (IV) i);
-
     /* set up magic */
     priv.key = PERL6_MAGIC_KEY;
+    priv.index = i;
     priv.call_p6_method = call_p6_method;
     priv.free_p6_object = free_p6_object;
     sv_magic(inst, inst, PERL_MAGIC_ext, (char *) &priv, sizeof(priv));
