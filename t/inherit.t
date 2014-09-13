@@ -8,6 +8,13 @@ use NativeCall;
 plan 2;
 
 my $i = Inline::Perl5.new();
+
+my $has_moose =  $i.run('eval { require Moose; 1};');
+if !$has_moose {
+    skip('Perl 5 Moose module not available',2);
+    exit;
+}
+
 $i.run(q:heredoc/PERL5/);
 package Foo;
 
