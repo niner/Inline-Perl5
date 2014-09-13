@@ -22,6 +22,7 @@ PerlInterpreter *p5_init_perl() {
     if (!inited++)
         PERL_SYS_INIT3(0, NULL, NULL);
     PerlInterpreter *my_perl = perl_alloc();
+    PERL_SET_CONTEXT(my_perl);
     perl_construct( my_perl );
     perl_parse(my_perl, xs_init, 3, embedding, NULL);
     PL_exit_flags |= PERL_EXIT_DESTRUCT_END;
@@ -146,6 +147,7 @@ SV *p5_newRV_noinc(PerlInterpreter *my_perl, SV *sv) {
 }
 
 SV *p5_eval_pv(PerlInterpreter *my_perl, const char* p, I32 croak_on_error) {
+    PERL_SET_CONTEXT(my_perl);
     return eval_pv(p, croak_on_error);
 }
 
@@ -155,6 +157,8 @@ AV *p5_call_package_method(PerlInterpreter *my_perl, char *package, char *name, 
     int count;
     AV * const retval = newAV();
     int flags = G_ARRAY;
+
+    PERL_SET_CONTEXT(my_perl);
 
     ENTER;
     SAVETMPS;
@@ -193,6 +197,8 @@ AV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, char *name,
     int count;
     AV * const retval = newAV();
     int flags = G_ARRAY;
+
+    PERL_SET_CONTEXT(my_perl);
 
     ENTER;
     SAVETMPS;
@@ -239,6 +245,8 @@ AV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]) 
     int count;
     AV * const retval = newAV();
     int flags = G_ARRAY;
+
+    PERL_SET_CONTEXT(my_perl);
 
     ENTER;
     SAVETMPS;
