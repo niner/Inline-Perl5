@@ -270,6 +270,15 @@ AV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]) 
     return retval;
 }
 
+void p5_rebless_object(PerlInterpreter *my_perl, SV *obj) {
+    SV * const inst = SvRV(obj);
+    SV * const inst_ptr = newRV_noinc(inst);
+    HV *stash = gv_stashpv("Perl6::Object", 0);
+    if (stash == NULL)
+        croak("Perl6::Object not found!? Forgot to call init_callbacks?");
+    (void)sv_bless(inst_ptr, stash);
+}
+
 typedef struct {
     I32 key; /* to make sure it came from Inline */
     IV index;
@@ -307,16 +316,9 @@ SV *p5_wrap_p6_object(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call_p6_m
         inst = newSVrv(inst_ptr, "Perl6::Object");
     }
     else {
-        inst = SvRV(p5obj);
-        if(SvROK(inst))
-            croak("reference to reference found!?");
-        if(SvTYPE(inst) != SVt_PVHV)
-            croak("expected a HASH");
-        inst_ptr = newRV_inc(inst);
-        HV *stash = gv_stashpv("Perl6::Object", 0);
-        if (stash == NULL)
-            croak("Perl6::Object not found!? Forgot to call init_callbacks?");
-        (void)sv_bless(inst_ptr, stash);
+        inst_ptr = p5obj;
+        inst = SvRV(inst_ptr);
+        SvREFCNT_inc(inst_ptr);
     }
     _perl6_magic priv;
 

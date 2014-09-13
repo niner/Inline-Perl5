@@ -143,6 +143,9 @@ sub p5_call_method(Perl5Interpreter, Str, OpaquePointer, Str, Int, CArray[Opaque
 sub p5_call_package_method(Perl5Interpreter, Str, Str, Int, CArray[OpaquePointer])
     returns OpaquePointer { ... }
     native(&p5_call_package_method);
+sub p5_rebless_object(Perl5Interpreter, OpaquePointer)
+    { ... }
+    native(&p5_rebless_object);
 sub p5_destruct_perl(Perl5Interpreter)
     { ... }
     native(&p5_destruct_perl);
@@ -358,6 +361,10 @@ method init_callbacks {
 
 method sv_refcnt_dec($obj) {
     p5_sv_refcnt_dec($!p5, $obj);
+}
+
+method rebless(Perl5Object $obj) {
+    p5_rebless_object($!p5, $obj.ptr);
 }
 
 submethod DESTROY {

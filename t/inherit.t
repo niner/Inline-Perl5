@@ -53,6 +53,7 @@ class Bar {
 
     method BUILD() {
         $.parent = $i.invoke('Foo', 'new');
+        $i.rebless($.parent);
     }
 
     method bar {
