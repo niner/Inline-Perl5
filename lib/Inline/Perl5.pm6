@@ -137,7 +137,7 @@ sub p5_hv_store(Perl5Interpreter, OpaquePointer, Str, OpaquePointer)
 sub p5_call_function(Perl5Interpreter, Str, Int, CArray[OpaquePointer])
     returns OpaquePointer { ... }
     native(&p5_call_function);
-sub p5_call_method(Perl5Interpreter, OpaquePointer, Str, Int, CArray[OpaquePointer])
+sub p5_call_method(Perl5Interpreter, Str, OpaquePointer, Str, Int, CArray[OpaquePointer])
     returns OpaquePointer { ... }
     native(&p5_call_method);
 sub p5_call_package_method(Perl5Interpreter, Str, Str, Int, CArray[OpaquePointer])
@@ -155,7 +155,7 @@ sub p5_is_object(Perl5Interpreter, OpaquePointer)
 sub p5_eval_pv(Perl5Interpreter, Str, Int)
     returns OpaquePointer { ... }
     native(&p5_eval_pv);
-sub p5_wrap_p6_object(Perl5Interpreter, Int, &call_method(Int, Str, OpaquePointer --> OpaquePointer), &free_p6_object(Int))
+sub p5_wrap_p6_object(Perl5Interpreter, Int, OpaquePointer, &call_method(Int, Str, OpaquePointer --> OpaquePointer), &free_p6_object(Int))
     returns OpaquePointer { ... }
     native(&p5_wrap_p6_object);
 sub p5_is_wrapped_p6_object(Perl5Interpreter, OpaquePointer)
@@ -175,6 +175,7 @@ multi method p6_to_p5(Str:D $value) returns OpaquePointer {
     return p5_str_to_sv($!p5, $value);
 }
 multi method p6_to_p5(Perl5Object $value) returns OpaquePointer {
+    p5_sv_refcnt_inc($!p5, $value.ptr);
     return $value.ptr;
 }
 multi method p6_to_p5(OpaquePointer $value) returns OpaquePointer {
@@ -190,19 +191,20 @@ sub free_p6_object(Int $index) {
     $objects.free($index);
 }
 
-multi method p6_to_p5(Any:D $value) {
+multi method p6_to_p5(Perl5Object:D $value, OpaquePointer $inst) {
+    p5_sv_refcnt_inc($!p5, $inst);
+    return $inst;
+}
+multi method p6_to_p5(Any:D $value, OpaquePointer $inst = OpaquePointer) {
     my $index = $objects.keep($value);
 
     return p5_wrap_p6_object(
         $!p5,
         $index,
+        $inst,
         &!call_method,
         &free_p6_object,
     );
-
-    X::Inline::Perl5::Unmarshallable.new(
-        :object($value),
-    ).throw;
 }
 multi method p6_to_p5(Hash:D $value) returns OpaquePointer {
     my $hv = p5_newHV($!p5);
@@ -326,8 +328,18 @@ multi method invoke(Str $package, Str $function, *@args) {
 }
 
 multi method invoke(OpaquePointer $obj, Str $function, *@args) {
+    return self.invoke(Str, $obj, $function, @args.list);
+}
+
+multi method invoke(Str $package, OpaquePointer $obj, Str $function, *@args) {
+    my $len = @args.elems;
+    my @svs := CArray[OpaquePointer].new();
+    @svs[0] = self.p6_to_p5(@args[0], $obj);
+    loop (my $i = 1; $i < $len; $i++) {
+        @svs[$i] = self.p6_to_p5(@args[$i]);
+    }
     return self!unpack_return_values(
-        p5_call_method($!p5, $obj, $function, |self!setup_arguments(@args))
+        p5_call_method($!p5, $package, $obj, $function, $len, @svs)
     );
 }
 

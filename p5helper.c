@@ -187,7 +187,7 @@ AV *p5_call_package_method(PerlInterpreter *my_perl, char *package, char *name, 
     return retval;
 }
 
-AV *p5_call_method(PerlInterpreter *my_perl, SV *obj, char *name, int len, SV *args[]) {
+AV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, char *name, int len, SV *args[]) {
     dSP;
     int i;
     int count;
@@ -205,20 +205,25 @@ AV *p5_call_method(PerlInterpreter *my_perl, SV *obj, char *name, int len, SV *a
 
     PUTBACK;
 
-    HV * const pkg = SvSTASH((SV*)SvRV(obj));
+    HV * const pkg = package != NULL ? gv_stashpv(package, 0) : SvSTASH((SV*)SvRV(obj));
     GV * const gv = Perl_gv_fetchmethod_autoload(aTHX_ pkg, name, FALSE);
-    SV * const rv = sv_2mortal(newRV((SV*)GvCV(gv)));
+    if (gv && isGV(gv)) {
+        SV * const rv = sv_2mortal(newRV((SV*)GvCV(gv)));
 
-    count = call_sv(rv, flags);
-    SPAGAIN;
+        count = call_sv(rv, flags);
+        SPAGAIN;
 
-    av_extend(retval, count - 1);
-    for (i = count - 1; i >= 0; i--) {
-        SV * const next = POPs;
-        SvREFCNT_inc(next);
+        av_extend(retval, count - 1);
+        for (i = count - 1; i >= 0; i--) {
+            SV * const next = POPs;
+            SvREFCNT_inc(next);
 
-        if (av_store(retval, i, next) == NULL)
-            SvREFCNT_dec(next); /* see perlguts Working with AVs */
+            if (av_store(retval, i, next) == NULL)
+                SvREFCNT_dec(next); /* see perlguts Working with AVs */
+        }
+    }
+    else {
+        croak("Could not find method \"%s\" of \"%s\" object", name, HvNAME(pkg));
     }
 
     PUTBACK;
@@ -277,7 +282,7 @@ typedef struct {
 int p5_free_perl6_obj(pTHX_ SV* obj, MAGIC *mg)
 {
     if (mg) {
-        _perl6_magic* const p6mg = mg->mg_ptr;
+        _perl6_magic* const p6mg = (_perl6_magic*) mg->mg_ptr;
         p6mg->free_p6_object(p6mg->index);
     }
     return 0;
@@ -294,9 +299,25 @@ MGVTBL p5_inline_mg_vtbl = {
     0x0
 };
 
-SV *p5_wrap_p6_object(PerlInterpreter *my_perl, IV i, SV *(*call_p6_method)(int, char * , SV *), void (*free_p6_object)(int)) {
-    SV * const inst_ptr = newSViv(0);
-    SV * const inst = newSVrv(inst_ptr, "Perl6::Object");;
+SV *p5_wrap_p6_object(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call_p6_method)(int, char * , SV *), void (*free_p6_object)(int)) {
+    SV * inst;
+    SV * inst_ptr;
+    if (p5obj == NULL) {
+        inst_ptr = newSViv(0);
+        inst = newSVrv(inst_ptr, "Perl6::Object");
+    }
+    else {
+        inst = SvRV(p5obj);
+        if(SvROK(inst))
+            croak("reference to reference found!?");
+        if(SvTYPE(inst) != SVt_PVHV)
+            croak("expected a HASH");
+        inst_ptr = newRV_inc(inst);
+        HV *stash = gv_stashpv("Perl6::Object", 0);
+        if (stash == NULL)
+            croak("Perl6::Object not found!? Forgot to call init_callbacks?");
+        (void)sv_bless(inst_ptr, stash);
+    }
     _perl6_magic priv;
 
     /* set up magic */
@@ -320,7 +341,8 @@ int p5_is_wrapped_p6_object(PerlInterpreter *my_perl, SV *obj) {
 
 int p5_unwrap_p6_object(PerlInterpreter *my_perl, SV *obj) {
     SV * const obj_deref = SvRV(obj);
-    return SvIV(obj_deref);
+    MAGIC * const mg = mg_find(obj_deref, '~');
+    return ((_perl6_magic*)(mg->mg_ptr))->index;
 }
 
 XS(p5_call_p6_method) {
@@ -343,7 +365,8 @@ XS(p5_call_p6_method) {
 
     SV * const obj_deref = SvRV(obj);
     MAGIC * const mg = mg_find(obj_deref, '~');
-    SV * retval = ((_perl6_magic*)(mg->mg_ptr))->call_p6_method(SvIV(obj_deref), name_str, newRV_noinc((SV *) args));
+    _perl6_magic* const p6mg = (_perl6_magic*)(mg->mg_ptr);
+    SV * retval = p6mg->call_p6_method(p6mg->index, name_str, newRV_noinc((SV *) args));
     SPAGAIN; /* refresh local stack pointer, could have been modified by Perl 5 code called from Perl 6 */
     SvREFCNT_dec(args);
     sv_2mortal(retval);

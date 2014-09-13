@@ -5,7 +5,7 @@ use Inline::Perl5;
 use Test;
 use NativeCall;
 
-plan 2;
+plan 3;
 
 my $i = Inline::Perl5.new();
 
@@ -16,6 +16,7 @@ if !$has_moose {
 }
 
 $i.run(q:heredoc/PERL5/);
+
 package Foo;
 
 use Moose;
@@ -35,6 +36,16 @@ sub test {
 sub bar {
     return "Perl5";
 }
+
+sub test_inherited {
+    my ($self) = @_;
+
+    return $self->baz;
+}
+
+sub baz {
+    return "Perl5";
+}
 PERL5
 
 class Bar {
@@ -51,14 +62,15 @@ class Bar {
     Bar.^add_fallback(-> $, $ { True },
         method ($name) {
             -> \self, |args {
-                $.parent.perl5.invoke($.parent.ptr, $name, self, args.list);
+                $.parent.perl5.invoke('Foo', $.parent.ptr, $name, self, args.list);
             }
         }
     );
 }
 
-is(Bar.new.foo, 'Moose!');
 is(Bar.new.test, 'Perl6');
+is(Bar.new.test_inherited, 'Perl5');
+is(Bar.new.foo, 'Moose!');
 
 # vim: ft=perl6
 
