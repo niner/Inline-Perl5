@@ -3,8 +3,8 @@
 use v6;
 use Inline::Perl5;
 
-my $i = Inline::Perl5.new();
-$i.run(q/
+my $p5 = Inline::Perl5.new();
+$p5.run(q/
     use Test::More;
 
     sub test {
@@ -26,13 +26,13 @@ class Foo {
 
 my $foo = Foo.new;
 
-$i.call('test', $foo);
+$p5.call('test', $foo);
 
-$i.run(q/
+$p5.run(q/
     done_testing;
 /);
 
-$i.DESTROY;
+$p5.DESTROY;
 
 # vim: ft=perl6
 

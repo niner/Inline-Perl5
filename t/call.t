@@ -5,8 +5,8 @@ use Inline::Perl5;
 
 say "1..12";
 
-my $i = Inline::Perl5.new();
-say $i.run('
+my $p5 = Inline::Perl5.new();
+say $p5.run('
 use 5.10.0;
 $| = 1;
 
@@ -99,16 +99,16 @@ sub sum {
 }
 ');
 
-$i.call('test');
-$i.call('test_int_params', 2, 1);
-$i.call('test_str_params', 'Hello', 'Perl 5');
-if ($i.call('test_int_retval') == 1) {
+$p5.call('test');
+$p5.call('test_int_params', 2, 1);
+$p5.call('test_str_params', 'Hello', 'Perl 5');
+if ($p5.call('test_int_retval') == 1) {
     say "ok 4 - return one int";
 }
 else {
     say "not ok 4 - return one int";
 }
-my @retvals = $i.call('test_int_retvals');
+my @retvals = $p5.call('test_int_retvals');
 if (@retvals == 3 and @retvals[0] == 3 and @retvals[1] == 1 and @retvals[2] == 2) {
     say "ok 5 - return one int";
 }
@@ -117,13 +117,13 @@ else {
     say "    got: {@retvals}";
     say "    expected: 3, 1, 2";
 }
-if ($i.call('test_str_retval') eq 'Hello Perl 6!') {
+if ($p5.call('test_str_retval') eq 'Hello Perl 6!') {
     say "ok 6 - return one string";
 }
 else {
     say "not ok 6 - return one string";
 }
-@retvals = $i.call('test_mixed_retvals');
+@retvals = $p5.call('test_mixed_retvals');
 if (@retvals == 3 and @retvals[0] eq 'Hello' and @retvals[1] eq 'Perl' and @retvals[2] == 6) {
     say "ok 7 - return mixed values";
 }
@@ -133,41 +133,41 @@ else {
     say "    expected: 'Hello', 'Perl', 6";
 }
 
-if ($i.call('Foo::new', 'Foo', 1).test() == 1) {
+if ($p5.call('Foo::new', 'Foo', 1).test() == 1) {
     say "ok 8 - Perl 5 method call";
 }
 else {
     say "not ok 8 - Perl 5 method call";
 }
 
-if ($i.call('Foo::new', 'Foo', 1).sum(3, 1) == 4) {
+if ($p5.call('Foo::new', 'Foo', 1).sum(3, 1) == 4) {
     say "ok 9 - Perl 5 method call with parameters";
 }
 else {
     say "not ok 9 - Perl 5 method call with parameters";
 }
 
-if ($i.call('test_undef', 'main', Any) == 1) {
+if ($p5.call('test_undef', 'main', Any) == 1) {
     say "ok 10 - Any converted to undef";
 }
 else {
     say "not ok 10 - Any converted to undef";
 }
 
-if ($i.call('test_hash', 'main', {a => 2, b => {c => [4, 3]}}) == 1) {
+if ($p5.call('test_hash', 'main', {a => 2, b => {c => [4, 3]}}) == 1) {
     say "ok 11 - Passing hashes to Perl 5";
 }
 else {
     say "not ok 11 - Passing hashes to Perl 5";
 }
 
-if ($i.call('test_foo', 'main', $i.call('Foo::new', 'Foo', 6)) == 6) {
+if ($p5.call('test_foo', 'main', $p5.call('Foo::new', 'Foo', 6)) == 6) {
     say "ok 12 - Passing Perl 5 objects back from Perl 6";
 }
 else {
     say "not ok 12 - Passing Perl 5 objects back from Perl 6";
 }
 
-$i.DESTROY;
+$p5.DESTROY;
 
 # vim: ft=perl6

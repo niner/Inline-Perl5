@@ -3,11 +3,11 @@
 use v6;
 use Inline::Perl5;
 
-my $i = Inline::Perl5.new();
-$i.use('Test::More');
-$i.call('Test::More::ok', 1);
-$i.call('Test::More::done_testing');
+my $p5 = Inline::Perl5.new();
+$p5.use('Test::More');
+$p5.call('Test::More::ok', 1);
+$p5.call('Test::More::done_testing');
 
-$i.DESTROY;
+$p5.DESTROY;
 
 # vim: ft=perl6

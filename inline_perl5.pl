@@ -4,8 +4,8 @@ use v6;
 use lib 'lib';
 use Inline::Perl5;
 
-my $i = Inline::Perl5.new();
-say $i.run('
+my $p5 = Inline::Perl5.new();
+say $p5.run('
 use 5.10.0;
 
 STDOUT->autoflush(1);
@@ -18,8 +18,8 @@ print "Hello world from Perl ";
 5');
 
 print 'It is now ';
-$i.call('main::test');
+$p5.call('main::test');
 
-$i.DESTROY;
+$p5.DESTROY;
 
 # vim: ft=perl6

@@ -7,15 +7,15 @@ use NativeCall;
 
 plan 5;
 
-my $i = Inline::Perl5.new();
+my $p5 = Inline::Perl5.new();
 
-my $has_moose =  $i.run('eval { require Moose; 1};');
+my $has_moose =  $p5.run('eval { require Moose; 1};');
 if !$has_moose {
     skip('Perl 5 Moose module not available',2);
     exit;
 }
 
-$i.run(q:heredoc/PERL5/);
+$p5.run(q:heredoc/PERL5/);
 
 package Foo;
 
@@ -66,9 +66,9 @@ class Bar does Inline::Perl5::Perl5Parent['Foo'] {
 
 }
 
-is(Bar.new(perl5 => $i).test, 'Perl6');
-is(Bar.new(perl5 => $i).test_inherited, 'Perl5');
-is(Bar.new(perl5 => $i).foo, 'Moose!');
+is(Bar.new(perl5 => $p5).test, 'Perl6');
+is(Bar.new(perl5 => $p5).test_inherited, 'Perl5');
+is(Bar.new(perl5 => $p5).foo, 'Moose!');
 
 class Baz does Inline::Perl5::Perl5Parent['Foo'] {
     method bar {
@@ -77,7 +77,7 @@ class Baz does Inline::Perl5::Perl5Parent['Foo'] {
 
 }
 
-is(Baz.new(perl5 => $i).test, 'Perl6!');
+is(Baz.new(perl5 => $p5).test, 'Perl6!');
 
 class Qux does Inline::Perl5::Perl5Parent['Bar'] {
     method qux {
@@ -86,7 +86,7 @@ class Qux does Inline::Perl5::Perl5Parent['Bar'] {
 
 }
 
-is(Qux.new(perl5 => $i).test, 'Perl6!!');
+is(Qux.new(perl5 => $p5).test, 'Perl6!!');
 
 # vim: ft=perl6
 

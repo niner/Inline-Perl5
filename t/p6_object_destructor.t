@@ -7,8 +7,8 @@ use NativeCall;
 
 plan 1;
 
-my $i = Inline::Perl5.new();
-$i.run(q/
+my $p5 = Inline::Perl5.new();
+$p5.run(q/
     sub test {
     };
 /);
@@ -25,12 +25,12 @@ class Foo {
 # create new objects until the GC kicks in and destroys at least one of them
 # this will loop endlessly if we leak all objects
 until $destroyed {
-    $i.call('test', 'main', Foo.new);
+    $p5.call('test', 'main', Foo.new);
 }
 
 ok(1, 'at least one destructor ran');
 
-$i.DESTROY;
+$p5.DESTROY;
 
 # vim: ft=perl6
 

@@ -5,19 +5,19 @@ use Inline::Perl5;
 
 say '1..2';
 
-my $i = Inline::Perl5.new();
+my $p5 = Inline::Perl5.new();
 
-$i.run('
+$p5.run('
     use 5.10.0;
     say "ok 1 - basic eval";
 ');
 
-$i.run('
+$p5.run('
     use 5.10.0;
     use Fcntl;
     say "ok 2 - loading XS modules";
 ');
 
-$i.DESTROY;
+$p5.DESTROY;
 
 # vim: ft=perl6

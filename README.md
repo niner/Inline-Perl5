@@ -6,9 +6,9 @@ Inline::Perl5
 
 ```
     use Inline::Perl5;
-    my $i = Inline::Perl5.new();
-    $i.use('DBI');
-    my $dbh = $i.invoke('DBI', 'connect', 'dbi:Pg:database=test');
+    my $p5 = Inline::Perl5.new();
+    $p5.use('DBI');
+    my $dbh = $p5.invoke('DBI', 'connect', 'dbi:Pg:database=test');
     my $products = $dbh.selectall_arrayref(
     	'select * from products', {Slice => {}}
     );
@@ -31,8 +31,8 @@ Inline::Perl5's use() method maps to Perl 5's use statement:
 
 ```
     use Inline::Perl5;
-    my $i = Inline::Perl5.new;
-    $i.use('Test::More');
+    my $p5 = Inline::Perl5.new;
+    $p5.use('Test::More');
 ```
 
 ## Call a Perl 5 function
@@ -43,10 +43,10 @@ is not in the "main" namespace.
 
 ```
     use Inline::Perl5;
-    my $i = Inline::Perl5.new;
-    $i.call('print', 'Hello World');
-    $i.use('Test::More');
-    $i.call('Test::More::plan', 1);
+    my $p5 = Inline::Perl5.new;
+    $p5.call('print', 'Hello World');
+    $p5.use('Test::More');
+    $p5.call('Test::More::plan', 1);
 ```
 
 ## Create a Perl 5 object
@@ -56,9 +56,9 @@ constructor (usually called "new").
 
 ```
     use Inline::Perl5;
-    my $i = Inline::Perl5.new;
-    $i.use('Data::Dumper');
-    my $dumper = $i.invoke('Data::Dumper', 'new');
+    my $p5 = Inline::Perl5.new;
+    $p5.use('Data::Dumper');
+    my $dumper = $p5.invoke('Data::Dumper', 'new');
 ```
 
 ## Invoke a method on a Perl 5 object
@@ -68,9 +68,9 @@ object.  You can call methods on it like on any other object.
 
 ```
     use Inline::Perl5;
-    my $i = Inline::Perl5.new;
-    $i.use('IO::Compress::Bzip2');
-    my $bzip2 = $i.invoke('IO::Compress::Bzip2', 'new', '/tmp/foo.bz2');
+    my $p5 = Inline::Perl5.new;
+    $p5.use('IO::Compress::Bzip2');
+    my $bzip2 = $p5.invoke('IO::Compress::Bzip2', 'new', '/tmp/foo.bz2');
     $bzip2.print($data);
     $bzip2.close;
 ```
@@ -82,9 +82,9 @@ objects in Perl 5, so you can invoke methods using the -> operator.
 
 ```
     use Inline::Perl5;
-    my $i = Inline::Perl5.new;
+    my $p5 = Inline::Perl5.new;
 
-    $i.run(q'
+    $p5.run(q'
         sub test {
             my ($perl6) = @_;
             $perl6->hello;
@@ -97,7 +97,7 @@ objects in Perl 5, so you can invoke methods using the -> operator.
         }
     }
 
-    $i.call('test', Foo.new);
+    $p5.call('test', Foo.new);
 ```
 
 ## Run arbitrary Perl 5 code
@@ -107,9 +107,9 @@ It accepts Perl 5 code as a string.
 
 ```
     use Inline::Perl5;
-    my $i = Inline::Perl5.new;
+    my $p5 = Inline::Perl5.new;
 
-    $i.run(q'
+    $p5.run(q'
         sub test {
             return 'Hello from Perl 5';
         }
@@ -124,7 +124,7 @@ Pass the Inline::Perl5 object as named parameter to your classes constructor
 when creating objects.
 
 ```
-    $i.run(q:heredoc/PERL5/);
+    $p5.run(q:heredoc/PERL5/);
 
     package Foo;
 
@@ -143,8 +143,8 @@ when creating objects.
     }
 
     use Inline::Perl5;
-    my $i = Inline::Perl5.new;
-    say Bar.new(perl5 => $i).test;
+    my $p5 = Inline::Perl5.new;
+    say Bar.new(perl5 => $p5).test;
 ```
 
 # BUILDING

@@ -6,9 +6,9 @@ use Inline::Perl5;
 
 plan 2;
 
-my $i = Inline::Perl5.new();
-is $i.run('5;'), 5;
-is $i.run('"Perl 5";'), 'Perl 5';
-$i.DESTROY;
+my $p5 = Inline::Perl5.new();
+is $p5.run('5;'), 5;
+is $p5.run('"Perl 5";'), 'Perl 5';
+$p5.DESTROY;
 
 # vim: ft=perl6
