@@ -23,6 +23,7 @@ PerlInterpreter *p5_init_perl() {
         PERL_SYS_INIT3(0, NULL, NULL);
     PerlInterpreter *my_perl = perl_alloc();
     PERL_SET_CONTEXT(my_perl);
+    PL_perl_destruct_level = 1;
     perl_construct( my_perl );
     perl_parse(my_perl, xs_init, 3, embedding, NULL);
     PL_exit_flags |= PERL_EXIT_DESTRUCT_END;
@@ -31,6 +32,7 @@ PerlInterpreter *p5_init_perl() {
 }
 
 void p5_destruct_perl(PerlInterpreter *my_perl) {
+    PL_perl_destruct_level = 1;
     perl_destruct(my_perl);
     perl_free(my_perl);
 }
