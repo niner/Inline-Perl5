@@ -24,11 +24,13 @@ class Foo {
 
 # create new objects until the GC kicks in and destroys at least one of them
 # this will loop endlessly if we leak all objects
+my $i = 0;
 until $destroyed {
     $p5.call('test', 'main', Foo.new);
+    last if $i++ > 10000;
 }
 
-ok(1, 'at least one destructor ran');
+ok($destroyed, 'at least one destructor ran');
 
 $p5.DESTROY;
 
