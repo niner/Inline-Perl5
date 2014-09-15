@@ -5,7 +5,7 @@ use Test;
 use Inline::Perl5;
 use NativeCall;
 
-plan 13;
+plan 16;
 
 my $p5 = Inline::Perl5.new();
 {
@@ -84,3 +84,20 @@ $p5.run(q/
 /);
 
 is $p5.call('test_foo', Foo.new), 'foo';
+
+{
+    $p5.run(q/
+        sub pass_through {
+            my ($foo) = @_;
+            $foo->depart;
+        }
+    /);
+    $p5.call('pass_through', Foo.new);
+    CATCH {
+        ok 1, 'P6 exception made it through P5 code';
+        when X::AdHoc {
+            ok $_.isa('X::AdHoc'), 'got an exception from method call';
+            ok $_.Str() ~~ m/foo/, 'exception message found from method call';
+        }
+    }
+}
