@@ -351,9 +351,9 @@ multi method invoke(Str $package, OpaquePointer $obj, Str $function, *@args) {
     loop (my $i = 1; $i < $len; $i++) {
         @svs[$i] = self.p6_to_p5(@args[$i]);
     }
-    return self!unpack_return_values(
-        p5_call_method($!p5, $package, $obj, $function, $len, @svs)
-    );
+    my $av = p5_call_method($!p5, $package, $obj, $function, $len, @svs);
+    self.handle_p5_exception();
+    return self!unpack_return_values($av);
 }
 
 method init_callbacks {

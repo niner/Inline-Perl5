@@ -5,7 +5,7 @@ use Test;
 use Inline::Perl5;
 use NativeCall;
 
-plan 9;
+plan 12;
 
 my $p5 = Inline::Perl5.new();
 {
@@ -35,6 +35,26 @@ my $p5 = Inline::Perl5.new();
         }
     /);
     my $foo = $p5.invoke('Foo', 'depart');
+    CATCH {
+        ok 1, 'survived P5 die in method call';
+        when X::AdHoc {
+            ok $_.isa('X::AdHoc'), 'got an exception from method call';
+            ok $_.Str() ~~ m/foo/, 'exception message found from method call';
+        }
+    }
+}
+{
+    $p5.run(q/
+        package Foo;
+        sub new {
+            return bless {};
+        }
+        sub depart {
+            die "foo";
+        }
+    /);
+    my $foo = $p5.invoke('Foo', 'new');
+    $foo.depart;
     CATCH {
         ok 1, 'survived P5 die in method call';
         when X::AdHoc {
