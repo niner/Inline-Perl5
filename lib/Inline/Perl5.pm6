@@ -335,9 +335,9 @@ method call(Str $function, *@args) {
 }
 
 multi method invoke(Str $package, Str $function, *@args) {
-    return self!unpack_return_values(
-        p5_call_package_method($!p5, $package, $function, |self!setup_arguments(@args))
-    );
+    my $av = p5_call_package_method($!p5, $package, $function, |self!setup_arguments(@args));
+    self.handle_p5_exception();
+    return self!unpack_return_values($av);
 }
 
 multi method invoke(OpaquePointer $obj, Str $function, *@args) {

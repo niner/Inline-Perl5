@@ -162,7 +162,7 @@ AV *p5_call_package_method(PerlInterpreter *my_perl, char *package, char *name, 
     int i;
     int count;
     AV * const retval = newAV();
-    int flags = G_ARRAY;
+    int flags = G_ARRAY | G_EVAL;
 
     PERL_SET_CONTEXT(my_perl);
 
