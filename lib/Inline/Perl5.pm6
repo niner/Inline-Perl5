@@ -158,6 +158,9 @@ sub p5_is_object(Perl5Interpreter, OpaquePointer)
 sub p5_eval_pv(Perl5Interpreter, Str, Int)
     returns OpaquePointer { ... }
     native(&p5_eval_pv);
+sub p5_err_sv(Perl5Interpreter)
+    returns OpaquePointer { ... }
+    native(&p5_err_sv);
 sub p5_wrap_p6_object(Perl5Interpreter, Int, OpaquePointer, &call_method(Int, Str, OpaquePointer --> OpaquePointer), &free_p6_object(Int))
     returns OpaquePointer { ... }
     native(&p5_wrap_p6_object);
@@ -283,7 +286,10 @@ method p5_to_p6(OpaquePointer $value) {
 }
 
 method run($perl) {
-    my $res = p5_eval_pv($!p5, $perl, 1);
+    my $res = p5_eval_pv($!p5, $perl, 0);
+    if my $error = self.p5_to_p6(p5_err_sv($!p5)) {
+        die $error;
+    }
     return self.p5_to_p6($res);
 }
 

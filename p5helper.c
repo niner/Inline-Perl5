@@ -153,6 +153,10 @@ SV *p5_eval_pv(PerlInterpreter *my_perl, const char* p, I32 croak_on_error) {
     return eval_pv(p, croak_on_error);
 }
 
+SV *p5_err_sv(PerlInterpreter *my_perl) {
+    return ERRSV;
+}
+
 AV *p5_call_package_method(PerlInterpreter *my_perl, char *package, char *name, int len, SV *args[]) {
     dSP;
     int i;
