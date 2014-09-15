@@ -296,7 +296,7 @@ void p5_rebless_object(PerlInterpreter *my_perl, SV *obj) {
 typedef struct {
     I32 key; /* to make sure it came from Inline */
     IV index;
-    SV *(*call_p6_method)(int, char * , SV *);
+    SV *(*call_p6_method)(int, char * , SV *, SV **);
     void (*free_p6_object)(int);
 } _perl6_magic;
 
@@ -322,7 +322,7 @@ MGVTBL p5_inline_mg_vtbl = {
     0x0
 };
 
-SV *p5_wrap_p6_object(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call_p6_method)(int, char * , SV *), void (*free_p6_object)(int)) {
+SV *p5_wrap_p6_object(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call_p6_method)(int, char * , SV *, SV **), void (*free_p6_object)(int)) {
     SV * inst;
     SV * inst_ptr;
     if (p5obj == NULL) {
@@ -382,9 +382,14 @@ XS(p5_call_p6_method) {
     SV * const obj_deref = SvRV(obj);
     MAGIC * const mg = mg_find(obj_deref, '~');
     _perl6_magic* const p6mg = (_perl6_magic*)(mg->mg_ptr);
-    SV * retval = p6mg->call_p6_method(p6mg->index, name_str, newRV_noinc((SV *) args));
+    SV *err = NULL;
+    SV * retval = p6mg->call_p6_method(p6mg->index, name_str, newRV_noinc((SV *) args), &err);
     SPAGAIN; /* refresh local stack pointer, could have been modified by Perl 5 code called from Perl 6 */
     SvREFCNT_dec(args);
+    if (err) {
+        sv_2mortal(err);
+        croak_sv(err);
+    }
     sv_2mortal(retval);
     sp -= items;
 

@@ -5,7 +5,7 @@ use Test;
 use Inline::Perl5;
 use NativeCall;
 
-plan 12;
+plan 13;
 
 my $p5 = Inline::Perl5.new();
 {
@@ -63,3 +63,24 @@ my $p5 = Inline::Perl5.new();
         }
     }
 }
+
+class Foo {
+    method depart {
+        die "foo";
+    }
+}
+
+$p5.run(q/
+    sub test_foo {
+        my ($foo) = @_;
+
+        eval {
+            $foo->depart;
+        };
+        if ($@) {
+            return $@;
+        }
+    }
+/);
+
+is $p5.call('test_foo', Foo.new), 'foo';

@@ -161,7 +161,7 @@ sub p5_eval_pv(Perl5Interpreter, Str, Int)
 sub p5_err_sv(Perl5Interpreter)
     returns OpaquePointer { ... }
     native(&p5_err_sv);
-sub p5_wrap_p6_object(Perl5Interpreter, Int, OpaquePointer, &call_method(Int, Str, OpaquePointer --> OpaquePointer), &free_p6_object(Int))
+sub p5_wrap_p6_object(Perl5Interpreter, Int, OpaquePointer, &call_method(Int, Str, OpaquePointer, OpaquePointer --> OpaquePointer), &free_p6_object(Int))
     returns OpaquePointer { ... }
     native(&p5_wrap_p6_object);
 sub p5_is_wrapped_p6_object(Perl5Interpreter, OpaquePointer)
@@ -410,11 +410,16 @@ method BUILD {
     $!p5 = p5_init_perl();
     self.init_callbacks();
 
-    &!call_method = sub (Int $index, Str $name, OpaquePointer $args) returns OpaquePointer {
+    &!call_method = sub (Int $index, Str $name, OpaquePointer $args, OpaquePointer $err) returns OpaquePointer {
         my $p6obj = $objects.get($index);
         my @retvals = $p6obj."$name"(|self.p5_array_to_p6_array($args));
         return self.p6_to_p5(@retvals);
-        CATCH { default { say $_; } }
+        CATCH {
+            default {
+                nativecast(CArray[OpaquePointer], $err)[0] = self.p6_to_p5($_);
+                return OpaquePointer;
+            }
+        }
     }
 }
 
