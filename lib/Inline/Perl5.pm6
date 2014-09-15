@@ -285,11 +285,15 @@ method p5_to_p6(OpaquePointer $value) {
     die "Unsupported type $value in p5_to_p6";
 }
 
-method run($perl) {
-    my $res = p5_eval_pv($!p5, $perl, 0);
+method handle_p5_exception() {
     if my $error = self.p5_to_p6(p5_err_sv($!p5)) {
         die $error;
     }
+}
+
+method run($perl) {
+    my $res = p5_eval_pv($!p5, $perl, 0);
+    self.handle_p5_exception();
     return self.p5_to_p6($res);
 }
 
@@ -325,9 +329,9 @@ method !unpack_return_values($av) {
 }
 
 method call(Str $function, *@args) {
-    return self!unpack_return_values(
-        p5_call_function($!p5, $function, |self!setup_arguments(@args))
-    );
+    my $av = p5_call_function($!p5, $function, |self!setup_arguments(@args));
+    self.handle_p5_exception();
+    return self!unpack_return_values($av);
 }
 
 multi method invoke(Str $package, Str $function, *@args) {

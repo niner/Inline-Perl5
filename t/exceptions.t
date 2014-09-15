@@ -5,7 +5,7 @@ use Test;
 use Inline::Perl5;
 use NativeCall;
 
-plan 4;
+plan 6;
 
 my $p5 = Inline::Perl5.new();
 {
@@ -16,4 +16,14 @@ my $p5 = Inline::Perl5.new();
     ok $!.isa('X::AdHoc'), 'got an exception';
     ok $!.Str() ~~ m/foo/, 'exception message found';
 }
-ok 1;
+{
+    $p5.run(q/
+        sub perish {
+            die "foo";
+        }
+    /);
+    try $p5.call('perish');
+    ok 1, 'survived P5 die in function call';
+    ok $!.isa('X::AdHoc'), 'got an exception from function call';
+    ok $!.Str() ~~ m/foo/, 'exception message found from function call';
+}
