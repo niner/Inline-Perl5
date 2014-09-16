@@ -60,6 +60,10 @@ int p5_is_object(PerlInterpreter *my_perl, SV* sv) {
     return sv_isobject(sv);
 }
 
+int p5_is_sub_ref(PerlInterpreter *my_perl, SV* sv) {
+    return (SvROK(sv) && SvTYPE(SvRV(sv)) == SVt_PVCV);
+}
+
 int p5_is_array(PerlInterpreter *my_perl, SV* sv) {
     return (SvROK(sv) && SvTYPE(SvRV(sv)) == SVt_PVAV);
 }
@@ -268,6 +272,45 @@ AV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]) 
     PUTBACK;
 
     count = call_pv(name, flags);
+    SPAGAIN;
+
+    av_extend(retval, count - 1);
+    for (i = count - 1; i >= 0; i--) {
+        SV * const next = POPs;
+        SvREFCNT_inc(next);
+
+        if (av_store(retval, i, next) == NULL)
+            SvREFCNT_dec(next); /* see perlguts Working with AVs */
+    }
+
+    PUTBACK;
+    FREETMPS;
+    LEAVE;
+
+    return retval;
+}
+
+AV *p5_call_code_ref(PerlInterpreter *my_perl, SV *code_ref, int len, SV *args[]) {
+    dSP;
+    int i;
+    int count;
+    AV * const retval = newAV();
+    int flags = G_ARRAY | G_EVAL;
+
+    PERL_SET_CONTEXT(my_perl);
+
+    ENTER;
+    SAVETMPS;
+
+    PUSHMARK(SP);
+
+    for (i = 0; i < len; i++) {
+        XPUSHs(sv_2mortal(args[i]));
+    }
+
+    PUTBACK;
+
+    count = call_sv(code_ref, flags);
     SPAGAIN;
 
     av_extend(retval, count - 1);

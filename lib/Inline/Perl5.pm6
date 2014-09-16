@@ -22,6 +22,7 @@ sub native(Sub $sub) {
 }
 
 class Perl5Object { ... }
+class Perl5Callable { ... }
 
 class X::Inline::Perl5::Unmarshallable is Exception {
     has Mu $.object;
@@ -144,6 +145,9 @@ sub p5_call_method(Perl5Interpreter, Str, OpaquePointer, Str, Int, CArray[Opaque
 sub p5_call_package_method(Perl5Interpreter, Str, Str, Int, CArray[OpaquePointer])
     returns OpaquePointer { ... }
     native(&p5_call_package_method);
+sub p5_call_code_ref(Perl5Interpreter, OpaquePointer, Int, CArray[OpaquePointer])
+    returns OpaquePointer { ... }
+    native(&p5_call_code_ref);
 sub p5_rebless_object(Perl5Interpreter, OpaquePointer)
     { ... }
     native(&p5_rebless_object);
@@ -156,6 +160,9 @@ sub p5_sv_iv(Perl5Interpreter, OpaquePointer)
 sub p5_is_object(Perl5Interpreter, OpaquePointer)
     returns Int { ... }
     native(&p5_is_object);
+sub p5_is_sub_ref(Perl5Interpreter, OpaquePointer)
+    returns Int { ... }
+    native(&p5_is_sub_ref);
 sub p5_eval_pv(Perl5Interpreter, Str, Int)
     returns OpaquePointer { ... }
     native(&p5_eval_pv);
@@ -282,6 +289,10 @@ method p5_to_p6(OpaquePointer $value) {
             return Perl5Object.new(perl5 => self, ptr => $value);
         }
     }
+    elsif p5_is_sub_ref($!p5, $value) {
+        p5_sv_refcnt_inc($!p5, $value);
+        return Perl5Callable.new(perl5 => self, ptr => $value);
+    }
     elsif p5_SvIOK($!p5, $value) {
         return p5_sv_iv($!p5, $value);
     }
@@ -371,6 +382,12 @@ multi method invoke(Str $package, OpaquePointer $obj, Str $function, *@args) {
     return self!unpack_return_values($av);
 }
 
+method execute(OpaquePointer $code_ref, *@args) {
+    my $av = p5_call_code_ref($!p5, $code_ref, |self!setup_arguments(@args));
+    self.handle_p5_exception();
+    return self!unpack_return_values($av);
+}
+
 method init_callbacks {
     self.run(q[
         package Perl6::Object;
@@ -425,6 +442,20 @@ class Perl5Object {
     );
 
     method sink() { self }
+
+    method DESTROY {
+        $!perl5.sv_refcnt_dec($!ptr) if $!ptr;
+        $!ptr = OpaquePointer;
+    }
+}
+
+class Perl5Callable {
+    has OpaquePointer $.ptr;
+    has Inline::Perl5 $.perl5;
+
+    method postcircumfix:<( )>(\args) {
+        $.perl5.execute($.ptr, |args);
+    }
 
     method DESTROY {
         $!perl5.sv_refcnt_dec($!ptr) if $!ptr;

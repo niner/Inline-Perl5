@@ -5,7 +5,7 @@ use Test;
 use Inline::Perl5;
 use NativeCall;
 
-plan 1;
+plan 2;
 
 my $p5 = Inline::Perl5.new();
 
@@ -15,6 +15,14 @@ $p5.run(q/
 
         return $something->($param);
     }
+
+    sub return_code {
+        my ($name) = @_;
+        return sub {
+            my ($param) = @_;
+            return "$name $param";
+        }
+    }
 /);
 
 sub something($suffix) {
@@ -22,5 +30,6 @@ sub something($suffix) {
 }
 
 is $p5.call('call_something', &something, 6), 'Perl 6';
+is $p5.call('return_code', 'Perl')(5), 'Perl 5';
 
 # vim: ft=perl6
