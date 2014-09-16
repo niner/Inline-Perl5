@@ -101,3 +101,5 @@ is $p5.call('test_foo', Foo.new), 'foo';
         }
     }
 }
+
+# vim: ft=perl6

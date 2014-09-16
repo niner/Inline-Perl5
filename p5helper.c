@@ -7,12 +7,14 @@ EXTERN_C void boot_DynaLoader (pTHX_ CV* cv);
 EXTERN_C void boot_Socket (pTHX_ CV* cv);
 
 XS(p5_call_p6_method);
+XS(p5_call_p6_callable);
 
 EXTERN_C void xs_init(pTHX) {
     char *file = __FILE__;
     /* DynaLoader is a special case */
     newXS("DynaLoader::boot_DynaLoader", boot_DynaLoader, file);
     newXS("Perl6::Object::call_method", p5_call_p6_method, file);
+    newXS("Perl6::Callable::call", p5_call_p6_callable, file);
 }
 
 static int inited = 0;
@@ -296,7 +298,10 @@ void p5_rebless_object(PerlInterpreter *my_perl, SV *obj) {
 typedef struct {
     I32 key; /* to make sure it came from Inline */
     IV index;
-    SV *(*call_p6_method)(int, char * , SV *, SV **);
+    union {
+        SV *(*call_p6_method)(int, char *, SV *, SV **);
+        SV *(*call_p6_callable)(int, SV *, SV **);
+    };
     void (*free_p6_object)(int);
 } _perl6_magic;
 
@@ -348,6 +353,32 @@ SV *p5_wrap_p6_object(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call_p6_m
     return inst_ptr;
 }
 
+SV *p5_wrap_p6_callable(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call)(int, SV *, SV **), void (*free_p6_object)(int)) {
+    SV * inst;
+    SV * inst_ptr;
+    if (p5obj == NULL) {
+        inst_ptr = newSViv(0);
+        inst = newSVrv(inst_ptr, "Perl6::Callable");
+    }
+    else {
+        inst_ptr = p5obj;
+        inst = SvRV(inst_ptr);
+        SvREFCNT_inc(inst_ptr);
+    }
+    _perl6_magic priv;
+
+    /* set up magic */
+    priv.key = PERL6_MAGIC_KEY;
+    priv.index = i;
+    priv.call_p6_callable = call;
+    priv.free_p6_object = free_p6_object;
+    sv_magic(inst, inst, PERL_MAGIC_ext, (char *) &priv, sizeof(priv));
+    MAGIC * const mg = mg_find(inst, PERL_MAGIC_ext);
+    mg->mg_virtual = &p5_inline_mg_vtbl;
+
+    return inst_ptr;
+}
+
 int p5_is_wrapped_p6_object(PerlInterpreter *my_perl, SV *obj) {
     SV * const obj_deref = SvRV(obj);
     /* check for magic! */
@@ -384,6 +415,52 @@ XS(p5_call_p6_method) {
     _perl6_magic* const p6mg = (_perl6_magic*)(mg->mg_ptr);
     SV *err = NULL;
     SV * retval = p6mg->call_p6_method(p6mg->index, name_str, newRV_noinc((SV *) args), &err);
+    SPAGAIN; /* refresh local stack pointer, could have been modified by Perl 5 code called from Perl 6 */
+    SvREFCNT_dec(args);
+    if (err) {
+        sv_2mortal(err);
+        croak_sv(err);
+    }
+    sv_2mortal(retval);
+    sp -= items;
+
+    if (GIMME_V == G_VOID) {
+        XSRETURN_EMPTY;
+    }
+    if (GIMME_V == G_ARRAY) {
+        AV* const av = (AV*)SvRV(retval);
+        int const len = av_len(av) + 1;
+        int i;
+        for (i = 0; i < len; i++) {
+            XPUSHs(sv_2mortal(av_shift(av)));
+        }
+        XSRETURN(len);
+    }
+    else {
+        AV* const av = (AV*)SvRV(retval);
+        XPUSHs(sv_2mortal(av_shift(av)));
+        XSRETURN(1);
+    }
+}
+
+XS(p5_call_p6_callable) {
+    dXSARGS;
+    SV * obj = ST(0);
+
+    AV * args = newAV();
+    av_extend(args, items - 1);
+    int i;
+    for (i = 0; i < items - 1; i++) {
+        SV * const next = SvREFCNT_inc(ST(i + 1));
+        if (av_store(args, i, next) == NULL)
+            SvREFCNT_dec(next); /* see perlguts Working with AVs */
+    }
+
+    SV * const obj_deref = SvRV(obj);
+    MAGIC * const mg = mg_find(obj_deref, '~');
+    _perl6_magic* const p6mg = (_perl6_magic*)(mg->mg_ptr);
+    SV *err = NULL;
+    SV * retval = p6mg->call_p6_callable(p6mg->index, newRV_noinc((SV *) args), &err);
     SPAGAIN; /* refresh local stack pointer, could have been modified by Perl 5 code called from Perl 6 */
     SvREFCNT_dec(args);
     if (err) {

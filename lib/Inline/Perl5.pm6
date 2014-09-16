@@ -4,6 +4,7 @@ class Perl5Interpreter is repr('CPointer') { }
 
 has Perl5Interpreter $!p5;
 has &!call_method;
+has &!call_callable;
 
 use NativeCall;
 
@@ -164,6 +165,9 @@ sub p5_err_sv(Perl5Interpreter)
 sub p5_wrap_p6_object(Perl5Interpreter, Int, OpaquePointer, &call_method(Int, Str, OpaquePointer, OpaquePointer --> OpaquePointer), &free_p6_object(Int))
     returns OpaquePointer { ... }
     native(&p5_wrap_p6_object);
+sub p5_wrap_p6_callable(Perl5Interpreter, Int, OpaquePointer, &call(Int, OpaquePointer, OpaquePointer --> OpaquePointer), &free_p6_object(Int))
+    returns OpaquePointer { ... }
+    native(&p5_wrap_p6_callable);
 sub p5_is_wrapped_p6_object(Perl5Interpreter, OpaquePointer)
     returns Int { ... }
     native(&p5_is_wrapped_p6_object);
@@ -209,6 +213,17 @@ multi method p6_to_p5(Any:D $value, OpaquePointer $inst = OpaquePointer) {
         $index,
         $inst,
         &!call_method,
+        &free_p6_object,
+    );
+}
+multi method p6_to_p5(Callable:D $value, OpaquePointer $inst = OpaquePointer) {
+    my $index = $objects.keep($value);
+
+    return p5_wrap_p6_callable(
+        $!p5,
+        $index,
+        $inst,
+        &!call_callable,
         &free_p6_object,
     );
 }
@@ -366,6 +381,17 @@ method init_callbacks {
             my $name = $AUTOLOAD =~ s/.*:://r;
             Perl6::Object::call_method($name, @_);
         }
+
+        package Perl6::Callable;
+
+        use overload '&{}' => \&deref_call, fallback => 1;
+
+        sub deref_call {
+            my ($self) = @_;
+            return sub {
+                $self->call(@_);
+            }
+        }
     ]);
 }
 
@@ -413,6 +439,18 @@ method BUILD {
     &!call_method = sub (Int $index, Str $name, OpaquePointer $args, OpaquePointer $err) returns OpaquePointer {
         my $p6obj = $objects.get($index);
         my @retvals = $p6obj."$name"(|self.p5_array_to_p6_array($args));
+        return self.p6_to_p5(@retvals);
+        CATCH {
+            default {
+                nativecast(CArray[OpaquePointer], $err)[0] = self.p6_to_p5($_);
+                return OpaquePointer;
+            }
+        }
+    }
+
+    &!call_callable = sub (Int $index, OpaquePointer $args, OpaquePointer $err) returns OpaquePointer {
+        my $callable = $objects.get($index);
+        my @retvals = $callable(|self.p5_array_to_p6_array($args));
         return self.p6_to_p5(@retvals);
         CATCH {
             default {
