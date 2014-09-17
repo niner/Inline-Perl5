@@ -15,6 +15,11 @@ is_deeply $p5.run('{a => 1, b => {c => 3}}'), {a => 1, b => {c => 3}};
 is_deeply $p5.run('[1, {b => {c => 3}}]'), [1, {b => {c => 3}}];
 ok $p5.run('undef') === Any, 'p5 undef maps to p6 Any';
 
+is $p5.run('
+    use utf8;
+    "Pörl 5"
+'), 'Pörl 5';
+
 $p5.DESTROY;
 
 done;

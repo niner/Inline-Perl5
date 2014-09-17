@@ -103,7 +103,9 @@ SV *p5_int_to_sv(PerlInterpreter *my_perl, int value) {
 }
 
 SV *p5_str_to_sv(PerlInterpreter *my_perl, char* value) {
-    return newSVpv(value, 0);
+    SV * const sv = newSVpv(value, 0);
+    SvUTF8_on(sv);
+    return sv;
 }
 
 int p5_av_top_index(PerlInterpreter *my_perl, AV *av) {
