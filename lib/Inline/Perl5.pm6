@@ -64,6 +64,9 @@ sub p5_init_perl()
 sub p5_SvIOK(Perl5Interpreter, OpaquePointer)
     returns Int { ... }
     native(&p5_SvIOK);
+sub p5_SvNOK(Perl5Interpreter, OpaquePointer)
+    returns Int { ... }
+    native(&p5_SvNOK);
 sub p5_SvPOK(Perl5Interpreter, OpaquePointer)
     returns Int { ... }
     native(&p5_SvPOK);
@@ -157,6 +160,9 @@ sub p5_destruct_perl(Perl5Interpreter)
 sub p5_sv_iv(Perl5Interpreter, OpaquePointer)
     returns Int { ... }
     native(&p5_sv_iv);
+sub p5_sv_nv(Perl5Interpreter, OpaquePointer)
+    returns num64 { ... }
+    native(&p5_sv_nv);
 sub p5_is_object(Perl5Interpreter, OpaquePointer)
     returns Int { ... }
     native(&p5_is_object);
@@ -292,6 +298,9 @@ method p5_to_p6(OpaquePointer $value) {
     elsif p5_is_sub_ref($!p5, $value) {
         p5_sv_refcnt_inc($!p5, $value);
         return Perl5Callable.new(perl5 => self, ptr => $value);
+    }
+    elsif p5_SvNOK($!p5, $value) {
+        return p5_sv_nv($!p5, $value);
     }
     elsif p5_SvIOK($!p5, $value) {
         return p5_sv_iv($!p5, $value);

@@ -7,6 +7,7 @@ use Inline::Perl5;
 my $p5 = Inline::Perl5.new();
 
 is $p5.run('5'), 5;
+is $p5.run('5.5'), 5.5;
 is $p5.run('"Perl 5"'), 'Perl 5';
 is_deeply $p5.run('[1, 2]'), [1, 2];
 is_deeply $p5.run('[1, [2, 3]]'), [1, [2, 3]];

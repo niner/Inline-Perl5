@@ -48,12 +48,20 @@ int p5_SvIOK(PerlInterpreter *my_perl, SV* sv) {
     return SvIOK(sv);
 }
 
+int p5_SvNOK(PerlInterpreter *my_perl, SV* sv) {
+    return SvNOK(sv);
+}
+
 int p5_SvPOK(PerlInterpreter *my_perl, SV* sv) {
     return SvPOK(sv);
 }
 
 int p5_sv_iv(PerlInterpreter *my_perl, SV* sv) {
     return SvIV(sv);
+}
+
+double p5_sv_nv(PerlInterpreter *my_perl, SV* sv) {
+    return SvNV(sv);
 }
 
 int p5_is_object(PerlInterpreter *my_perl, SV* sv) {
