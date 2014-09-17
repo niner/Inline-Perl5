@@ -100,6 +100,9 @@ sub p5_sv_refcnt_inc(Perl5Interpreter, OpaquePointer)
 sub p5_int_to_sv(Perl5Interpreter, Int)
     returns OpaquePointer { ... }
     native(&p5_int_to_sv);
+sub p5_float_to_sv(Perl5Interpreter, num64)
+    returns OpaquePointer { ... }
+    native(&p5_float_to_sv);
 sub p5_str_to_sv(Perl5Interpreter, Str)
     returns OpaquePointer { ... }
     native(&p5_str_to_sv);
@@ -193,6 +196,12 @@ sub p5_terminate()
 
 multi method p6_to_p5(Int:D $value) returns OpaquePointer {
     return p5_int_to_sv($!p5, $value);
+}
+multi method p6_to_p5(Num:D $value) returns OpaquePointer {
+    return p5_float_to_sv($!p5, $value);
+}
+multi method p6_to_p5(Rat:D $value) returns OpaquePointer {
+    return p5_float_to_sv($!p5, $value.Num);
 }
 multi method p6_to_p5(Str:D $value) returns OpaquePointer {
     return p5_str_to_sv($!p5, $value);
