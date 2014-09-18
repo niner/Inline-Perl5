@@ -141,6 +141,11 @@ SV *p5_str_to_sv(PerlInterpreter *my_perl, char* value) {
     return sv;
 }
 
+SV *p5_buf_to_sv(PerlInterpreter *my_perl, long len, char* value) {
+    SV * const sv = newSVpv(value, len);
+    return sv;
+}
+
 int p5_av_top_index(PerlInterpreter *my_perl, AV *av) {
     return av_top_index(av);
 }
