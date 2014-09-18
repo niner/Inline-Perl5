@@ -70,6 +70,9 @@ sub p5_SvNOK(Perl5Interpreter, OpaquePointer)
 sub p5_SvPOK(Perl5Interpreter, OpaquePointer)
     returns Int { ... }
     native(&p5_SvPOK);
+sub p5_sv_utf8(Perl5Interpreter, OpaquePointer)
+    returns Int { ... }
+    native(&p5_sv_utf8);
 sub p5_is_array(Perl5Interpreter, OpaquePointer)
     returns Int { ... }
     native(&p5_is_array);
@@ -79,6 +82,9 @@ sub p5_is_hash(Perl5Interpreter, OpaquePointer)
 sub p5_is_undef(Perl5Interpreter, OpaquePointer)
     returns Int { ... }
     native(&p5_is_undef);
+sub p5_sv_to_buf(Perl5Interpreter, OpaquePointer, CArray[CArray[int8]])
+    returns Int { ... }
+    native(&p5_sv_to_buf);
 sub p5_sv_to_char_star(Perl5Interpreter, OpaquePointer)
     returns Str { ... }
     native(&p5_sv_to_char_star);
@@ -315,7 +321,19 @@ method p5_to_p6(OpaquePointer $value) {
         return p5_sv_iv($!p5, $value);
     }
     elsif p5_SvPOK($!p5, $value) {
-        return p5_sv_to_char_star($!p5, $value);
+        if p5_sv_utf8($!p5, $value) {
+            return p5_sv_to_char_star($!p5, $value);
+        }
+        else {
+            my $string_ptr = CArray[CArray[int8]].new;
+            $string_ptr[0] = CArray[int8];
+            my $len = p5_sv_to_buf($!p5, $value, $string_ptr);
+            my $buf = Buf.new;
+            for 0..^$len {
+                $buf[$_] = $string_ptr[0][$_];
+            }
+            return $buf;
+        }
     }
     elsif p5_is_array($!p5, $value) {
         return self.p5_array_to_p6_array($value);

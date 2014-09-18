@@ -21,6 +21,12 @@ is $p5.run('
     "Pörl 5"
 '), 'Pörl 5';
 
+is $p5.run('
+    use utf8;
+    use Encode;
+    encode("latin-1", "Pörl 5");
+').decode('latin-1'), 'Pörl 5';
+
 $p5.DESTROY;
 
 done;

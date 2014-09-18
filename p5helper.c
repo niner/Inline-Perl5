@@ -56,6 +56,21 @@ int p5_SvPOK(PerlInterpreter *my_perl, SV* sv) {
     return SvPOK(sv);
 }
 
+int p5_sv_utf8(PerlInterpreter *my_perl, SV* sv) {
+    if (SvUTF8(sv)) { // UTF-8 flag set -> can use string as-is
+        return 1;
+    }
+    else { // pure 7 bit ASCII is valid UTF-8 as well
+        STRLEN len;
+        char * const pv  = SvPV(sv, len);
+        int i;
+        for (i = 0; i < len; i++)
+            if (pv[i] < 0) // signed char!
+                return 0;
+        return 1;
+    }
+}
+
 int p5_sv_iv(PerlInterpreter *my_perl, SV* sv) {
     return SvIV(sv);
 }
@@ -96,6 +111,12 @@ char *p5_sv_to_char_star(PerlInterpreter *my_perl, SV *sv) {
     STRLEN len;
     char * const pv  = SvPV(sv, len);
     return pv;
+}
+
+int p5_sv_to_buf(PerlInterpreter *my_perl, SV *sv, char **buf) {
+    STRLEN len;
+    *buf  = SvPV(sv, len);
+    return len;
 }
 
 void p5_sv_refcnt_dec(PerlInterpreter *my_perl, SV *sv) {
