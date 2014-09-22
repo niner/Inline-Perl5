@@ -479,14 +479,6 @@ class Perl5Object {
     has OpaquePointer $.ptr;
     has Inline::Perl5 $.perl5;
 
-    Perl5Object.^add_fallback(-> $, $ { True },
-        method ($name ) {
-            -> \self, |args {
-                $.perl5.invoke($.ptr, $name, self, args.list);
-            }
-        }
-    );
-
     method sink() { self }
 
     method DESTROY {
@@ -550,6 +542,16 @@ role Perl5Parent[$package] {
         method ($name) {
             -> \self, |args {
                 $.parent.perl5.invoke($package, $.parent.ptr, $name, self, args.list);
+            }
+        }
+    );
+}
+
+BEGIN {
+    Perl5Object.^add_fallback(-> $, $ { True },
+        method ($name ) {
+            -> \self, |args {
+                $.perl5.invoke($.ptr, $name, self, args.list);
             }
         }
     );
