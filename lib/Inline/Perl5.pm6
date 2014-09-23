@@ -443,6 +443,13 @@ method execute(OpaquePointer $code_ref, *@args) {
     self!unpack_return_values($av);
 }
 
+class Perl6PackageCreator {
+    method create($package, $code) {
+        EVAL "GLOBAL::<$package> = package \{\n$code\n\}";
+        return;
+    }
+}
+
 method init_callbacks {
     self.run(q[
         package Perl6::Object;
@@ -464,7 +471,31 @@ method init_callbacks {
                 $self->call(@_);
             }
         }
+
+        package v6;
+
+        my $package;
+        my $creator;
+
+        sub init {
+            ($creator) = @_;
+        }
+
+        sub import {
+            $package = scalar caller;
+        }
+
+        use Filter::Simple sub {
+            $creator->create($package, $_);
+            $_ = '1;';
+        };
+
+        $INC{'v6.pm'} = undef;
+
+        1;
     ]);
+
+    self.call('v6::init', Perl6PackageCreator.new);
 }
 
 method sv_refcnt_dec($obj) {
@@ -512,7 +543,6 @@ class Perl5Callable {
 
 method BUILD {
     $!p5 = p5_init_perl();
-    self.init_callbacks();
 
     &!call_method = sub (Int $index, Str $name, OpaquePointer $args, OpaquePointer $err) returns OpaquePointer {
         my $p6obj = $objects.get($index);
@@ -537,6 +567,8 @@ method BUILD {
             }
         }
     }
+
+    self.init_callbacks();
 }
 
 role Perl5Parent[$package] {
