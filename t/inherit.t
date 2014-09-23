@@ -11,7 +11,7 @@ my $p5 = Inline::Perl5.new();
 
 my $has_moose =  $p5.run('eval { require Moose; 1};');
 if !$has_moose {
-    skip('Perl 5 Moose module not available',2);
+    skip('Perl 5 Moose module not available', 5);
     exit;
 }
 
