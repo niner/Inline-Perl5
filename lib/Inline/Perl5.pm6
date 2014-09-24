@@ -265,6 +265,10 @@ multi method p6_to_p5(Callable:D $value, OpaquePointer $inst = OpaquePointer) {
         &free_p6_object,
     );
 }
+multi method p6_to_p5(Perl5Callable:D $value) returns OpaquePointer {
+    p5_sv_refcnt_inc($!p5, $value.ptr);
+    return $value.ptr;
+}
 multi method p6_to_p5(Hash:D $value) returns OpaquePointer {
     my $hv = p5_newHV($!p5);
     for %$value -> $item {

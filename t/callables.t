@@ -5,7 +5,7 @@ use Test;
 use Inline::Perl5;
 use NativeCall;
 
-plan 2;
+plan 3;
 
 my $p5 = Inline::Perl5.new();
 
@@ -31,5 +31,7 @@ sub something($suffix) {
 
 is $p5.call('call_something', &something, 6), 'Perl 6';
 is $p5.call('return_code', 'Perl')(5), 'Perl 5';
+my $sub = $p5.call('return_code', 'Foo');
+is $p5.call('call_something', $sub, 1), 'Foo 1';
 
 # vim: ft=perl6
