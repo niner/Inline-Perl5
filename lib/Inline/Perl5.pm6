@@ -445,7 +445,7 @@ method execute(OpaquePointer $code_ref, *@args) {
 
 class Perl6PackageCreator {
     method create($package, $code) {
-        EVAL "GLOBAL::<$package> = package \{\n$code\n\}";
+        EVAL "class GLOBAL::$package \{\n$code\n\}";
         return;
     }
 }
