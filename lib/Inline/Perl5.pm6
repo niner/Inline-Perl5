@@ -28,13 +28,6 @@ sub native(Sub $sub) {
 class Perl5Object { ... }
 class Perl5Callable { ... }
 
-class X::Inline::Perl5::Unmarshallable is Exception {
-    has Mu $.object;
-    method message() {
-        "Don't know how to pass object of type {$.object.^name} to Perl 5 code";
-    }
-}
-
 class ObjectKeeper {
     has @!objects;
     has $!last_free = -1;
