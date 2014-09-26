@@ -10,15 +10,19 @@ use NativeCall;
 
 sub native(Sub $sub) {
     my $so = 'p5helper.so';
-    my Str $path;
-    for @*INC {
-        if ($_ ~ "/Inline/$so").IO ~~ :f {
-            $path = $_ ~ "/Inline/$so";
-            trait_mod:<is>($sub, :native($path));
-            return;
+    state Str $path;
+    unless $path {
+        for @*INC {
+            if "$_/Inline/$so".IO ~~ :f {
+                $path = "$_/Inline/$so";
+                last;
+            }
         }
     }
-    die "unable to find $so";
+    unless $path {
+        die "unable to find Inline/$so IN \@*INC";
+    }
+    trait_mod:<is>($sub, :native($path));
 }
 
 class Perl5Object { ... }
