@@ -287,7 +287,7 @@ method p5_array_to_p6_array(OpaquePointer $sv) {
     my $av_len = p5_av_top_index($!p5, $av);
 
     my $arr = [];
-    loop (my $i = 0; $i <= $av_len; $i++) {
+    loop (my int $i = 0; $i <= $av_len; $i = $i + 1) {
         $arr.push(self.p5_to_p6(p5_av_fetch($!p5, $av, $i)));
     }
     return $arr;
