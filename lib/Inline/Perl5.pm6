@@ -46,7 +46,7 @@ class ObjectKeeper {
     }
 
     method get(Int $index) returns Any:D {
-        return @!objects[$index];
+        @!objects[$index];
     }
 
     method free(Int $index) {
@@ -201,33 +201,33 @@ sub p5_terminate()
     native(&p5_terminate);
 
 multi method p6_to_p5(Int:D $value) returns OpaquePointer {
-    return p5_int_to_sv($!p5, $value);
+    p5_int_to_sv($!p5, $value);
 }
 multi method p6_to_p5(Num:D $value) returns OpaquePointer {
-    return p5_float_to_sv($!p5, $value);
+    p5_float_to_sv($!p5, $value);
 }
 multi method p6_to_p5(Rat:D $value) returns OpaquePointer {
-    return p5_float_to_sv($!p5, $value.Num);
+    p5_float_to_sv($!p5, $value.Num);
 }
 multi method p6_to_p5(Str:D $value) returns OpaquePointer {
-    return p5_str_to_sv($!p5, $value);
+    p5_str_to_sv($!p5, $value);
 }
 multi method p6_to_p5(blob8:D $value) returns OpaquePointer {
     my $array = CArray[uint8].new();
     for ^$value.elems {
         $array[$_] = $value[$_];
     }
-    return p5_buf_to_sv($!p5, $value.elems, $array);
+    p5_buf_to_sv($!p5, $value.elems, $array);
 }
 multi method p6_to_p5(Perl5Object $value) returns OpaquePointer {
     p5_sv_refcnt_inc($!p5, $value.ptr);
-    return $value.ptr;
+    $value.ptr;
 }
 multi method p6_to_p5(OpaquePointer $value) returns OpaquePointer {
-    return $value;
+    $value;
 }
 multi method p6_to_p5(Any:U $value) returns OpaquePointer {
-    return p5_undef($!p5);
+    p5_undef($!p5);
 }
 
 my $objects = ObjectKeeper.new;
@@ -238,12 +238,12 @@ sub free_p6_object(Int $index) {
 
 multi method p6_to_p5(Perl5Object:D $value, OpaquePointer $inst) {
     p5_sv_refcnt_inc($!p5, $inst);
-    return $inst;
+    $inst;
 }
 multi method p6_to_p5(Any:D $value, OpaquePointer $inst = OpaquePointer) {
     my $index = $objects.keep($value);
 
-    return p5_wrap_p6_object(
+    p5_wrap_p6_object(
         $!p5,
         $index,
         $inst,
@@ -254,7 +254,7 @@ multi method p6_to_p5(Any:D $value, OpaquePointer $inst = OpaquePointer) {
 multi method p6_to_p5(Callable:D $value, OpaquePointer $inst = OpaquePointer) {
     my $index = $objects.keep($value);
 
-    return p5_wrap_p6_callable(
+    p5_wrap_p6_callable(
         $!p5,
         $index,
         $inst,
@@ -264,7 +264,7 @@ multi method p6_to_p5(Callable:D $value, OpaquePointer $inst = OpaquePointer) {
 }
 multi method p6_to_p5(Perl5Callable:D $value) returns OpaquePointer {
     p5_sv_refcnt_inc($!p5, $value.ptr);
-    return $value.ptr;
+    $value.ptr;
 }
 multi method p6_to_p5(Hash:D $value) returns OpaquePointer {
     my $hv = p5_newHV($!p5);
@@ -272,14 +272,14 @@ multi method p6_to_p5(Hash:D $value) returns OpaquePointer {
         my $value = self.p6_to_p5($item.value);
         p5_hv_store($!p5, $hv, $item.key, $value);
     }
-    return p5_newRV_noinc($!p5, $hv);
+    p5_newRV_noinc($!p5, $hv);
 }
 multi method p6_to_p5(Positional:D $value) returns OpaquePointer {
     my $av = p5_newAV($!p5);
     for @$value -> $item {
         p5_av_push($!p5, $av, self.p6_to_p5($item));
     }
-    return p5_newRV_noinc($!p5, $av);
+    p5_newRV_noinc($!p5, $av);
 }
 
 method p5_array_to_p6_array(OpaquePointer $sv) {
@@ -290,7 +290,7 @@ method p5_array_to_p6_array(OpaquePointer $sv) {
     loop (my int $i = 0; $i <= $av_len; $i = $i + 1) {
         $arr.push(self.p5_to_p6(p5_av_fetch($!p5, $av, $i)));
     }
-    return $arr;
+    $arr;
 }
 method !p5_hash_to_p6_hash(OpaquePointer $sv) {
     my OpaquePointer $hv = p5_sv_to_hv($!p5, $sv);
@@ -308,7 +308,7 @@ method !p5_hash_to_p6_hash(OpaquePointer $sv) {
         $hash{$p6_key} = $val;
     }
 
-    return $hash;
+    $hash;
 }
 
 method p5_to_p6(OpaquePointer $value) {
@@ -367,13 +367,13 @@ method handle_p5_exception() is hidden_from_backtrace {
 method run($perl) {
     my $res = p5_eval_pv($!p5, $perl, 0);
     self.handle_p5_exception();
-    return self.p5_to_p6($res);
+    self.p5_to_p6($res);
 }
 
 method !setup_arguments(@args) {
     my $len = @args.elems;
     my @svs := CArray[OpaquePointer].new();
-    loop (my $i = 0; $i < $len; $i++) {
+    loop (my int $i = 0; $i < $len; $i = $i + 1) {
         @svs[$i] = self.p6_to_p5(@args[$i]);
     }
     return $len, @svs;
@@ -394,27 +394,27 @@ method !unpack_return_values($av) {
     }
 
     my @retvals;
-    loop (my $i = 0; $i <= $av_len; $i++) {
+    loop (my int $i = 0; $i <= $av_len; $i = $i + 1) {
         @retvals.push(self.p5_to_p6(p5_av_fetch($!p5, $av, $i)));
     }
     p5_sv_refcnt_dec($!p5, $av);
-    return @retvals;
+    @retvals;
 }
 
 method call(Str $function, *@args) {
     my $av = p5_call_function($!p5, $function, |self!setup_arguments(@args));
     self.handle_p5_exception();
-    return self!unpack_return_values($av);
+    self!unpack_return_values($av);
 }
 
 multi method invoke(Str $package, Str $function, *@args) {
     my $av = p5_call_package_method($!p5, $package, $function, |self!setup_arguments(@args));
     self.handle_p5_exception();
-    return self!unpack_return_values($av);
+    self!unpack_return_values($av);
 }
 
 multi method invoke(OpaquePointer $obj, Str $function, *@args) {
-    return self.invoke(Str, $obj, $function, @args.list);
+    self.invoke(Str, $obj, $function, @args.list);
 }
 
 multi method invoke(Str $package, OpaquePointer $obj, Str $function, *@args) {
@@ -426,13 +426,13 @@ multi method invoke(Str $package, OpaquePointer $obj, Str $function, *@args) {
     }
     my $av = p5_call_method($!p5, $package, $obj, $function, $len, @svs);
     self.handle_p5_exception();
-    return self!unpack_return_values($av);
+    self!unpack_return_values($av);
 }
 
 method execute(OpaquePointer $code_ref, *@args) {
     my $av = p5_call_code_ref($!p5, $code_ref, |self!setup_arguments(@args));
     self.handle_p5_exception();
-    return self!unpack_return_values($av);
+    self!unpack_return_values($av);
 }
 
 method init_callbacks {
