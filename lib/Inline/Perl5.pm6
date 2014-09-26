@@ -214,7 +214,7 @@ multi method p6_to_p5(Str:D $value) returns OpaquePointer {
 }
 multi method p6_to_p5(blob8:D $value) returns OpaquePointer {
     my $array = CArray[uint8].new();
-    for 0 .. $value.elems - 1 {
+    for ^$value.elems {
         $array[$_] = $value[$_];
     }
     return p5_buf_to_sv($!p5, $value.elems, $array);
