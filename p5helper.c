@@ -151,7 +151,10 @@ int p5_av_top_index(PerlInterpreter *my_perl, AV *av) {
 }
 
 SV *p5_av_fetch(PerlInterpreter *my_perl, AV *av, int key) {
-    return *av_fetch(av, key, 0);
+    SV ** const item = av_fetch(av, key, 0);
+    if (item)
+        return *item;
+    return NULL;
 }
 
 void p5_av_push(PerlInterpreter *my_perl, AV *av, SV *sv) {

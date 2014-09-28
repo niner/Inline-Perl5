@@ -312,6 +312,7 @@ method !p5_hash_to_p6_hash(OpaquePointer $sv) {
 }
 
 method p5_to_p6(OpaquePointer $value) {
+    return Any unless defined $value;
     if p5_is_object($!p5, $value) {
         if p5_is_wrapped_p6_object($!p5, $value) {
             return $objects.get(p5_unwrap_p6_object($!p5, $value));
