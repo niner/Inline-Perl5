@@ -197,6 +197,10 @@ SV *p5_newRV_noinc(PerlInterpreter *my_perl, SV *sv) {
     return newRV_noinc(sv);
 }
 
+const char *p5_sv_reftype(PerlInterpreter *my_perl, SV *sv) {
+    return sv_reftype(SvRV(sv), 1);
+}
+
 SV *p5_eval_pv(PerlInterpreter *my_perl, const char* p, I32 croak_on_error) {
     PERL_SET_CONTEXT(my_perl);
     return eval_pv(p, croak_on_error);

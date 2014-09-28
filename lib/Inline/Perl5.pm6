@@ -145,6 +145,9 @@ sub p5_newAV(Perl5Interpreter)
 sub p5_newRV_noinc(Perl5Interpreter, OpaquePointer)
     returns OpaquePointer { ... }
     native(&p5_newRV_noinc);
+sub p5_sv_reftype(Perl5Interpreter, OpaquePointer)
+    returns Str { ... }
+    native(&p5_sv_reftype);
 sub p5_hv_store(Perl5Interpreter, OpaquePointer, Str, OpaquePointer)
     { ... }
     native(&p5_hv_store);
@@ -280,6 +283,10 @@ multi method p6_to_p5(Positional:D $value) returns OpaquePointer {
         p5_av_push($!p5, $av, self.p6_to_p5($item));
     }
     p5_newRV_noinc($!p5, $av);
+}
+
+method p5_sv_reftype(OpaquePointer $sv) {
+    return p5_sv_reftype($!p5, $sv);
 }
 
 method p5_array_to_p6_array(OpaquePointer $sv) {
