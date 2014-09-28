@@ -540,6 +540,8 @@ XS(p5_call_p6_callable) {
             SvREFCNT_dec(next); /* see perlguts Working with AVs */
     }
 
+    if (!SvROK(obj))
+        croak("Tried to call a Perl 6 method on a non-object!?");
     SV * const obj_deref = SvRV(obj);
     MAGIC * const mg = mg_find(obj_deref, '~');
     _perl6_magic* const p6mg = (_perl6_magic*)(mg->mg_ptr);
