@@ -5,8 +5,6 @@ use Test;
 use Inline::Perl5;
 use NativeCall;
 
-plan 16;
-
 my $p5 = Inline::Perl5.new();
 {
     try $p5.run(q/
@@ -63,6 +61,24 @@ my $p5 = Inline::Perl5.new();
         }
     }
 }
+{
+    $p5.run(q/
+        package Foo;
+        sub new {
+            return bless {};
+        }
+    /);
+    my $foo = $p5.invoke('Foo', 'new');
+    $foo.non_existing;
+    CATCH {
+        ok 1, 'survived P5 missing method';
+        when X::AdHoc {
+            ok $_.isa('X::AdHoc'), 'got an exception from method call';
+            ok $_.Str().index('Could not find method "non_existing" of "Foo" object') == 0, 'exception message found from method call';
+        }
+    }
+}
+
 
 class Foo {
     method depart {
@@ -101,5 +117,7 @@ is $p5.call('test_foo', Foo.new), 'foo';
         }
     }
 }
+
+done;
 
 # vim: ft=perl6

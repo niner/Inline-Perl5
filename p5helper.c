@@ -258,17 +258,17 @@ AV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, char *name,
     ENTER;
     SAVETMPS;
 
-    PUSHMARK(SP);
-
-    for (i = 0; i < len; i++) {
-        XPUSHs(sv_2mortal(args[i]));
-    }
-
-    PUTBACK;
-
     HV * const pkg = package != NULL ? gv_stashpv(package, 0) : SvSTASH((SV*)SvRV(obj));
     GV * const gv = Perl_gv_fetchmethod_autoload(aTHX_ pkg, name, FALSE);
     if (gv && isGV(gv)) {
+        PUSHMARK(SP);
+
+        for (i = 0; i < len; i++) {
+            XPUSHs(sv_2mortal(args[i]));
+        }
+
+        PUTBACK;
+
         SV * const rv = sv_2mortal(newRV((SV*)GvCV(gv)));
 
         count = call_sv(rv, flags);
@@ -284,7 +284,7 @@ AV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, char *name,
         }
     }
     else {
-        croak("Could not find method \"%s\" of \"%s\" object", name, HvNAME(pkg));
+        ERRSV = newSVpvf("Could not find method \"%s\" of \"%s\" object", name, HvNAME(pkg));
     }
 
     PUTBACK;
