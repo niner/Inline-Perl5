@@ -432,9 +432,7 @@ SV *p5_wrap_p6_object(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call_p6_m
     priv.index = i;
     priv.call_p6_method = call_p6_method;
     priv.free_p6_object = free_p6_object;
-    sv_magic(inst, inst, PERL_MAGIC_ext, (char *) &priv, sizeof(priv));
-    MAGIC * const mg = mg_find(inst, PERL_MAGIC_ext);
-    mg->mg_virtual = &p5_inline_mg_vtbl;
+    sv_magicext(inst, inst, PERL_MAGIC_ext, &p5_inline_mg_vtbl, (char *) &priv, sizeof(priv));
 
     return inst_ptr;
 }
