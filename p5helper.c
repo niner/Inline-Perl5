@@ -21,8 +21,10 @@ static int inited = 0;
 
 PerlInterpreter *p5_init_perl() {
     char *embedding[] = { "", "-e", "0" };
+    int argc = 0;
+    char **argv;
     if (!inited++)
-        PERL_SYS_INIT3(0, NULL, NULL);
+        PERL_SYS_INIT3(&argc, &argv, &argv);
     PerlInterpreter *my_perl = perl_alloc();
     PERL_SET_CONTEXT(my_perl);
     PL_perl_destruct_level = 1;
