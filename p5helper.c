@@ -24,7 +24,7 @@ PerlInterpreter *p5_init_perl() {
     int argc = 0;
     char **argv;
     if (!inited++)
-        PERL_SYS_INIT3(&argc, &argv, &argv);
+        PERL_SYS_INIT(&argc, &argv);
     PerlInterpreter *my_perl = perl_alloc();
     PERL_SET_CONTEXT(my_perl);
     PL_perl_destruct_level = 1;
