@@ -46,26 +46,26 @@ void p5_terminate() {
         PERL_SYS_TERM();
 }
 
-int p5_SvIOK(PerlInterpreter *my_perl, SV* sv) {
+U32 p5_SvIOK(PerlInterpreter *my_perl, SV* sv) {
     return SvIOK(sv);
 }
 
-int p5_SvNOK(PerlInterpreter *my_perl, SV* sv) {
+U32 p5_SvNOK(PerlInterpreter *my_perl, SV* sv) {
     return SvNOK(sv);
 }
 
-int p5_SvPOK(PerlInterpreter *my_perl, SV* sv) {
+U32 p5_SvPOK(PerlInterpreter *my_perl, SV* sv) {
     return SvPOK(sv);
 }
 
-int p5_sv_utf8(PerlInterpreter *my_perl, SV* sv) {
+U32 p5_sv_utf8(PerlInterpreter *my_perl, SV* sv) {
     if (SvUTF8(sv)) { // UTF-8 flag set -> can use string as-is
         return 1;
     }
     else { // pure 7 bit ASCII is valid UTF-8 as well
         STRLEN len;
         char * const pv  = SvPV(sv, len);
-        int i;
+        STRLEN i;
         for (i = 0; i < len; i++)
             if (pv[i] < 0) // signed char!
                 return 0;
@@ -73,11 +73,11 @@ int p5_sv_utf8(PerlInterpreter *my_perl, SV* sv) {
     }
 }
 
-int p5_sv_iv(PerlInterpreter *my_perl, SV* sv) {
+IV p5_sv_iv(PerlInterpreter *my_perl, SV* sv) {
     return SvIV(sv);
 }
 
-double p5_sv_nv(PerlInterpreter *my_perl, SV* sv) {
+NV p5_sv_nv(PerlInterpreter *my_perl, SV* sv) {
     return SvNV(sv);
 }
 
@@ -115,7 +115,7 @@ char *p5_sv_to_char_star(PerlInterpreter *my_perl, SV *sv) {
     return pv;
 }
 
-int p5_sv_to_buf(PerlInterpreter *my_perl, SV *sv, char **buf) {
+STRLEN p5_sv_to_buf(PerlInterpreter *my_perl, SV *sv, char **buf) {
     STRLEN len;
     *buf  = SvPV(sv, len);
     return len;
@@ -129,7 +129,7 @@ void p5_sv_refcnt_inc(PerlInterpreter *my_perl, SV *sv) {
     SvREFCNT_inc(sv);
 }
 
-SV *p5_int_to_sv(PerlInterpreter *my_perl, int value) {
+SV *p5_int_to_sv(PerlInterpreter *my_perl, IV value) {
     return newSViv(value);
 }
 
@@ -143,16 +143,16 @@ SV *p5_str_to_sv(PerlInterpreter *my_perl, char* value) {
     return sv;
 }
 
-SV *p5_buf_to_sv(PerlInterpreter *my_perl, long len, char* value) {
+SV *p5_buf_to_sv(PerlInterpreter *my_perl, STRLEN len, char* value) {
     SV * const sv = newSVpv(value, len);
     return sv;
 }
 
-int p5_av_top_index(PerlInterpreter *my_perl, AV *av) {
+I32 p5_av_top_index(PerlInterpreter *my_perl, AV *av) {
     return av_top_index(av);
 }
 
-SV *p5_av_fetch(PerlInterpreter *my_perl, AV *av, int key) {
+SV *p5_av_fetch(PerlInterpreter *my_perl, AV *av, I32 key) {
     SV ** const item = av_fetch(av, key, 0);
     if (item)
         return *item;
@@ -163,7 +163,7 @@ void p5_av_push(PerlInterpreter *my_perl, AV *av, SV *sv) {
     av_push(av, sv);
 }
 
-int p5_hv_iterinit(PerlInterpreter *my_perl, HV *hv) {
+I32 p5_hv_iterinit(PerlInterpreter *my_perl, HV *hv) {
     return hv_iterinit(hv);
 }
 
@@ -215,7 +215,7 @@ SV *p5_err_sv(PerlInterpreter *my_perl) {
 AV *p5_call_package_method(PerlInterpreter *my_perl, char *package, char *name, int len, SV *args[]) {
     dSP;
     int i;
-    int count;
+    I32 count;
     AV * const retval = newAV();
     int flags = G_ARRAY | G_EVAL;
 
@@ -255,7 +255,6 @@ AV *p5_call_package_method(PerlInterpreter *my_perl, char *package, char *name, 
 AV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, char *name, int len, SV *args[]) {
     dSP;
     int i;
-    int count;
     AV * const retval = newAV();
     int flags = G_ARRAY | G_EVAL;
 
@@ -267,6 +266,7 @@ AV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, char *name,
     HV * const pkg = package != NULL ? gv_stashpv(package, 0) : SvSTASH((SV*)SvRV(obj));
     GV * const gv = Perl_gv_fetchmethod_autoload(aTHX_ pkg, name, FALSE);
     if (gv && isGV(gv)) {
+        I32 count;
         PUSHMARK(SP);
 
         for (i = 0; i < len; i++) {
@@ -303,7 +303,7 @@ AV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, char *name,
 AV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]) {
     dSP;
     int i;
-    int count;
+    I32 count;
     AV * const retval = newAV();
     int flags = G_ARRAY | G_EVAL;
 
@@ -342,7 +342,7 @@ AV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]) 
 AV *p5_call_code_ref(PerlInterpreter *my_perl, SV *code_ref, int len, SV *args[]) {
     dSP;
     int i;
-    int count;
+    I32 count;
     AV * const retval = newAV();
     int flags = G_ARRAY | G_EVAL;
 
@@ -391,10 +391,10 @@ typedef struct {
     I32 key; /* to make sure it came from Inline */
     IV index;
     union {
-        SV *(*call_p6_method)(int, char *, SV *, SV **);
-        SV *(*call_p6_callable)(int, SV *, SV **);
+        SV *(*call_p6_method)(IV, char *, SV *, SV **);
+        SV *(*call_p6_callable)(IV, SV *, SV **);
     };
-    void (*free_p6_object)(int);
+    void (*free_p6_object)(IV);
 } _perl6_magic;
 
 #define PERL6_MAGIC_KEY 0x0DD515FE
@@ -419,7 +419,7 @@ MGVTBL p5_inline_mg_vtbl = {
     0x0
 };
 
-SV *p5_wrap_p6_object(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call_p6_method)(int, char * , SV *, SV **), void (*free_p6_object)(int)) {
+SV *p5_wrap_p6_object(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call_p6_method)(IV, char * , SV *, SV **), void (*free_p6_object)(IV)) {
     SV * inst;
     SV * inst_ptr;
     if (p5obj == NULL) {
@@ -443,7 +443,7 @@ SV *p5_wrap_p6_object(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call_p6_m
     return inst_ptr;
 }
 
-SV *p5_wrap_p6_callable(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call)(int, SV *, SV **), void (*free_p6_object)(int)) {
+SV *p5_wrap_p6_callable(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call)(IV, SV *, SV **), void (*free_p6_object)(IV)) {
     SV * inst;
     SV * inst_ptr;
     if (p5obj == NULL) {
@@ -476,7 +476,7 @@ int p5_is_wrapped_p6_object(PerlInterpreter *my_perl, SV *obj) {
     return (mg && ((_perl6_magic*)(mg->mg_ptr))->key == PERL6_MAGIC_KEY);
 }
 
-int p5_unwrap_p6_object(PerlInterpreter *my_perl, SV *obj) {
+IV p5_unwrap_p6_object(PerlInterpreter *my_perl, SV *obj) {
     SV * const obj_deref = SvRV(obj);
     MAGIC * const mg = mg_find(obj_deref, '~');
     return ((_perl6_magic*)(mg->mg_ptr))->index;
@@ -519,8 +519,8 @@ XS(p5_call_p6_method) {
     }
     if (GIMME_V == G_ARRAY) {
         AV* const av = (AV*)SvRV(retval);
-        int const len = av_len(av) + 1;
-        int i;
+        I32 const len = av_len(av) + 1;
+        I32 i;
         for (i = 0; i < len; i++) {
             XPUSHs(sv_2mortal(av_shift(av)));
         }
@@ -567,8 +567,8 @@ XS(p5_call_p6_callable) {
     }
     if (GIMME_V == G_ARRAY) {
         AV* const av = (AV*)SvRV(retval);
-        int const len = av_len(av) + 1;
-        int i;
+        I32 const len = av_len(av) + 1;
+        I32 i;
         for (i = 0; i < len; i++) {
             XPUSHs(sv_2mortal(av_shift(av)));
         }

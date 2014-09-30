@@ -59,25 +59,25 @@ sub p5_init_perl()
     returns Perl5Interpreter { ... }
     native(&p5_init_perl);
 sub p5_SvIOK(Perl5Interpreter, OpaquePointer)
-    returns Int { ... }
+    returns int32 { ... } # should be uint32 once that's supported
     native(&p5_SvIOK);
 sub p5_SvNOK(Perl5Interpreter, OpaquePointer)
-    returns Int { ... }
+    returns int32 { ... } # should be uint32 once that's supported
     native(&p5_SvNOK);
 sub p5_SvPOK(Perl5Interpreter, OpaquePointer)
-    returns Int { ... }
+    returns int32 { ... } # should be uint32 once that's supported
     native(&p5_SvPOK);
 sub p5_sv_utf8(Perl5Interpreter, OpaquePointer)
-    returns Int { ... }
+    returns int32 { ... } # should be uint32 once that's supported
     native(&p5_sv_utf8);
 sub p5_is_array(Perl5Interpreter, OpaquePointer)
-    returns Int { ... }
+    returns int { ... }
     native(&p5_is_array);
 sub p5_is_hash(Perl5Interpreter, OpaquePointer)
-    returns Int { ... }
+    returns int { ... }
     native(&p5_is_hash);
 sub p5_is_undef(Perl5Interpreter, OpaquePointer)
-    returns Int { ... }
+    returns int { ... }
     native(&p5_is_undef);
 sub p5_sv_to_buf(Perl5Interpreter, OpaquePointer, CArray[CArray[int8]])
     returns Int { ... }
@@ -115,14 +115,14 @@ sub p5_buf_to_sv(Perl5Interpreter, Int, CArray[uint8])
 sub p5_av_top_index(Perl5Interpreter, OpaquePointer)
     returns Int { ... }
     native(&p5_av_top_index);
-sub p5_av_fetch(Perl5Interpreter, OpaquePointer, Int)
+sub p5_av_fetch(Perl5Interpreter, OpaquePointer, int32)
     returns OpaquePointer { ... }
     native(&p5_av_fetch);
 sub p5_av_push(Perl5Interpreter, OpaquePointer, OpaquePointer)
     { ... }
     native(&p5_av_push);
 sub p5_hv_iterinit(Perl5Interpreter, OpaquePointer)
-    returns Int { ... }
+    returns int32 { ... }
     native(&p5_hv_iterinit);
 sub p5_hv_iternext(Perl5Interpreter, OpaquePointer)
     returns OpaquePointer { ... }
@@ -151,16 +151,16 @@ sub p5_sv_reftype(Perl5Interpreter, OpaquePointer)
 sub p5_hv_store(Perl5Interpreter, OpaquePointer, Str, OpaquePointer)
     { ... }
     native(&p5_hv_store);
-sub p5_call_function(Perl5Interpreter, Str, Int, CArray[OpaquePointer])
+sub p5_call_function(Perl5Interpreter, Str, int, CArray[OpaquePointer])
     returns OpaquePointer { ... }
     native(&p5_call_function);
-sub p5_call_method(Perl5Interpreter, Str, OpaquePointer, Str, Int, CArray[OpaquePointer])
+sub p5_call_method(Perl5Interpreter, Str, OpaquePointer, Str, int, CArray[OpaquePointer])
     returns OpaquePointer { ... }
     native(&p5_call_method);
-sub p5_call_package_method(Perl5Interpreter, Str, Str, Int, CArray[OpaquePointer])
+sub p5_call_package_method(Perl5Interpreter, Str, Str, int, CArray[OpaquePointer])
     returns OpaquePointer { ... }
     native(&p5_call_package_method);
-sub p5_call_code_ref(Perl5Interpreter, OpaquePointer, Int, CArray[OpaquePointer])
+sub p5_call_code_ref(Perl5Interpreter, OpaquePointer, int, CArray[OpaquePointer])
     returns OpaquePointer { ... }
     native(&p5_call_code_ref);
 sub p5_rebless_object(Perl5Interpreter, OpaquePointer)
@@ -176,12 +176,12 @@ sub p5_sv_nv(Perl5Interpreter, OpaquePointer)
     returns num64 { ... }
     native(&p5_sv_nv);
 sub p5_is_object(Perl5Interpreter, OpaquePointer)
-    returns Int { ... }
+    returns int { ... }
     native(&p5_is_object);
 sub p5_is_sub_ref(Perl5Interpreter, OpaquePointer)
-    returns Int { ... }
+    returns int { ... }
     native(&p5_is_sub_ref);
-sub p5_eval_pv(Perl5Interpreter, Str, Int)
+sub p5_eval_pv(Perl5Interpreter, Str, int32)
     returns OpaquePointer { ... }
     native(&p5_eval_pv);
 sub p5_err_sv(Perl5Interpreter)
@@ -194,7 +194,7 @@ sub p5_wrap_p6_callable(Perl5Interpreter, Int, OpaquePointer, &call(Int, OpaqueP
     returns OpaquePointer { ... }
     native(&p5_wrap_p6_callable);
 sub p5_is_wrapped_p6_object(Perl5Interpreter, OpaquePointer)
-    returns Int { ... }
+    returns int { ... }
     native(&p5_is_wrapped_p6_object);
 sub p5_unwrap_p6_object(Perl5Interpreter, OpaquePointer)
     returns Int { ... }
@@ -302,7 +302,7 @@ method p5_array_to_p6_array(OpaquePointer $sv) {
 method !p5_hash_to_p6_hash(OpaquePointer $sv) {
     my OpaquePointer $hv = p5_sv_to_hv($!p5, $sv);
 
-    my Int $len = p5_hv_iterinit($!p5, $hv);
+    my int32 $len = p5_hv_iterinit($!p5, $hv);
 
     my $hash = {};
 
@@ -381,7 +381,7 @@ method run($perl) {
 method !setup_arguments(@args) {
     my $len = @args.elems;
     my @svs := CArray[OpaquePointer].new();
-    loop (my int $i = 0; $i < $len; $i = $i + 1) {
+    loop (my Int $i = 0; $i < $len; $i = $i + 1) {
         @svs[$i] = self.p6_to_p5(@args[$i]);
     }
     return $len, @svs;
@@ -402,7 +402,7 @@ method !unpack_return_values($av) {
     }
 
     my @retvals;
-    loop (my int $i = 0; $i <= $av_len; $i = $i + 1) {
+    loop (my int32 $i = 0; $i <= $av_len; $i = $i + 1) {
         @retvals.push(self.p5_to_p6(p5_av_fetch($!p5, $av, $i)));
     }
     p5_sv_refcnt_dec($!p5, $av);
@@ -429,7 +429,7 @@ multi method invoke(Str $package, OpaquePointer $obj, Str $function, *@args) {
     my $len = @args.elems;
     my @svs := CArray[OpaquePointer].new();
     @svs[0] = self.p6_to_p5(@args[0], $obj);
-    loop (my $i = 1; $i < $len; $i++) {
+    loop (my Int $i = 1; $i < $len; $i++) {
         @svs[$i] = self.p6_to_p5(@args[$i]);
     }
     my $av = p5_call_method($!p5, $package, $obj, $function, $len, @svs);
