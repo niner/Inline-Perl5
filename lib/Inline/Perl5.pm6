@@ -113,7 +113,7 @@ sub p5_buf_to_sv(Perl5Interpreter, Int, CArray[uint8])
     returns OpaquePointer { ... }
     native(&p5_buf_to_sv);
 sub p5_av_top_index(Perl5Interpreter, OpaquePointer)
-    returns Int { ... }
+    returns int32 { ... }
     native(&p5_av_top_index);
 sub p5_av_fetch(Perl5Interpreter, OpaquePointer, int32)
     returns OpaquePointer { ... }
