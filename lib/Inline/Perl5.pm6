@@ -454,6 +454,10 @@ method init_callbacks {
             Perl6::Object::call_method($name, @_);
         }
 
+        sub can {
+            return Perl6::Object::call_method('can', @_);
+        }
+
         package Perl6::Callable;
 
         use overload '&{}' => \&deref_call, fallback => 1;
