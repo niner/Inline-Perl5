@@ -5,7 +5,7 @@ use Inline::Perl5;
 use Test;
 use NativeCall;
 
-plan 5;
+plan 8;
 
 my $p5 = Inline::Perl5.new();
 
@@ -87,6 +87,30 @@ class Qux does Inline::Perl5::Perl5Parent['Bar'] {
 }
 
 is(Qux.new(perl5 => $p5).test, 'Perl6!!');
+
+# Test passing a P5 object to the constructor of a P6 subclass
+
+class Perl6ObjectCreator {
+    method create($package, $parent) {
+        ::($package).WHAT.new(perl5 => $p5, parent => $parent);
+    }
+}
+
+$p5.run(q:heredoc/PERL5/);
+    sub init_perl6_object_creator {
+        $Perl6::ObjectCreator = shift;
+    }
+PERL5
+
+$p5.call('init_perl6_object_creator', Perl6ObjectCreator.new);
+
+my $bar = $p5.run(q:heredoc/PERL5/);
+    my $foo = Foo->new(foo => 'injected');
+    $Perl6::ObjectCreator->create('Bar', $foo);
+PERL5
+is($bar.foo, 'injected');
+is($bar.test, 'Perl6');
+is($bar.test_inherited, 'Perl5');
 
 # vim: ft=perl6
 
