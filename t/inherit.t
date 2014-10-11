@@ -5,13 +5,13 @@ use Inline::Perl5;
 use Test;
 use NativeCall;
 
-plan 8;
+plan 8; # adjust the skip as well!
 
 my $p5 = Inline::Perl5.new();
 
 my $has_moose =  $p5.run('eval { require Moose; 1};');
 if !$has_moose {
-    skip('Perl 5 Moose module not available', 5);
+    skip('Perl 5 Moose module not available', 8);
     exit;
 }
 
