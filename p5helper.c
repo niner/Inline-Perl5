@@ -236,7 +236,9 @@ AV *p5_call_package_method(PerlInterpreter *my_perl, char *package, char *name, 
     count = call_method(name, flags);
     SPAGAIN;
 
-    av_extend(retval, count - 1);
+    if (count > 0)
+        av_extend(retval, count - 1);
+
     for (i = count - 1; i >= 0; i--) {
         SV * const next = POPs;
         SvREFCNT_inc(next);
@@ -280,7 +282,8 @@ AV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, char *name,
         count = call_sv(rv, flags);
         SPAGAIN;
 
-        av_extend(retval, count - 1);
+        if (count > 0)
+            av_extend(retval, count - 1);
         for (i = count - 1; i >= 0; i--) {
             SV * const next = POPs;
             SvREFCNT_inc(next);
@@ -323,7 +326,8 @@ AV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]) 
     count = call_pv(name, flags);
     SPAGAIN;
 
-    av_extend(retval, count - 1);
+    if (count > 0)
+        av_extend(retval, count - 1);
     for (i = count - 1; i >= 0; i--) {
         SV * const next = POPs;
         SvREFCNT_inc(next);
@@ -362,7 +366,8 @@ AV *p5_call_code_ref(PerlInterpreter *my_perl, SV *code_ref, int len, SV *args[]
     count = call_sv(code_ref, flags);
     SPAGAIN;
 
-    av_extend(retval, count - 1);
+    if (count > 0)
+        av_extend(retval, count - 1);
     for (i = count - 1; i >= 0; i--) {
         SV * const next = POPs;
         SvREFCNT_inc(next);
