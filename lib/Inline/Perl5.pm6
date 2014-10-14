@@ -199,6 +199,9 @@ sub p5_is_wrapped_p6_object(Perl5Interpreter, OpaquePointer)
 sub p5_unwrap_p6_object(Perl5Interpreter, OpaquePointer)
     returns Int { ... }
     native(&p5_unwrap_p6_object);
+sub p5_use(Perl5Interpreter, OpaquePointer)
+    { ... }
+    native(&p5_use);
 sub p5_terminate()
     { ... }
     native(&p5_terminate);
@@ -510,8 +513,10 @@ method rebless(Perl5Object $obj) {
     p5_rebless_object($!p5, $obj.ptr);
 }
 
-method use(Str $module) {
-    self.run("use $module;");
+method use(Str $module, *@args) {
+    my $module_sv = self.p6_to_p5($module);
+    p5_use($!p5, $module_sv);
+    self.invoke($module, 'import', @args.list);
 }
 
 submethod DESTROY {

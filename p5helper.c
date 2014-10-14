@@ -585,3 +585,7 @@ XS(p5_call_p6_callable) {
         XSRETURN(1);
     }
 }
+
+void p5_use(PerlInterpreter *my_perl, SV *module) {
+    load_module(PERL_LOADMOD_NOIMPORT, module, NULL);
+}
