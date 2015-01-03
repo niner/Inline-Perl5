@@ -187,10 +187,10 @@ sub p5_eval_pv(Perl5Interpreter, Str, int32)
 sub p5_err_sv(Perl5Interpreter)
     returns OpaquePointer { ... }
     native(&p5_err_sv);
-sub p5_wrap_p6_object(Perl5Interpreter, Int, OpaquePointer, &call_method(Int, Str, OpaquePointer, OpaquePointer --> OpaquePointer), &free_p6_object(Int))
+sub p5_wrap_p6_object(Perl5Interpreter, Int, OpaquePointer, &call_method (Int, Str, OpaquePointer, OpaquePointer --> OpaquePointer), &free_p6_object (Int))
     returns OpaquePointer { ... }
     native(&p5_wrap_p6_object);
-sub p5_wrap_p6_callable(Perl5Interpreter, Int, OpaquePointer, &call(Int, OpaquePointer, OpaquePointer --> OpaquePointer), &free_p6_object(Int))
+sub p5_wrap_p6_callable(Perl5Interpreter, Int, OpaquePointer, &call (Int, OpaquePointer, OpaquePointer --> OpaquePointer), &free_p6_object (Int))
     returns OpaquePointer { ... }
     native(&p5_wrap_p6_callable);
 sub p5_is_wrapped_p6_object(Perl5Interpreter, OpaquePointer)
