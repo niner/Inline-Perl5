@@ -3,7 +3,7 @@
 use v6;
 use Inline::Perl5;
 
-use Test::More:from<perl5>;
+use Test::More:from<Perl5>;
 
 Test::More.ok(1);
 Test::More.done_testing;

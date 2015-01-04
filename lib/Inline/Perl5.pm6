@@ -634,7 +634,7 @@ class Perl5ModuleLoader {
     }
 }
 
-nqp::getcurhllsym('ModuleLoader').p6ml.register_language_module_loader('perl5', Perl5ModuleLoader);
+nqp::getcurhllsym('ModuleLoader').p6ml.register_language_module_loader('Perl5', Perl5ModuleLoader);
 
 END {
     p5_terminate;
