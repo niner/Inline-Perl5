@@ -524,14 +524,24 @@ class Perl5Package {
     }
 }
 
-method use(Str $module, *@args) {
+method require(Str $module) {
     my $module_sv = self.p6_to_p5($module);
     p5_use($!p5, $module_sv);
-    self.invoke($module, 'import', @args.list);
 
     EVAL "class GLOBAL::$module is Perl5Package \{ \}";
 
+    ::($module).WHO<EXPORT> := Metamodel::PackageHOW.new();
+    ::($module).WHO<&EXPORT> := sub EXPORT(*@args) {
+        self.invoke($module, 'import', @args.list);
+        return EnumMap.new();
+    };
+
     %perl5_for_imported_packages{$module} = self;
+}
+
+method use(Str $module, *@args) {
+    self.require($module);
+    self.invoke($module, 'import', @args.list);
 }
 
 submethod DESTROY {
@@ -628,7 +638,7 @@ BEGIN {
 class Perl5ModuleLoader {
     method load_module($module_name, %opts, *@GLOBALish, :$line, :$file) {
         $default_perl5 //= Inline::Perl5.new();
-        $default_perl5.use($module_name);
+        $default_perl5.require($module_name);
 
         return ::($module_name).WHO;
     }
