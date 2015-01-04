@@ -565,6 +565,7 @@ class Perl5Callable {
     }
 }
 
+my $default_perl5;
 method BUILD {
     $!p5 = p5_init_perl();
 
@@ -593,6 +594,8 @@ method BUILD {
     }
 
     self.init_callbacks();
+
+    $default_perl5 //= self;
 }
 
 role Perl5Parent[$package] {
@@ -621,6 +624,17 @@ BEGIN {
         }
     );
 }
+
+class Perl5ModuleLoader {
+    method load_module($module_name, %opts, *@GLOBALish, :$line, :$file) {
+        $default_perl5 //= Inline::Perl5.new();
+        $default_perl5.use($module_name);
+
+        return ::($module_name).WHO;
+    }
+}
+
+nqp::getcurhllsym('ModuleLoader').p6ml.register_language_module_loader('perl5', Perl5ModuleLoader);
 
 END {
     p5_terminate;
