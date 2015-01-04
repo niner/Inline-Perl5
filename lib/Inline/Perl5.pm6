@@ -513,12 +513,15 @@ method rebless(Perl5Object $obj) {
     p5_rebless_object($!p5, $obj.ptr);
 }
 
+my %perl5_for_imported_packages;
 class Perl5Package {
-    method new(:$perl5, *@args) {
-        return $perl5.invoke(self.perl.Str, 'new', @args.list);
+    method new(*@args) {
+        return %perl5_for_imported_packages{self.perl.Str}.invoke(self.perl.Str, 'new', @args.list);
     }
 
-    method sink() { self }
+    method FALLBACK($name, *@args) {
+        %perl5_for_imported_packages{self.perl.Str}.call("{self.perl.Str}::$name", @args.list);
+    }
 }
 
 method use(Str $module, *@args) {
@@ -526,18 +529,9 @@ method use(Str $module, *@args) {
     p5_use($!p5, $module_sv);
     self.invoke($module, 'import', @args.list);
 
-    my $class := Metamodel::ClassHOW.new_type(name => $module);
-    $class.^add_parent(::Perl5Package);
-    $class.HOW.compose($class);
+    EVAL "class GLOBAL::$module is Perl5Package \{ \}";
 
-    my @parts = $module.split('::');
-    my $inner = @parts.pop;
-    my $ns = ::GLOBAL.WHO;
-    for @parts -> $part {
-        $ns{$part} := Metamodel::PackageHOW.new_type(name => $part) unless $part ~~ $ns;
-        $ns = $ns{$part}.WHO;
-    }
-    $ns{$inner} := $class;
+    %perl5_for_imported_packages{$module} = self;
 }
 
 submethod DESTROY {
