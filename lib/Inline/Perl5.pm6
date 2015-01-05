@@ -520,7 +520,7 @@ class Perl5Package {
     }
 
     method FALLBACK($name, *@args) {
-        %perl5_for_imported_packages{self.perl.Str}.call("{self.perl.Str}::$name", @args.list);
+        %perl5_for_imported_packages{self.perl.Str}.invoke(self.perl.Str, $name, @args.list);
     }
 }
 
@@ -535,6 +535,12 @@ method require(Str $module) {
         self.invoke($module, 'import', @args.list);
         return EnumMap.new();
     };
+    my $symbols = self.run('[ grep { *{"' ~ $module ~ '::$_"}{CODE} } keys %' ~ $module ~ ':: ]');
+    for @$symbols -> $name {
+        ::($module).WHO{"&$name"} := sub (*@args) {
+            self.call("{$module}::$name", @args.list);
+        }
+    }
 
     %perl5_for_imported_packages{$module} = self;
 }
