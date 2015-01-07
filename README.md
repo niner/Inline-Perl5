@@ -155,6 +155,8 @@ you have to build it as:
 
     perlbrew install perl-5.20.0 -Duseshrplib
 
+(or, if you want to use more than one Inline::Perl5 interpeter safely, for instance from within Perl 6 threads, add the `-Dusemultiplicity` option as well)
+
 and then build Inline::Perl5 with
 
     make
