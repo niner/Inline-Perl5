@@ -266,7 +266,7 @@ AV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, char *name,
     SAVETMPS;
 
     HV * const pkg = package != NULL ? gv_stashpv(package, 0) : SvSTASH((SV*)SvRV(obj));
-    GV * const gv = Perl_gv_fetchmethod_autoload(aTHX_ pkg, name, FALSE);
+    GV * const gv = Perl_gv_fetchmethod_autoload(aTHX_ pkg, name, TRUE);
     if (gv && isGV(gv)) {
         I32 count;
         PUSHMARK(SP);
