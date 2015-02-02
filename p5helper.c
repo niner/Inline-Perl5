@@ -77,8 +77,8 @@ IV p5_sv_iv(PerlInterpreter *my_perl, SV* sv) {
     return SvIV(sv);
 }
 
-NV p5_sv_nv(PerlInterpreter *my_perl, SV* sv) {
-    return SvNV(sv);
+double p5_sv_nv(PerlInterpreter *my_perl, SV* sv) {
+    return (double)SvNV(sv);
 }
 
 int p5_is_object(PerlInterpreter *my_perl, SV* sv) {
@@ -134,7 +134,7 @@ SV *p5_int_to_sv(PerlInterpreter *my_perl, IV value) {
 }
 
 SV *p5_float_to_sv(PerlInterpreter *my_perl, double value) {
-    return newSVnv(value);
+    return newSVnv((NV)value);
 }
 
 SV *p5_str_to_sv(PerlInterpreter *my_perl, char* value) {
