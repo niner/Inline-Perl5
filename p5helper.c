@@ -17,6 +17,12 @@ EXTERN_C void xs_init(pTHX) {
     newXS("Perl6::Callable::call", p5_call_p6_callable, file);
 }
 
+void p5_inline_perl6_xs_init(PerlInterpreter *my_perl) {
+    char *file = __FILE__;
+    newXS("Perl6::Object::call_method", p5_call_p6_method, file);
+    newXS("Perl6::Callable::call", p5_call_p6_callable, file);
+}
+
 static int inited = 0;
 
 PerlInterpreter *p5_init_perl() {

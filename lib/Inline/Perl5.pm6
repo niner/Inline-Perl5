@@ -59,6 +59,9 @@ class ObjectKeeper {
 sub p5_init_perl()
     returns Perl5Interpreter { ... }
     native(&p5_init_perl);
+sub p5_inline_perl6_xs_init(Perl5Interpreter)
+    { ... }
+    native(&p5_inline_perl6_xs_init);
 sub p5_SvIOK(Perl5Interpreter, OpaquePointer)
     returns int32 { ... } # should be uint32 once that's supported
     native(&p5_SvIOK);
@@ -504,6 +507,10 @@ method init_callbacks {
     ]);
 
     self.call('v6::init', Perl6PackageCreator.new);
+
+    if $!external_p5 {
+        p5_inline_perl6_xs_init($!p5);
+    }
 }
 
 method sv_refcnt_dec($obj) {
