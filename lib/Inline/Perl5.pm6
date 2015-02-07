@@ -457,6 +457,13 @@ class Perl6PackageCreator {
     }
 }
 
+class Perl6Evaluator {
+    has $.p5;
+    method run($code) {
+        return $!p5.p6_to_p5(EVAL $code);
+    }
+}
+
 method init_callbacks {
     self.run(q[
         package Perl6::Object;
@@ -487,9 +494,15 @@ method init_callbacks {
 
         my $package;
         my $creator;
+        my $evaluator;
 
         sub init {
-            ($creator) = @_;
+            ($creator, $evaluator) = @_;
+        }
+
+        sub run {
+            my ($code) = @_;
+            return $evaluator->run($code);
         }
 
         sub import {
@@ -506,7 +519,7 @@ method init_callbacks {
         1;
     ]);
 
-    self.call('v6::init', Perl6PackageCreator.new);
+    self.call('v6::init', Perl6PackageCreator.new, Perl6Evaluator.new(:p5(self)));
 
     if $!external_p5 {
         p5_inline_perl6_xs_init($!p5);
