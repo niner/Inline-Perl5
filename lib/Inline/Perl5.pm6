@@ -3,6 +3,7 @@ class Inline::Perl5;
 class Perl5Interpreter is repr('CPointer') { }
 
 has Perl5Interpreter $!p5;
+has Bool $!external_p5 = False;
 has &!call_method;
 has &!call_callable;
 
@@ -551,7 +552,7 @@ method use(Str $module, *@args) {
 }
 
 submethod DESTROY {
-    p5_destruct_perl($!p5) if $!p5;
+    p5_destruct_perl($!p5) if $!p5 and not $!external_p5;
     $!p5 = Perl5Interpreter;
 }
 
@@ -582,8 +583,9 @@ class Perl5Callable {
 }
 
 my $default_perl5;
-method BUILD {
-    $!p5 = p5_init_perl();
+method BUILD(:$p5) {
+    $!p5 = $p5 // p5_init_perl();
+    $!external_p5 = defined $p5;
 
     &!call_method = sub (Int $index, Str $name, OpaquePointer $args, OpaquePointer $err) returns OpaquePointer {
         my $p6obj = $objects.get($index);
