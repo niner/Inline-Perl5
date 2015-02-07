@@ -450,15 +450,12 @@ method execute(OpaquePointer $code_ref, *@args) {
     self!unpack_return_values($av);
 }
 
-class Perl6PackageCreator {
+class Perl6Callbacks {
+    has $.p5;
     method create($package, $code) {
         EVAL "class GLOBAL::$package \{\n$code\n\}";
         return;
     }
-}
-
-class Perl6Evaluator {
-    has $.p5;
     method run($code) {
         return $!p5.p6_to_p5(EVAL $code);
     }
@@ -493,16 +490,19 @@ method init_callbacks {
         package v6;
 
         my $package;
-        my $creator;
-        my $evaluator;
+        my $p6;
 
         sub init {
-            ($creator, $evaluator) = @_;
+            ($p6) = @_;
+        }
+
+        sub uninit {
+            undef $p6;
         }
 
         sub run {
             my ($code) = @_;
-            return $evaluator->run($code);
+            return $p6->run($code);
         }
 
         sub import {
@@ -510,7 +510,7 @@ method init_callbacks {
         }
 
         use Filter::Simple sub {
-            $creator->create($package, $_);
+            $p6->create($package, $_);
             $_ = '1;';
         };
 
@@ -519,7 +519,7 @@ method init_callbacks {
         1;
     ]);
 
-    self.call('v6::init', Perl6PackageCreator.new, Perl6Evaluator.new(:p5(self)));
+    self.call('v6::init', Perl6Callbacks.new(:p5(self)));
 
     if $!external_p5 {
         p5_inline_perl6_xs_init($!p5);
