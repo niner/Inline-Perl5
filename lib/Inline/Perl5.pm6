@@ -682,6 +682,19 @@ class Perl5ModuleLoader {
 
 nqp::getcurhllsym('ModuleLoader').p6ml.register_language_module_loader('Perl5', Perl5ModuleLoader);
 
+my Bool $inline_perl6_in_use = False;
+sub init_inline_perl6_new_callback(&inline_perl5_new (Perl5Interpreter --> OpaquePointer)) { ... };
+
+our sub init_inline_perl6_callback(Str $path) {
+    $inline_perl6_in_use = True;
+    trait_mod:<is>(&init_inline_perl6_new_callback, :native($path));
+
+    init_inline_perl6_new_callback(sub (Perl5Interpreter $p5) {
+        my $self = Inline::Perl5.new(:p5($p5));
+        return $self.p6_to_p5($self);
+    });
+}
+
 END {
-    p5_terminate;
+    p5_terminate unless $inline_perl6_in_use;
 }
