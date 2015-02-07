@@ -457,7 +457,10 @@ class Perl6Callbacks {
         return;
     }
     method run($code) {
-        return $!p5.p6_to_p5(EVAL $code);
+        return EVAL $code;
+    }
+    method call(Str $name, @args) {
+        return &::($name)(|@args);
     }
 }
 
@@ -503,6 +506,11 @@ method init_callbacks {
         sub run {
             my ($code) = @_;
             return $p6->run($code);
+        }
+
+        sub call {
+            my ($name, @args) = @_;
+            return $p6->call($name, \@args);
         }
 
         sub import {
