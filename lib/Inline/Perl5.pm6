@@ -10,7 +10,8 @@ has &!call_callable;
 use NativeCall;
 
 sub native(Sub $sub) {
-    my $so = 'p5helper.so';
+    my $so = $*VM.config<dll>;
+    $so ~~ s/^.*\%s/p5helper/;
     state Str $path;
     unless $path {
         for @*INC {
