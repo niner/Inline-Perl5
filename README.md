@@ -6,9 +6,9 @@ Inline::Perl5
 
 ```
     use Inline::Perl5;
-    my $p5 = Inline::Perl5.new();
-    $p5.use('DBI');
-    my $dbh = $p5.invoke('DBI', 'connect', 'dbi:Pg:database=test');
+    use DBI:from<Perl5>;
+
+    my $dbh = DBI.connect('dbi:Pg:database=test');
     my $products = $dbh.selectall_arrayref(
     	'select * from products', {Slice => {}}
     );
@@ -19,13 +19,21 @@ Inline::Perl5
 Module for executing Perl 5 code and accessing Perl 5 modules from Perl 6.
 
 Supports Perl 5 modules including XS modules. Allows passing integers,
-strings, arrays and hashes between Perl 5 and Perl 6. Also supports calling
-methods on Perl 5 objects from Perl 6 and calling methods on Perl 6 objects
-from Perl 5.
+strings, arrays, hashes and objectsbetween Perl 5 and Perl 6. Also supports
+calling methods on Perl 5 objects from Perl 6 and calling methods on Perl 6
+objects from Perl 5.
 
 # HOW DO I?
 
 ## Load a Perl 5 module
+
+Perl 6' use statement allows you load modules from other languages as well.
+Inline::Perl5 registers as a handler for the Perl5 language:
+
+```
+    use Inline::Perl5;
+    use Test::More:from<Perl5>;
+```
 
 Inline::Perl5's use() method maps to Perl 5's use statement:
 
@@ -56,6 +64,14 @@ constructor (usually called "new").
 
 ```
     use Inline::Perl5;
+    use Data::Dumper:from<Perl5>;
+    my $dumper = Data::Dumper.new();
+```
+
+Or using the low level methods:
+
+```
+    use Inline::Perl5;
     my $p5 = Inline::Perl5.new;
     $p5.use('Data::Dumper');
     my $dumper = $p5.invoke('Data::Dumper', 'new');
@@ -68,9 +84,8 @@ object.  You can call methods on it like on any other object.
 
 ```
     use Inline::Perl5;
-    my $p5 = Inline::Perl5.new;
-    $p5.use('IO::Compress::Bzip2');
-    my $bzip2 = $p5.invoke('IO::Compress::Bzip2', 'new', '/tmp/foo.bz2');
+    use IO::Compress::Bzip2:from<Perl5>;
+    my $bzip2 = IO::Compress::Bzip2.new('/tmp/foo.bz2');
     $bzip2.print($data);
     $bzip2.close;
 ```
