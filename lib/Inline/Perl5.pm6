@@ -463,6 +463,9 @@ class Perl6Callbacks {
     method call(Str $name, @args) {
         return &::($name)(|@args);
     }
+    method invoke(Str $package, Str $name, @args) {
+        return ::($package)."$name"(|@args);
+    }
 }
 
 method init_callbacks {
@@ -512,6 +515,11 @@ method init_callbacks {
         sub call {
             my ($name, @args) = @_;
             return $p6->call($name, \@args);
+        }
+
+        sub invoke {
+            my ($class, $name, @args) = @_;
+            return $p6->invoke($class, $name, \@args);
         }
 
         sub import {
