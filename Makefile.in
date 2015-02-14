@@ -3,6 +3,6 @@ all: %DESTDIR%/Inline/p5helper%SO%
 clean:
 	rm %DESTDIR%/Inline/p5helper%SO%
 %DESTDIR%/Inline/p5helper%SO%: p5helper.c
-	gcc p5helper.c `perl -MExtUtils::Embed -e ccopts -e ldopts` -shared -o %DESTDIR%/Inline/p5helper%SO% -fPIC -g
+	gcc -Wall p5helper.c `perl -MExtUtils::Embed -e ccopts -e ldopts` -shared -o %DESTDIR%/Inline/p5helper%SO% -fPIC -g
 test: all
 	prove -e 'perl6 -Ilib' t
