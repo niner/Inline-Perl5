@@ -620,9 +620,9 @@ class Perl5Callable {
 }
 
 my $default_perl5;
-method BUILD(:$p5) {
-    $!p5 = $p5 === Any ?? p5_init_perl() !! $p5;
-    $!external_p5 = $p5 !=== Any;
+method BUILD(*%args) {
+    $!external_p5 = %args<p5>:exists;
+    $!p5 = $!external_p5 ?? %args<p5> !! p5_init_perl();
 
     &!call_method = sub (Int $index, Str $name, OpaquePointer $args, OpaquePointer $err) returns OpaquePointer {
         my $p6obj = $objects.get($index);
