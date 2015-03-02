@@ -509,13 +509,12 @@ XS(p5_call_p6_method) {
 
     STRLEN len;
     char * const name_pv  = SvPV(name, len);
-    char * const name_str = savepvn(name_pv, len);
 
     SV * const obj_deref = SvRV(obj);
     MAGIC * const mg = mg_find(obj_deref, '~');
     _perl6_magic* const p6mg = (_perl6_magic*)(mg->mg_ptr);
     SV *err = NULL;
-    SV * retval = p6mg->call_p6_method(p6mg->index, name_str, newRV_noinc((SV *) args), &err);
+    SV * retval = p6mg->call_p6_method(p6mg->index, name_pv, newRV_noinc((SV *) args), &err);
     SPAGAIN; /* refresh local stack pointer, could have been modified by Perl 5 code called from Perl 6 */
     SvREFCNT_dec(args);
     if (err) {
