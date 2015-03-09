@@ -198,6 +198,9 @@ sub p5_wrap_p6_object(Perl5Interpreter, Int, OpaquePointer, &call_method (Int, S
 sub p5_wrap_p6_callable(Perl5Interpreter, Int, OpaquePointer, &call (Int, OpaquePointer, OpaquePointer --> OpaquePointer), &free_p6_object (Int))
     returns OpaquePointer { ... }
     native(&p5_wrap_p6_callable);
+sub p5_wrap_p6_handle(Perl5Interpreter, Int, OpaquePointer, &call_method (Int, Str, OpaquePointer, OpaquePointer --> OpaquePointer), &free_p6_object (Int))
+    returns OpaquePointer { ... }
+    native(&p5_wrap_p6_handle);
 sub p5_is_wrapped_p6_object(Perl5Interpreter, OpaquePointer)
     returns int { ... }
     native(&p5_is_wrapped_p6_object);
@@ -291,6 +294,17 @@ multi method p6_to_p5(Positional:D $value) returns OpaquePointer {
         p5_av_push($!p5, $av, self.p6_to_p5($item));
     }
     p5_newRV_noinc($!p5, $av);
+}
+multi method p6_to_p5(IO::Handle:D $value) returns OpaquePointer {
+    my $index = $objects.keep($value);
+
+    p5_wrap_p6_handle(
+        $!p5,
+        $index,
+        Any,
+        &!call_method,
+        &free_p6_object,
+    );
 }
 
 method p5_sv_reftype(OpaquePointer $sv) {
@@ -492,6 +506,26 @@ method init_callbacks {
             return sub {
                 $self->call(@_);
             }
+        }
+
+        package Perl6::Handle;
+
+        sub new {
+            my ($class, $handle) = @_;
+            my $out = \do { local *FH };
+            tie *$out, $class, $handle;
+            return $out;
+        }
+
+        sub TIEHANDLE {
+            my ($class, $p6obj) = @_;
+            my $self = \$p6obj;
+            return bless $self, $class;
+        }
+
+        sub PRINT {
+            my ($self, @list) = @_;
+            return $$self->print(@list);
         }
 
         package v6;

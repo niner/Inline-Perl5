@@ -480,6 +480,36 @@ SV *p5_wrap_p6_callable(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call)(I
     return inst_ptr;
 }
 
+SV *p5_wrap_p6_handle(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call_p6_method)(IV, char * , SV *, SV **), void (*free_p6_object)(IV)) {
+    SV *handle = p5_wrap_p6_object(my_perl, i, p5obj, call_p6_method, free_p6_object);
+    int flags = G_SCALAR;
+    dSP;
+
+    PERL_SET_CONTEXT(my_perl);
+
+    ENTER;
+    SAVETMPS;
+
+    PUSHMARK(SP);
+
+    XPUSHs(newSVpv("Perl6::Handle", 0));
+    XPUSHs(handle);
+
+    PUTBACK;
+
+    call_method("new", flags);
+    SPAGAIN;
+
+    SV *tied_handle = POPs;
+    SvREFCNT_inc(tied_handle);
+
+    PUTBACK;
+    FREETMPS;
+    LEAVE;
+
+    return tied_handle;
+}
+
 int p5_is_wrapped_p6_object(PerlInterpreter *my_perl, SV *obj) {
     SV * const obj_deref = SvRV(obj);
     /* check for magic! */
