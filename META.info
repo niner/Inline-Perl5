@@ -3,7 +3,7 @@
     "version" : "*",
     "author" : "github:niner",
     "description" : "Use Perl 5 code in a Perl 6 program",
-    "depends" : [ "LibraryMake" ],
+    "depends" : [ "LibraryMake", "File::Temp" ],
     "provides" : {
         "Inline::Perl5" : "lib/Inline/Perl5.pm6"
     },

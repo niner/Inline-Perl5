@@ -528,6 +528,11 @@ method init_callbacks {
             return $$self->print(@list);
         }
 
+        sub READLINE {
+            my ($self) = @_;
+            return $$self->get;
+        }
+
         package v6;
 
         my $package;
