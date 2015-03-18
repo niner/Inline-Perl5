@@ -114,7 +114,7 @@ sub p5_float_to_sv(Perl5Interpreter, num64)
 sub p5_str_to_sv(Perl5Interpreter, Str)
     returns OpaquePointer { ... }
     native(&p5_str_to_sv);
-sub p5_buf_to_sv(Perl5Interpreter, Int, CArray[uint8])
+sub p5_buf_to_sv(Perl5Interpreter, Int, Buf)
     returns OpaquePointer { ... }
     native(&p5_buf_to_sv);
 sub p5_av_top_index(Perl5Interpreter, OpaquePointer)
@@ -227,11 +227,7 @@ multi method p6_to_p5(Str:D $value) returns OpaquePointer {
     p5_str_to_sv($!p5, $value);
 }
 multi method p6_to_p5(blob8:D $value) returns OpaquePointer {
-    my $array = CArray[uint8].new();
-    for ^$value.elems {
-        $array[$_] = $value[$_];
-    }
-    p5_buf_to_sv($!p5, $value.elems, $array);
+    p5_buf_to_sv($!p5, $value.elems, $value);
 }
 multi method p6_to_p5(Perl5Object $value) returns OpaquePointer {
     p5_sv_refcnt_inc($!p5, $value.ptr);
