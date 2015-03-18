@@ -114,7 +114,7 @@ sub p5_float_to_sv(Perl5Interpreter, num64)
 sub p5_str_to_sv(Perl5Interpreter, Str)
     returns OpaquePointer { ... }
     native(&p5_str_to_sv);
-sub p5_buf_to_sv(Perl5Interpreter, Int, Buf)
+sub p5_buf_to_sv(Perl5Interpreter, Int, Blob)
     returns OpaquePointer { ... }
     native(&p5_buf_to_sv);
 sub p5_av_top_index(Perl5Interpreter, OpaquePointer)
