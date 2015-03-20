@@ -384,7 +384,7 @@ method p5_to_p6(OpaquePointer $value) {
     die "Unsupported type $value in p5_to_p6";
 }
 
-method handle_p5_exception() is hidden_from_backtrace {
+method handle_p5_exception() is hidden-from-backtrace {
     if my $error = self.p5_to_p6(p5_err_sv($!p5)) {
         die $error;
     }
