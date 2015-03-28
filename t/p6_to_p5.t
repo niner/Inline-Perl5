@@ -7,13 +7,17 @@ use Inline::Perl5;
 plan 11;
 
 my $p5 = Inline::Perl5.new();
-$p5.run(q[ sub identity { return $_[1] }; ]);
+$p5.run(q:heredoc/PERL5/);
+    sub identity {
+        return $_[0]
+    };
+    PERL5
 
 class Foo {
 }
 
 for ('abcö', Buf.new('äbc'.encode('latin-1')), 24, 2.4.Num, [1, 2], { a => 1, b => 2}, Any, Foo.new) -> $obj {
-    is_deeply $p5.call('identity', 'main', $obj), $obj, "Can round-trip " ~ $obj.^name;
+    is_deeply $p5.call('identity', $obj), $obj, "Can round-trip " ~ $obj.^name;
 }
 
 $p5.run(q/
