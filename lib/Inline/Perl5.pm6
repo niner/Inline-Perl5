@@ -399,10 +399,17 @@ method run($perl) {
 method !setup_arguments(@args) {
     my $len = @args.elems;
     my @svs := CArray[OpaquePointer].new();
+    my Int $j = 0;
     loop (my Int $i = 0; $i < $len; $i = $i + 1) {
-        @svs[$i] = self.p6_to_p5(@args[$i]);
+        if @args[$i] ~~ Pair {
+            @svs[$j++] = self.p6_to_p5(@args[$i].key);
+            @svs[$j++] = self.p6_to_p5(@args[$i].value);
+        }
+        else {
+            @svs[$j++] = self.p6_to_p5(@args[$i]);
+        }
     }
-    return $len, @svs;
+    return $j, @svs;
 }
 
 method !unpack_return_values($av) {
@@ -427,14 +434,14 @@ method !unpack_return_values($av) {
     @retvals;
 }
 
-method call(Str $function, *@args) {
-    my $av = p5_call_function($!p5, $function, |self!setup_arguments(@args));
+method call(Str $function, *@args, *%args) {
+    my $av = p5_call_function($!p5, $function, |self!setup_arguments([@args.list, %args.list]));
     self.handle_p5_exception();
     self!unpack_return_values($av);
 }
 
-multi method invoke(Str $package, Str $function, *@args) {
-    my $av = p5_call_package_method($!p5, $package, $function, |self!setup_arguments(@args));
+multi method invoke(Str $package, Str $function, *@args, *%args) {
+    my $av = p5_call_package_method($!p5, $package, $function, |self!setup_arguments([@args.list, %args.list]));
     self.handle_p5_exception();
     self!unpack_return_values($av);
 }
@@ -443,7 +450,7 @@ multi method invoke(OpaquePointer $obj, Str $function, *@args) {
     self.invoke(Str, $obj, $function, @args.list);
 }
 
-multi method invoke(Str $package, OpaquePointer $obj, Str $function, *@args) {
+multi method invoke(Str $package, OpaquePointer $obj, Str $function, *@args, *%args) {
     my $len = @args.elems;
     my @svs := CArray[OpaquePointer].new();
     @svs[0] = self.p6_to_p5(@args[0], $obj);

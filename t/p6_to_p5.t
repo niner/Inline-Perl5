@@ -4,7 +4,7 @@ use v6;
 use Test;
 use Inline::Perl5;
 
-plan 11;
+plan 13;
 
 my $p5 = Inline::Perl5.new();
 $p5.run(q:heredoc/PERL5/);
@@ -50,6 +50,22 @@ $p5.run(q/
 /);
 
 ok($p5.call('is_two_point_five', Num.new(2.5)));
+
+$p5.run(q/
+    use warnings;
+    sub test_named {
+        my (%params) = @_;
+        return $params{a} + $params{b};
+    }
+    package Foo;
+    sub test_named {
+        my ($self, %params) = @_;
+        return $params{a} + $params{b};
+    }
+/);
+
+is($p5.call('test_named', a => 1, b => 2), 3);
+is($p5.invoke('Foo', 'test_named', a => 1, b => 2), 3);
 
 $p5.DESTROY;
 
