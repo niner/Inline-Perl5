@@ -4,7 +4,7 @@ use v6;
 use Test;
 use Inline::Perl5;
 
-plan 13;
+plan 14;
 
 my $p5 = Inline::Perl5.new();
 $p5.run(q:heredoc/PERL5/);
@@ -58,6 +58,9 @@ $p5.run(q/
         return $params{a} + $params{b};
     }
     package Foo;
+    sub new {
+        return bless {};
+    }
     sub test_named {
         my ($self, %params) = @_;
         return $params{a} + $params{b};
@@ -66,6 +69,7 @@ $p5.run(q/
 
 is($p5.call('test_named', a => 1, b => 2), 3);
 is($p5.invoke('Foo', 'test_named', a => 1, b => 2), 3);
+is($p5.invoke('Foo', 'new').test_named(a => 1, b => 2), 3);
 
 $p5.DESTROY;
 

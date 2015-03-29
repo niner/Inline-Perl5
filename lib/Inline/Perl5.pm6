@@ -450,14 +450,21 @@ multi method invoke(OpaquePointer $obj, Str $function, *@args) {
     self.invoke(Str, $obj, $function, @args.list);
 }
 
-multi method invoke(Str $package, OpaquePointer $obj, Str $function, *@args, *%args) {
+multi method invoke(Str $package, OpaquePointer $obj, Str $function, *@args) {
     my $len = @args.elems;
     my @svs := CArray[OpaquePointer].new();
-    @svs[0] = self.p6_to_p5(@args[0], $obj);
+    my Int $j = 0;
+    @svs[$j++] = self.p6_to_p5(@args[0], $obj);
     loop (my Int $i = 1; $i < $len; $i++) {
-        @svs[$i] = self.p6_to_p5(@args[$i]);
+        if @args[$i] ~~ Pair {
+            @svs[$j++] = self.p6_to_p5(@args[$i].key);
+            @svs[$j++] = self.p6_to_p5(@args[$i].value);
+        }
+        else {
+            @svs[$j++] = self.p6_to_p5(@args[$i]);
+        }
     }
-    my $av = p5_call_method($!p5, $package, $obj, $function, $len, @svs);
+    my $av = p5_call_method($!p5, $package, $obj, $function, $j, @svs);
     self.handle_p5_exception();
     self!unpack_return_values($av);
 }
@@ -716,7 +723,7 @@ BEGIN {
     Perl5Object.^add_fallback(-> $, $ { True },
         method ($name ) {
             -> \self, |args {
-                $.perl5.invoke($.ptr, $name, self, args.list);
+                $.perl5.invoke($.ptr, $name, self, args.list, args.hash);
             }
         }
     );
