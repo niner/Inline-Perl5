@@ -713,7 +713,7 @@ role Perl5Parent[$package] {
     ::?CLASS.HOW.add_fallback(::?CLASS, -> $, $ { True },
         method ($name) {
             -> \self, |args {
-                $.parent.perl5.invoke($package, $.parent.ptr, $name, self, args.list);
+                $.parent.perl5.invoke($package, $.parent.ptr, $name, self, args.list, args.hash);
             }
         }
     );

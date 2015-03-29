@@ -4,7 +4,7 @@ use v6;
 use Test;
 use Inline::Perl5;
 
-plan 14;
+plan 15;
 
 my $p5 = Inline::Perl5.new();
 $p5.run(q:heredoc/PERL5/);
@@ -70,6 +70,11 @@ $p5.run(q/
 is($p5.call('test_named', a => 1, b => 2), 3);
 is($p5.invoke('Foo', 'test_named', a => 1, b => 2), 3);
 is($p5.invoke('Foo', 'new').test_named(a => 1, b => 2), 3);
+
+class Bar does Inline::Perl5::Perl5Parent['Foo'] {
+}
+
+is(Bar.new(perl5 => $p5).test_named(a => 1, b => 2), 3);
 
 $p5.DESTROY;
 
