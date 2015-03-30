@@ -11,13 +11,22 @@ use NativeCall;
 
 sub native(Sub $sub) {
     my $so = $*VM.config<dll>;
-    $so ~~ s/^.*\%s/p5helper/;
+    $so ~~ s!^.*\%s!p5helper!;
+    my $base = "lib/Inline/$so";
     state Str $path;
     unless $path {
         for @*INC {
-            if "$_/Inline/$so".IO ~~ :f {
-                $path = "$_/Inline/$so";
-                last;
+            if my @files = ($_.files($base) || $_.files("blib/$base")) {
+                my $files = @files[0]<files>;
+                my $tmp = $files{$base} || $files{"blib/$base"};
+
+                # copy to a temp dir
+                #
+                # This is required because CompUnitRepo::Local::Installation stores the file
+                # with a different filename (a number with no extension) that NativeCall doesn't
+                # know how to load. We do this copy to fix the filename.
+                $tmp.IO.copy($*SPEC.tmpdir ~ '/' ~ $so);
+                $path = $*SPEC.tmpdir ~ '/' ~ $so;
             }
         }
     }
