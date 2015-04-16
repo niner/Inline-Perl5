@@ -679,6 +679,11 @@ class Perl5Callable does Callable {
 }
 
 my $default_perl5;
+
+method default_perl5 {
+    return $default_perl5 //= self.new();
+}
+
 method BUILD(*%args) {
     $!external_p5 = %args<p5>:exists;
     $!p5 = $!external_p5 ?? %args<p5> !! p5_init_perl();
@@ -757,7 +762,7 @@ class Perl5ModuleLoader {
     }
 }
 
-nqp::getcurhllsym('ModuleLoader').p6ml.register_language_module_loader('Perl5', Perl5ModuleLoader);
+nqp::getcurhllsym('ModuleLoader').p6ml.register_language_module_loader('Perl5', Perl5ModuleLoader, :force(True));
 
 my Bool $inline_perl6_in_use = False;
 sub init_inline_perl6_new_callback(&inline_perl5_new (Perl5Interpreter --> OpaquePointer)) { ... };
