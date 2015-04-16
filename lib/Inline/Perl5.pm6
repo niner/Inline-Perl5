@@ -667,8 +667,8 @@ class Perl5Callable {
     has OpaquePointer $.ptr;
     has Inline::Perl5 $.perl5;
 
-    method postcircumfix:<( )>(\args) {
-        $.perl5.execute($.ptr, |args);
+    method postcircumfix:<( )>(*@args) {
+        $.perl5.execute($.ptr, @args);
     }
 
     method DESTROY {
