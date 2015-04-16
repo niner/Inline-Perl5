@@ -143,8 +143,8 @@ SV *p5_float_to_sv(PerlInterpreter *my_perl, double value) {
     return newSVnv((NV)value);
 }
 
-SV *p5_str_to_sv(PerlInterpreter *my_perl, char* value) {
-    SV * const sv = newSVpv(value, 0);
+SV *p5_str_to_sv(PerlInterpreter *my_perl, STRLEN len, char* value) {
+    SV * const sv = newSVpv(value, len);
     SvUTF8_on(sv);
     return sv;
 }

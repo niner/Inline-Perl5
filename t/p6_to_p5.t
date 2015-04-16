@@ -4,7 +4,7 @@ use v6;
 use Test;
 use Inline::Perl5;
 
-plan 15;
+plan 16;
 
 my $p5 = Inline::Perl5.new();
 $p5.run(q:heredoc/PERL5/);
@@ -27,9 +27,15 @@ $p5.run(q/
 
         return $str eq 'Töst';
     };
+    sub check_null {
+        my ($str) = @_;
+
+        return $str eq "foo\0bar";
+    }
 /);
 
 ok($p5.call('check_utf8', 'Töst'), 'UTF-8 string recognized in Perl 5');
+ok($p5.call('check_null', "foo\0bar"), 'Null safe conversion of Str from P6 to P5');
 
 $p5.run(q/
     use utf8;

@@ -120,7 +120,7 @@ sub p5_int_to_sv(Perl5Interpreter, Int)
 sub p5_float_to_sv(Perl5Interpreter, num64)
     returns OpaquePointer { ... }
     native(&p5_float_to_sv);
-sub p5_str_to_sv(Perl5Interpreter, Str)
+sub p5_str_to_sv(Perl5Interpreter, Int, Blob)
     returns OpaquePointer { ... }
     native(&p5_str_to_sv);
 sub p5_buf_to_sv(Perl5Interpreter, Int, Blob)
@@ -233,7 +233,8 @@ multi method p6_to_p5(Rat:D $value) returns OpaquePointer {
     p5_float_to_sv($!p5, $value.Num);
 }
 multi method p6_to_p5(Str:D $value) returns OpaquePointer {
-    p5_str_to_sv($!p5, $value);
+    my $buf = $value.encode('UTF-8');
+    p5_str_to_sv($!p5, $buf.elems, $buf);
 }
 multi method p6_to_p5(blob8:D $value) returns OpaquePointer {
     p5_buf_to_sv($!p5, $value.elems, $value);
