@@ -663,7 +663,7 @@ class Perl5Object {
     }
 }
 
-class Perl5Callable {
+class Perl5Callable does Callable {
     has OpaquePointer $.ptr;
     has Inline::Perl5 $.perl5;
 

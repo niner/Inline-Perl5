@@ -44,5 +44,6 @@ is $p5.call('return_code', 'Perl')(5), 'Perl 5';
 my $sub = $p5.call('return_code', 'Foo');
 is $p5.call('call_something', $sub, 1), 'Foo 1';
 is($p5.call('return_array_checker')([1, 2, 3]), 3);
+my &callable := $p5.call('return_code', 'Foo');
 
 # vim: ft=perl6
