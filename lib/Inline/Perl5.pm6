@@ -736,6 +736,15 @@ BEGIN {
             }
         }
     );
+    for Any.^methods>>.gist -> $name {
+        Perl5Object.^add_method(
+            $name,
+            method (|args) {
+                $.perl5.invoke($.ptr, $name, self, args.list, args.hash);
+            }
+        );
+    }
+    Perl5Object.^compose;
 }
 
 class Perl5ModuleLoader {
