@@ -1,3 +1,4 @@
+use v6;
 use Inline::Perl5;
 use File::Temp;
 use Test;
