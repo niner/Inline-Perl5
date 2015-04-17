@@ -25,8 +25,8 @@ sub native(Sub $sub) {
                 # This is required because CompUnitRepo::Local::Installation stores the file
                 # with a different filename (a number with no extension) that NativeCall doesn't
                 # know how to load. We do this copy to fix the filename.
-                $tmp.IO.copy($*SPEC.tmpdir ~ '/' ~ $so);
-                $path = $*SPEC.tmpdir ~ '/' ~ $so;
+                $path = $*SPEC.tmpdir ~ '/' ~ $*PID ~ '-' ~ $so;
+                $tmp.IO.copy($path);
             }
         }
     }
