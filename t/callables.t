@@ -3,7 +3,6 @@
 use v6;
 use Test;
 use Inline::Perl5;
-use NativeCall;
 
 plan 4;
 

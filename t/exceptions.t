@@ -3,7 +3,6 @@
 use v6;
 use Test;
 use Inline::Perl5;
-use NativeCall;
 
 my $p5 = Inline::Perl5.new();
 {

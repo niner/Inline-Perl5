@@ -3,7 +3,6 @@
 use v6;
 use Inline::Perl5;
 use Test;
-use NativeCall;
 
 plan 8; # adjust the skip as well!
 
