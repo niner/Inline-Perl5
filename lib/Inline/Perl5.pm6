@@ -94,7 +94,7 @@ sub p5_is_undef(Perl5Interpreter, OpaquePointer)
     returns int { ... }
     native(&p5_is_undef);
 sub p5_sv_to_buf(Perl5Interpreter, OpaquePointer, CArray[CArray[int8]])
-    returns Int { ... }
+    returns long { ... }
     native(&p5_sv_to_buf);
 sub p5_sv_to_char_star(Perl5Interpreter, OpaquePointer)
     returns Str { ... }
@@ -114,16 +114,16 @@ sub p5_sv_2mortal(Perl5Interpreter, OpaquePointer)
 sub p5_sv_refcnt_inc(Perl5Interpreter, OpaquePointer)
     { ... }
     native(&p5_sv_refcnt_inc);
-sub p5_int_to_sv(Perl5Interpreter, Int)
+sub p5_int_to_sv(Perl5Interpreter, long)
     returns OpaquePointer { ... }
     native(&p5_int_to_sv);
 sub p5_float_to_sv(Perl5Interpreter, num64)
     returns OpaquePointer { ... }
     native(&p5_float_to_sv);
-sub p5_str_to_sv(Perl5Interpreter, Int, Blob)
+sub p5_str_to_sv(Perl5Interpreter, long, Blob)
     returns OpaquePointer { ... }
     native(&p5_str_to_sv);
-sub p5_buf_to_sv(Perl5Interpreter, Int, Blob)
+sub p5_buf_to_sv(Perl5Interpreter, long, Blob)
     returns OpaquePointer { ... }
     native(&p5_buf_to_sv);
 sub p5_av_top_index(Perl5Interpreter, OpaquePointer)
@@ -184,7 +184,7 @@ sub p5_destruct_perl(Perl5Interpreter)
     { ... }
     native(&p5_destruct_perl);
 sub p5_sv_iv(Perl5Interpreter, OpaquePointer)
-    returns Int { ... }
+    returns long { ... }
     native(&p5_sv_iv);
 sub p5_sv_nv(Perl5Interpreter, OpaquePointer)
     returns num64 { ... }
@@ -201,20 +201,20 @@ sub p5_eval_pv(Perl5Interpreter, Str, int32)
 sub p5_err_sv(Perl5Interpreter)
     returns OpaquePointer { ... }
     native(&p5_err_sv);
-sub p5_wrap_p6_object(Perl5Interpreter, Int, OpaquePointer, &call_method (Int, Str, OpaquePointer, OpaquePointer --> OpaquePointer), &free_p6_object (Int))
+sub p5_wrap_p6_object(Perl5Interpreter, long, OpaquePointer, &call_method (long, Str, OpaquePointer, OpaquePointer --> OpaquePointer), &free_p6_object (long))
     returns OpaquePointer { ... }
     native(&p5_wrap_p6_object);
-sub p5_wrap_p6_callable(Perl5Interpreter, Int, OpaquePointer, &call (Int, OpaquePointer, OpaquePointer --> OpaquePointer), &free_p6_object (Int))
+sub p5_wrap_p6_callable(Perl5Interpreter, long, OpaquePointer, &call (long, OpaquePointer, OpaquePointer --> OpaquePointer), &free_p6_object (long))
     returns OpaquePointer { ... }
     native(&p5_wrap_p6_callable);
-sub p5_wrap_p6_handle(Perl5Interpreter, Int, OpaquePointer, &call_method (Int, Str, OpaquePointer, OpaquePointer --> OpaquePointer), &free_p6_object (Int))
+sub p5_wrap_p6_handle(Perl5Interpreter, long, OpaquePointer, &call_method (long, Str, OpaquePointer, OpaquePointer --> OpaquePointer), &free_p6_object (long))
     returns OpaquePointer { ... }
     native(&p5_wrap_p6_handle);
 sub p5_is_wrapped_p6_object(Perl5Interpreter, OpaquePointer)
     returns int { ... }
     native(&p5_is_wrapped_p6_object);
 sub p5_unwrap_p6_object(Perl5Interpreter, OpaquePointer)
-    returns Int { ... }
+    returns long { ... }
     native(&p5_unwrap_p6_object);
 sub p5_use(Perl5Interpreter, OpaquePointer)
     { ... }
