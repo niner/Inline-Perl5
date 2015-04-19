@@ -7,6 +7,7 @@ has Bool $!external_p5 = False;
 has &!call_method;
 has &!call_callable;
 
+use nqp;
 use NativeCall;
 
 sub native(Sub $sub) {
