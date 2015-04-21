@@ -320,10 +320,10 @@ method p5_sv_reftype(OpaquePointer $sv) {
 
 method p5_array_to_p6_array(OpaquePointer $sv) {
     my $av = p5_sv_to_av($!p5, $sv);
-    my $av_len = p5_av_top_index($!p5, $av);
+    my int32 $av_len = p5_av_top_index($!p5, $av);
 
     my $arr = [];
-    loop (my int $i = 0; $i <= $av_len; $i = $i + 1) {
+    loop (my int32 $i = 0; $i <= $av_len; $i = $i + 1) {
         $arr.push(self.p5_to_p6(p5_av_fetch($!p5, $av, $i)));
     }
     $arr;
@@ -424,7 +424,7 @@ method !setup_arguments(@args) {
 }
 
 method !unpack_return_values($av) {
-    my $av_len = p5_av_top_index($!p5, $av);
+    my int32 $av_len = p5_av_top_index($!p5, $av);
 
     if $av_len == -1 {
         p5_sv_refcnt_dec($!p5, $av);
