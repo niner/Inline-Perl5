@@ -743,7 +743,7 @@ BEGIN {
             }
         }
     );
-    for Any.^methods>>.gist -> $name {
+    for Any.^methods>>.name -> $name {
         Perl5Object.^add_method(
             $name,
             method (|args) {
