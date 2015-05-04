@@ -17,7 +17,7 @@ sub native(Sub $sub) {
     state Str $path;
     unless $path {
         for @*INC {
-            my $cur = $_ ~~ Str ?? INCLUDE-SPEC2CUR($_) !! $_;
+            my $cur = $_ ~~ Str ?? CompUnitRepo.new($_) !! $_;
             if my @files = ($cur.files($base) || $cur.files("blib/$base")) {
                 my $files = @files[0]<files>;
                 my $tmp = $files{$base} || $files{"blib/$base"};
