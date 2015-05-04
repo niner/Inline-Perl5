@@ -4,7 +4,7 @@ use v6;
 use Test;
 use Inline::Perl5;
 
-plan 16;
+plan 17;
 
 my $p5 = Inline::Perl5.new();
 $p5.run(q:heredoc/PERL5/);
@@ -16,7 +16,17 @@ $p5.run(q:heredoc/PERL5/);
 class Foo {
 }
 
-for ('abcö', Buf.new('äbc'.encode('latin-1')), 24, 2.4.Num, [1, 2], { a => 1, b => 2}, Any, Foo.new) -> $obj {
+for (
+    '',
+    'abcö',
+    Buf.new('äbc'.encode('latin-1')),
+    24,
+    2.4.Num,
+    [1, 2],
+    { a => 1, b => 2},
+    Any,
+    Foo.new,
+) -> $obj {
     is_deeply $p5.call('identity', $obj), $obj, "Can round-trip " ~ $obj.^name;
 }
 
