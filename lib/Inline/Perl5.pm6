@@ -17,7 +17,8 @@ sub native(Sub $sub) {
     state Str $path;
     unless $path {
         for @*INC {
-            if my @files = ($_.files($base) || $_.files("blib/$base")) {
+            my $cur = $_ ~~ Str ?? INCLUDE-SPEC2CUR($_) !! $_;
+            if my @files = ($cur.files($base) || $cur.files("blib/$base")) {
                 my $files = @files[0]<files>;
                 my $tmp = $files{$base} || $files{"blib/$base"};
 
