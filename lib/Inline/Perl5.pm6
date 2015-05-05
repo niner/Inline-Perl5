@@ -34,7 +34,13 @@ sub native(Sub $sub) {
         }
     }
     unless $path {    # TEMPORARY !!!!
-        $path = $?FILE.substr(0,*-9) ~ $so;
+        for @*INC.grep(Str) {
+            my $file = "$_.substr(5)/Inline/$so";
+            if $file.IO.e {
+                $path = $file;
+                last;
+            }
+        }
     }
     unless $path {
         die "unable to find Inline/$so IN \@*INC";
