@@ -28,9 +28,13 @@ sub native(Sub $sub) {
                 # with a different filename (a number with no extension) that NativeCall doesn't
                 # know how to load. We do this copy to fix the filename.
                 $path = $*SPEC.tmpdir ~ '/' ~ $*PID ~ '-' ~ $so;
+
                 $tmp.IO.copy($path);
             }
         }
+    }
+    unless $path {    # TEMPORARY !!!!
+        $path = $?FILE.substr(0,*-9) ~ $so;
     }
     unless $path {
         die "unable to find Inline/$so IN \@*INC";
