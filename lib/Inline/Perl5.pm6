@@ -1,4 +1,4 @@
-class Inline::Perl5;
+unit class Inline::Perl5;
 
 class Perl5Interpreter is repr('CPointer') { }
 
