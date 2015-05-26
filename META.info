@@ -1,13 +1,20 @@
 {
-    "name" : "Inline::Perl5",
-    "version" : "*",
-    "author" : "github:niner",
-    "description" : "Use Perl 5 code in a Perl 6 program",
-    "depends" : [ "LibraryMake" ],
-    "test-depends" : [ "File::Temp" ],
+    "name"           : "Inline::Perl5",
+    "version"       : "*",
+    "perl"          : "v6.0.0",
+    "author"        : "github:niner",
+    "authors"       : [ "Stefan Seifert" ],
+    "description"   : "Use Perl 5 code in a Perl 6 program",
+    "depends"       : [ "LibraryMake" ],
+    "test-depends"  : [ "File::Temp" ],
     "build-depends" : [ ],
-    "provides" : {
+    "provides"      : {
         "Inline::Perl5" : "lib/Inline/Perl5.pm6"
     },
-    "source-url" : "git://github.com/niner/Inline-Perl5.git"
+    "repo-type"     : "git",
+    "source-url"    : "git://github.com/niner/Inline-Perl5.git"
+    "license"       : "http://www.perlfoundation.org/artistic_license_2_0",
+    "support"       : {
+        "irc" : "irc://irc.freenode.org/#perl6"
+    }
 }
