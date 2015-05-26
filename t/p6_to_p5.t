@@ -27,7 +27,7 @@ for (
     Any,
     Foo.new,
 ) -> $obj {
-    is_deeply $p5.call('identity', $obj), $obj, "Can round-trip " ~ $obj.^name;
+    is-deeply $p5.call('identity', $obj), $obj, "Can round-trip " ~ $obj.^name;
 }
 
 $p5.run(q/
