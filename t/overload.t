@@ -18,7 +18,7 @@ $p5.run: q:heredoc/PERL5/;
         my ($class, $str) = @_;
         return bless \$str, $class;
     }
-    my $foo = Foo->new("foo");
+
     package Bar;
     sub new {
         my ($class, $str) = @_;
