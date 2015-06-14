@@ -670,6 +670,11 @@ class Perl5Object {
 
     method sink() { self }
 
+    method Str() {
+        my $stringify = $!perl5.call('overload::Method', self, '""');
+        return $stringify ?? $stringify(self) !! callsame;
+    }
+
     method DESTROY {
         $!perl5.sv_refcnt_dec($!ptr) if $!ptr;
         $!ptr = OpaquePointer;
