@@ -228,9 +228,6 @@ sub p5_is_wrapped_p6_object(Perl5Interpreter, OpaquePointer)
 sub p5_unwrap_p6_object(Perl5Interpreter, OpaquePointer)
     returns long { ... }
     native(&p5_unwrap_p6_object);
-sub p5_use(Perl5Interpreter, OpaquePointer)
-    { ... }
-    native(&p5_use);
 sub p5_terminate()
     { ... }
     native(&p5_terminate);
@@ -578,6 +575,11 @@ method init_callbacks {
             undef $p6;
         }
 
+        # wrapper for the load_module perlapi call to allow catching exceptions
+        sub load_module {
+            v6::load_module_impl(@_);
+        }
+
         sub run {
             my ($code) = @_;
             return $p6->run($code);
@@ -633,9 +635,14 @@ class Perl5Package {
     }
 }
 
-method require(Str $module) {
-    my $module_sv = self.p6_to_p5($module);
-    p5_use($!p5, $module_sv);
+method require(Str $module, Num $version?) {
+    # wrap the load_module call so exceptions can be translated to Perl 6
+    if $version {
+        self.call('v6::load_module', $module, $version);
+    }
+    else {
+        self.call('v6::load_module', $module);
+    }
 
     EVAL "class GLOBAL::$module is Perl5Package \{ \}";
 
@@ -773,7 +780,7 @@ BEGIN {
 class Perl5ModuleLoader {
     method load_module($module_name, %opts, *@GLOBALish, :$line, :$file) {
         $default_perl5 //= Inline::Perl5.new();
-        $default_perl5.require($module_name);
+        $default_perl5.require($module_name, %opts<ver> ?? %opts<ver>.Num !! Num);
 
         return ::($module_name).WHO;
     }

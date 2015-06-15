@@ -8,6 +8,7 @@ EXTERN_C void boot_Socket (pTHX_ CV* cv);
 
 XS(p5_call_p6_method);
 XS(p5_call_p6_callable);
+XS(p5_load_module);
 
 EXTERN_C void xs_init(pTHX) {
     char *file = __FILE__;
@@ -15,6 +16,7 @@ EXTERN_C void xs_init(pTHX) {
     newXS("DynaLoader::boot_DynaLoader", boot_DynaLoader, file);
     newXS("Perl6::Object::call_method", p5_call_p6_method, file);
     newXS("Perl6::Callable::call", p5_call_p6_callable, file);
+    newXS("v6::load_module_impl", p5_load_module, file);
 }
 
 void p5_inline_perl6_xs_init(PerlInterpreter *my_perl) {
@@ -618,6 +620,17 @@ XS(p5_call_p6_callable) {
     }
 }
 
-void p5_use(PerlInterpreter *my_perl, SV *module) {
-    load_module(PERL_LOADMOD_NOIMPORT, module, NULL);
+XS(p5_load_module) {
+    dXSARGS;
+    SV * module  = ST(0);
+    SV * version = NULL;
+    SvREFCNT_inc(module);  /* decremented by load_module */
+    if (items == 2) {
+        version = ST(1);
+        SvREFCNT_inc(version); /* decremented by load_module */
+    }
+    load_module(PERL_LOADMOD_NOIMPORT, module, version);
+    SPAGAIN;
+    sp -= items;
+    XSRETURN_EMPTY;
 }
