@@ -10,18 +10,23 @@ BEGIN {
 
 plan 2;
 
+note "precomp Inline::Perl5";
 my $ipc = CompUnit.new('lib/Inline/Perl5.pm6');
 my $already-precompiled = $ipc.precomp-path.IO.e;
 
 if not $already-precompiled {
     $ipc.precomp;
 }
+note "precomped";
 
 my $first = CompUnit.new('t/Precomp/First.pm6');
 my $second = CompUnit.new('t/Precomp/Second.pm6');
 
+note "precomp First";
 ok $first.precomp;
-ok $second.precomp;
+note "precomp Second";
+warn $second.precomp;
+note "done";
 
 # clean up
 sub rmpp($cu) {

@@ -259,7 +259,7 @@ multi method p6_to_p5(Any:U $value) returns OpaquePointer {
     p5_undef($!p5);
 }
 
-my $objects = ObjectKeeper.new;
+our $objects = ObjectKeeper.new;
 
 sub free_p6_object(Int $index) {
     $objects.free($index);
@@ -658,7 +658,7 @@ method require(Str $module, Num $version?) {
         }
     }
 
-    %perl5_for_imported_packages{$module} = self;
+    %perl5_for_imported_packages{$module} = self; # unless %*COMPILING<%?OPTIONS><precomp>;
 }
 
 method use(Str $module, *@args) {
@@ -779,8 +779,7 @@ BEGIN {
 
 class Perl5ModuleLoader {
     method load_module($module_name, %opts, *@GLOBALish, :$line, :$file) {
-        $default_perl5 //= Inline::Perl5.new();
-        $default_perl5.require($module_name, %opts<ver> ?? %opts<ver>.Num !! Num);
+        Inline::Perl5.default_perl5.require($module_name, %opts<ver> ?? %opts<ver>.Num !! Num);
 
         return ::($module_name).WHO;
     }
@@ -803,4 +802,11 @@ our sub init_inline_perl6_callback(Str $path) {
 
 END {
     p5_terminate unless $inline_perl6_in_use;
+}
+
+CHECK {
+    warn "Cleaning up";
+    $objects = Any;
+    $default_perl5 = Any;
+    %perl5_for_imported_packages = Hash;
 }
