@@ -252,7 +252,7 @@ can be cought like any other Perl 5 exceptions:
         eval {
             v6::run('die("test");');
         };
-        say $@->Str;
+        say $@;
     PERL5
 ```
 

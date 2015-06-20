@@ -512,8 +512,14 @@ class Perl6Callbacks {
 }
 
 method init_callbacks {
-    self.run(q[
+    self.run(q:to/PERL5/);
         package Perl6::Object;
+
+        use overload '""' => sub {
+            my ($self) = @_;
+
+            return $self->Str;
+        };
 
         our $AUTOLOAD;
         sub AUTOLOAD {
@@ -607,7 +613,7 @@ method init_callbacks {
         $INC{'v6.pm'} = undef;
 
         1;
-    ]);
+        PERL5
 
     self.call('v6::init', Perl6Callbacks.new(:p5(self)));
 
