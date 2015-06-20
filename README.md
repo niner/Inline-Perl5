@@ -19,20 +19,28 @@ Inline::Perl5
 Module for executing Perl 5 code and accessing Perl 5 modules from Perl 6.
 
 Supports Perl 5 modules including XS modules. Allows passing integers,
-strings, arrays, hashes and objectsbetween Perl 5 and Perl 6. Also supports
-calling methods on Perl 5 objects from Perl 6 and calling methods on Perl 6
-objects from Perl 5.
+strings, arrays, hashes, code references, file handles and objects between
+Perl 5 and Perl 6. Also supports calling methods on Perl 5 objects from
+Perl 6 and calling methods on Perl 6 objects from Perl 5 and subclass
+Perl 5 classes in Perl 6.
 
 # HOW DO I?
 
 ## Load a Perl 5 module
 
-Perl 6' use statement allows you load modules from other languages as well.
-Inline::Perl5 registers as a handler for the Perl5 language:
+Perl 6' use statement allows you to load modules from other languages as well.
+Inline::Perl5 registers as a handler for the Perl5 language. Rakudo will
+automatically load Inline::Perl5 as long as it is installed:
 
 ```
-    use Inline::Perl5;
     use Test::More:from<Perl5>;
+```
+
+In Perl 6 the :ver adverb is used for requiring a minimum version of a loaded
+module:
+
+```
+    use Test::More:from<Perl5>:ver<1.001014>;
 ```
 
 Inline::Perl5's use() method maps to Perl 5's use statement:
@@ -44,6 +52,15 @@ Inline::Perl5's use() method maps to Perl 5's use statement:
 ```
 
 ## Call a Perl 5 function
+
+Inline::Perl5 creates wrappers for loaded Perl 5 modules and their functions.
+They can be used as if they were Perl 6 modules:
+
+```
+    use Test::More:from<Perl5>;
+    Test::More::plan(1);
+    Test::More::ok('yes', 'looks like a Perl 6 function');
+```
 
 Inline::Perl5's call($name, \*@args) method allows calling arbitrary Perl 5
 functions. Use a fully qualified name (like "Test::More::ok") if the function
@@ -57,7 +74,7 @@ is not in the "main" namespace.
     $p5.call('Test::More::plan', 1);
 ```
 
-## Create a Perl 5 object
+## Create a Perl 5 object / call a Perl 5 package method
 
 Creating Perl 5 objects works just the same as in Perl 5: invoke their
 constructor (usually called "new").
@@ -90,6 +107,53 @@ object.  You can call methods on it like on any other object.
     $bzip2.close;
 ```
 
+## Run arbitrary Perl 5 code
+
+Perl6's EVAL function supports multiple languages, just like the "use"
+statement. It allows for execution of arbitrary Perl 5 code given as string:
+
+```
+    EVAL "print 'Hello from Perl 5';", :lang<perl5>;
+```
+
+The low level interface to this functionality is Inline::Perl5's run($str)
+method:
+
+```
+    use Inline::Perl5;
+    my $p5 = Inline::Perl5.new;
+
+    $p5.run(q'
+        sub test {
+            return 'Hello from Perl 5';
+        }
+    ');
+```
+
+Both "EVAL" and "run" return the value of the last statement in the EVAL'ed
+code.
+
+## Call a Perl 6 function from Perl 5
+
+Inline::Perl5 creates a Perl 5 package called "v6". This package contains
+a "call" function which allows for calling Perl 6 functions from Perl 5,
+same as Inline::Perl5's "call" method. It takes the name of the function
+to call and passes on any additional arguments and returns the return value
+of the called Perl 5 function.
+
+```
+    use Inline::Perl5;
+    my $p5 = Inline::Perl5.new;
+
+    our sub foo($str) {
+        say "Perl6 says hello to $str";
+    };
+
+    $p5.run(q:to/PERL5/);
+        v6::call("foo", "Perl 5");
+    PERL5
+```
+
 ## Invoke a method on a Perl 6 object from Perl 5
 
 Perl 6 objects passed to Perl 5 functions will behave just like any other
@@ -115,20 +179,19 @@ objects in Perl 5, so you can invoke methods using the -> operator.
     $p5.call('test', Foo.new);
 ```
 
-## Run arbitrary Perl 5 code
+## Run arbitrary Perl 6 code from Perl 5
 
-Arbitrary Perl 5 code can be executed using Inline::Perl5's run($str) method.
-It accepts Perl 5 code as a string.
+The "run" function in the automatically created "v6" package can be used to
+execute arbitrary Perl 6 code from Perl 5. It returns the value of the last
+evaluated expression in the executed code.
 
 ```
     use Inline::Perl5;
     my $p5 = Inline::Perl5.new;
 
-    $p5.run(q'
-        sub test {
-            return 'Hello from Perl 5';
-        }
-    ');
+    $p5.run(q:to/PERL5/);
+        v6::run("say foo");
+    PERL5
 ```
 
 ## Inherit from a Perl 5 class
@@ -162,6 +225,60 @@ when creating objects.
     say Bar.new(perl5 => $p5).test;
 ```
 
+## Catch exceptions thrown by Perl 5 code
+
+Perl 5's exceptions (die) are translated to X::AdHoc exceptions in Perl 6 and
+can be cought like any other Perl 6 exceptions:
+
+```
+    {
+        EVAL "die 'a Perl 5 exception!';", :lang<perl5>;
+        CATCH {
+            when X::AdHoc {
+                say "Cought a Perl 5 exception: $_";
+            }
+        }
+    }
+```
+
+## Catch exceptions thrown by Perl 6 code in Perl 5
+
+Perl 6's exceptions (die) are translated to Perl 5 exceptions and
+can be cought like any other Perl 5 exceptions:
+
+```
+    EVAL q:to:PERL5, :lang<perl5>;
+        use 5.10.0;
+        eval {
+            v6::run('die("test");');
+        };
+        say $@->Str;
+    PERL5
+```
+
+## Mix Perl 5 and Perl 6 code in the same file
+
+Inline::Perl5 creates a virtual module called "v6-inline". By saying
+"use v6-inline;" in a Perl 5 module, you can declare that the rest of the file
+is written in Perl 6:
+
+```
+    package Some::Perl5::Module;
+
+    use v6-inline;
+
+    has $.name;
+
+    sub greet {
+        say "Hello $.name";
+    }
+```
+
+Note that this Perl 5 module obviously will only work when loaded by
+Inline::Perl5. This functionality is aimed at supporting Perl 5 frameworks
+(think Catalyst or DBIx::Class or Dancer or ...) that automatically load
+modules and of course expect these modules to be written in Perl 5.
+
 # BUILDING
 
 You will need a perl 5 built with the -fPIC option (position independent
@@ -170,7 +287,8 @@ you have to build it as:
 
     perlbrew install perl-5.20.0 -Duseshrplib
 
-(or, if you want to use more than one Inline::Perl5 interpeter safely, for instance from within Perl 6 threads, add the `-Dusemultiplicity` option as well)
+(or, if you want to use more than one Inline::Perl5 interpeter safely, for
+instance from within Perl 6 threads, add the `-Dusemultiplicity` option as well)
 
 If you use the perl that comes with a Linux distribution, you may need to
 install a separate package containing the perl library. E.g. on Debian
