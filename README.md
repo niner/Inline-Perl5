@@ -196,10 +196,33 @@ evaluated expression in the executed code.
 
 ## Inherit from a Perl 5 class
 
-The Inline::Perl5::Perl5Parent role allows convenient subclassing of Perl 5
-packages in Perl 6. Pass the Perl 5 package's name as parameter to the role.
-Pass the Inline::Perl5 object as named parameter to your classes constructor
-when creating objects.
+Inline::Perl5 creates a corresponding Perl 6 class for each Perl 5 module
+loaded via the <code>use Foo:from<Perl5></code> or <code>$p5.use('Foo')</code>
+mechanisms.
+
+You can subclass these automatically created classes as if they were original
+Perl 6 classes:
+
+```
+    use Data::Dumper:from<Perl5>;
+    class MyDumper is Data::Dumper {
+        has $.bar;
+        method foo { say "foo!"; }
+    }
+    my $dumper = MyDumper.new([1], bar => 1);
+    say $dumper.Dump();
+    say $dumper.foo;
+    say $dumper.bar;
+```
+
+You can override methods and the overridden methods will be called even by the
+Perl 5 methods in your base class. However, it is not yet possible to directly
+access the Perl 5 object's data, i.e. <code>$self->{foo}</code>.
+
+When <code>use</code> cannot be used to load the Perl 5 module, the
+Inline::Perl5::Perl5Parent role allows can be used for subclassing.
+Pass the Perl 5 package's name as parameter to the role. Pass the Inline::Perl5
+object as named parameter to your classes constructor when creating objects.
 
 ```
     $p5.run(q:heredoc/PERL5/);

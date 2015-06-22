@@ -466,7 +466,7 @@ multi method invoke(Str $package, Str $function, *@args, *%args) {
 }
 
 multi method invoke(OpaquePointer $obj, Str $function, *@args) {
-    self.invoke(Str, $obj, $function, @args.list);
+    self.invoke(Str, $obj, $function, |@args);
 }
 
 multi method invoke(Str $package, OpaquePointer $obj, Str $function, *@args) {
@@ -630,14 +630,30 @@ method rebless(Perl5Object $obj) {
     p5_rebless_object($!p5, $obj.ptr);
 }
 
-my %perl5_for_imported_packages;
-class Perl5Package {
-    method new(*@args) {
-        return %perl5_for_imported_packages{self.perl.Str}.invoke(self.perl.Str, 'new', @args.list);
+role Perl5Package[Inline::Perl5 $p5, Str $module] {
+    has $!parent;
+
+    method new(*@args, *%args) {
+        if (self.perl.Str ne $module) { # subclass
+            %args<parent> = $p5.invoke($module, 'new', @args.list);
+            my $self = self.bless();
+            $self.BUILDALL(@args, %args);
+            return $self;
+        }
+        else {
+            return $p5.invoke($module, 'new', @args.list);
+        }
     }
 
-    method FALLBACK($name, *@args) {
-        %perl5_for_imported_packages{self.perl.Str}.invoke(self.perl.Str, $name, @args.list);
+    submethod BUILD(:$parent) {
+        $!parent = $parent;
+        $p5.rebless($parent) if $parent;
+    }
+
+    multi method FALLBACK($name, *@args) {
+        return self.defined
+            ?? $p5.invoke($module, $!parent.ptr, $name, self, |@args)
+            !! $p5.invoke($module, $name, |@args);
     }
 }
 
@@ -650,7 +666,8 @@ method require(Str $module, Num $version?) {
         self.call('v6::load_module', $module);
     }
 
-    EVAL "class GLOBAL::$module is Perl5Package \{ \}";
+    my $p5 = self;
+    EVAL "class GLOBAL::$module does Perl5Package[\$p5, \$module] \{ \}";
 
     ::($module).WHO<EXPORT> := Metamodel::PackageHOW.new();
     ::($module).WHO<&EXPORT> := sub EXPORT(*@args) {
@@ -663,8 +680,6 @@ method require(Str $module, Num $version?) {
             self.call("{$module}::$name", @args.list);
         }
     }
-
-    %perl5_for_imported_packages{$module} = self;
 }
 
 method use(Str $module, *@args) {
