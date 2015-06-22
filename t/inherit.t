@@ -4,12 +4,14 @@ use v6;
 use Inline::Perl5;
 use Test;
 
-plan 5; # adjust the skip as well!
+BEGIN {
+    plan 5; # adjust the skip as well!
 
-BEGIN EVAL 'use lib qw(t/lib);', :lang<perl5>;
-BEGIN EVAL 'eval { require Moose; 1};', :lang<perl5> or {
-    skip('Perl 5 Moose module not available', 5);
-    exit;
+    EVAL 'use lib qw(t/lib);', :lang<perl5>;
+    unless EVAL 'eval { require Moose; 1};', :lang<perl5> {
+        skip('Perl 5 Moose module not available', 5);
+        exit;
+    }
 }
 
 use Foo:from<Perl5>;
