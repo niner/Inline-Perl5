@@ -16,10 +16,28 @@ $p5.run: q:heredoc/PERL5/;
     sub push {
         return 'pushed';
     }
+
+    sub nothing {
+        return;
+    }
+
+    sub empty_hash {
+        return {};
+    }
+
+    sub count_args {
+        return scalar @_;
+    }
+
     PERL5
 
 my $foo = $p5.invoke('Foo', 'new');
 
 is($foo.push, 'pushed');
+my @a = $foo.nothing;
+is($foo.count_args($foo.nothing), 1);
+is($foo.count_args($foo.empty_hash), 2);
 
 done;
+
+# vim: ft=perl6

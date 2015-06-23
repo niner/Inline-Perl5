@@ -434,9 +434,10 @@ method !setup_arguments(@args) {
 method !unpack_return_values($av) {
     my int32 $av_len = p5_av_top_index($!p5, $av);
 
+    my @retvals;
     if $av_len == -1 {
         p5_sv_refcnt_dec($!p5, $av);
-        return;
+        return @retvals; # avoid returning Nil when there are no return values
     }
 
     if $av_len == 0 {
@@ -445,7 +446,6 @@ method !unpack_return_values($av) {
         return $retval;
     }
 
-    my @retvals;
     loop (my int32 $i = 0; $i <= $av_len; $i = $i + 1) {
         @retvals.push(self.p5_to_p6(p5_av_fetch($!p5, $av, $i)));
     }
