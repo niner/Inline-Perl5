@@ -655,6 +655,17 @@ role Perl5Package[Inline::Perl5 $p5, Str $module] {
             ?? $p5.invoke($module, $!parent.ptr, $name, self, |@args)
             !! $p5.invoke($module, $name, |@args);
     }
+
+    for Any.^methods>>.name.list, <say> -> $name {
+        $?CLASS.^add_method(
+            $name,
+            method (|args) {
+                return self.defined
+                    ?? $p5.invoke($module, $!parent.ptr, $name, self, args.list, args.hash)
+                    !! $p5.invoke($module, $name, args.list, args.hash);
+            }
+        );
+    }
 }
 
 method require(Str $module, Num $version?) {
