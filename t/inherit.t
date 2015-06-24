@@ -1,15 +1,14 @@
 #!/usr/bin/env perl6
 
 use v6;
-use Inline::Perl5;
 use Test;
 
 BEGIN {
-    plan 5; # adjust the skip as well!
+    plan 6; # adjust the skip as well!
 
     EVAL 'use lib qw(t/lib);', :lang<perl5>;
     unless EVAL 'eval { require Moose; 1};', :lang<perl5> {
-        skip('Perl 5 Moose module not available', 5);
+        skip('Perl 5 Moose module not available', 6);
         exit;
     }
 }
@@ -27,6 +26,7 @@ class P6Bar is Foo {
 is(P6Bar.new.test, 'Perl6');
 is(P6Bar.new.test_inherited, 'Perl5');
 is(P6Bar.new.foo, 'Moose!');
+is(P6Bar.new(foo => 'custom').foo, 'custom');
 
 class Baz is Foo {
     method bar {
