@@ -214,7 +214,7 @@ SV *p5_eval_pv(PerlInterpreter *my_perl, const char* p, I32 croak_on_error) {
 }
 
 SV *p5_err_sv(PerlInterpreter *my_perl) {
-    return ERRSV;
+    return sv_mortalcopy(ERRSV);
 }
 
 AV *p5_call_package_method(PerlInterpreter *my_perl, char *package, char *name, int len, SV *args[]) {
