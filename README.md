@@ -251,14 +251,14 @@ object as named parameter to your classes constructor when creating objects.
 ## Catch exceptions thrown by Perl 5 code
 
 Perl 5's exceptions (die) are translated to X::AdHoc exceptions in Perl 6 and
-can be cought like any other Perl 6 exceptions:
+can be caught like any other Perl 6 exceptions:
 
 ```
     {
         EVAL "die 'a Perl 5 exception!';", :lang<perl5>;
         CATCH {
             when X::AdHoc {
-                say "Cought a Perl 5 exception: $_";
+                say "Caught a Perl 5 exception: $_";
             }
         }
     }
@@ -267,7 +267,7 @@ can be cought like any other Perl 6 exceptions:
 ## Catch exceptions thrown by Perl 6 code in Perl 5
 
 Perl 6's exceptions (die) are translated to Perl 5 exceptions and
-can be cought like any other Perl 5 exceptions:
+can be caught like any other Perl 5 exceptions:
 
 ```
     EVAL q:to:PERL5, :lang<perl5>;
