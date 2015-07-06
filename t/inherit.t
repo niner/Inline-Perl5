@@ -4,17 +4,19 @@ use v6;
 use Test;
 
 BEGIN {
-    plan 9; # adjust the skip as well!
+    plan 10; # adjust the skip as well!
 
     EVAL 'use lib qw(t/lib);', :lang<perl5>;
     unless EVAL 'eval { require Moose; 1};', :lang<perl5> {
-        skip('Perl 5 Moose module not available', 9);
+        skip('Perl 5 Moose module not available', 10);
         exit;
     }
 }
 
 use Foo:from<Perl5>;
 use Bar:from<Perl5>;
+
+is(Foo.new(foo => 'custom').foo, 'custom');
 
 class P6Bar is Foo {
     method bar {

@@ -11,9 +11,6 @@ eval-dies-ok "use P5ModuleVersion:from<Perl5>:ver<2.1>;";
 
 is(P5Import::ok(1), 1);
 
-use Foo:from<Perl5>;
-is(Foo.new(foo => 'custom').foo, 'custom');
-
 done;
 
 # vim: ft=perl6
