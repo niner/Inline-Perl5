@@ -641,7 +641,7 @@ role Perl5Package[Inline::Perl5 $p5, Str $module] {
             return $self;
         }
         else {
-            return $p5.invoke($module, 'new', @args.list);
+            return $p5.invoke($module, 'new', @args.list, %args.hash);
         }
     }
 
