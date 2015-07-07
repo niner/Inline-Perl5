@@ -102,6 +102,9 @@ sub p5_is_array(Perl5Interpreter, OpaquePointer)
 sub p5_is_hash(Perl5Interpreter, OpaquePointer)
     returns int { ... }
     native(&p5_is_hash);
+sub p5_is_scalar_ref(Perl5Interpreter, OpaquePointer)
+    returns int { ... }
+    native(&p5_is_scalar_ref);
 sub p5_is_undef(Perl5Interpreter, OpaquePointer)
     returns int { ... }
     native(&p5_is_undef);
@@ -138,6 +141,9 @@ sub p5_str_to_sv(Perl5Interpreter, long, Blob)
 sub p5_buf_to_sv(Perl5Interpreter, long, Blob)
     returns OpaquePointer { ... }
     native(&p5_buf_to_sv);
+sub p5_sv_to_ref(Perl5Interpreter, OpaquePointer)
+    returns OpaquePointer { ... }
+    native(&p5_sv_to_ref);
 sub p5_av_top_index(Perl5Interpreter, OpaquePointer)
     returns int32 { ... }
     native(&p5_av_top_index);
@@ -201,6 +207,9 @@ sub p5_sv_iv(Perl5Interpreter, OpaquePointer)
 sub p5_sv_nv(Perl5Interpreter, OpaquePointer)
     returns num64 { ... }
     native(&p5_sv_nv);
+sub p5_sv_rv(Perl5Interpreter, OpaquePointer)
+    returns OpaquePointer { ... }
+    native(&p5_sv_rv);
 sub p5_is_object(Perl5Interpreter, OpaquePointer)
     returns int { ... }
     native(&p5_is_object);
@@ -247,6 +256,9 @@ multi method p6_to_p5(Str:D $value) returns OpaquePointer {
 }
 multi method p6_to_p5(blob8:D $value) returns OpaquePointer {
     p5_buf_to_sv($!p5, $value.elems, $value);
+}
+multi method p6_to_p5(Capture:D $value where $value.elems == 1) returns OpaquePointer {
+    p5_sv_to_ref($!p5, self.p6_to_p5($value[0]));
 }
 multi method p6_to_p5(Perl5Object $value) returns OpaquePointer {
     p5_sv_refcnt_inc($!p5, $value.ptr);
@@ -355,6 +367,10 @@ method !p5_hash_to_p6_hash(OpaquePointer $sv) {
     $hash;
 }
 
+method !p5_scalar_ref_to_capture(OpaquePointer $sv) {
+    return \(self.p5_to_p6(p5_sv_rv($!p5, $sv)));
+}
+
 method p5_to_p6(OpaquePointer $value) {
     return Any unless defined $value;
     if p5_is_object($!p5, $value) {
@@ -399,6 +415,9 @@ method p5_to_p6(OpaquePointer $value) {
     }
     elsif p5_is_undef($!p5, $value) {
         return Any;
+    }
+    elsif p5_is_scalar_ref($!p5, $value) {
+        return self!p5_scalar_ref_to_capture($value);
     }
     die "Unsupported type $value in p5_to_p6";
 }

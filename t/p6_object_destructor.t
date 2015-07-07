@@ -25,8 +25,8 @@ class Foo {
 # this will loop endlessly if we leak all objects
 my $i = 0;
 until $destroyed {
-    $p5.call('test', 'main', Foo.new);
-    last if $i++ > 10000;
+    $p5.call('test', 'main', Foo.new(bar => 'bar'));
+    last if $i++ > 100000;
 }
 
 ok($destroyed, 'at least one destructor ran');

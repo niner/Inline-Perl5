@@ -89,6 +89,10 @@ double p5_sv_nv(PerlInterpreter *my_perl, SV* sv) {
     return (double)SvNV(sv);
 }
 
+SV *p5_sv_rv(PerlInterpreter *my_perl, SV* sv) {
+    return SvRV(sv);
+}
+
 int p5_is_object(PerlInterpreter *my_perl, SV* sv) {
     return sv_isobject(sv);
 }
@@ -103,6 +107,10 @@ int p5_is_array(PerlInterpreter *my_perl, SV* sv) {
 
 int p5_is_hash(PerlInterpreter *my_perl, SV* sv) {
     return (SvROK(sv) && SvTYPE(SvRV(sv)) == SVt_PVHV);
+}
+
+int p5_is_scalar_ref(PerlInterpreter *my_perl, SV* sv) {
+    return (SvROK(sv) && SvTYPE(SvRV(sv)) < SVt_PVAV);
 }
 
 int p5_is_undef(PerlInterpreter *my_perl, SV* sv) {
@@ -127,6 +135,10 @@ STRLEN p5_sv_to_buf(PerlInterpreter *my_perl, SV *sv, char **buf) {
     STRLEN len;
     *buf  = SvPV(sv, len);
     return len;
+}
+
+SV *p5_sv_to_ref(PerlInterpreter *my_perl, SV *sv) {
+    return newRV_noinc(sv);
 }
 
 void p5_sv_refcnt_dec(PerlInterpreter *my_perl, SV *sv) {

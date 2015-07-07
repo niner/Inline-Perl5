@@ -4,7 +4,7 @@ use v6;
 use Test;
 use Inline::Perl5;
 
-plan 17;
+plan 19;
 
 my $p5 = Inline::Perl5.new();
 $p5.run(q:heredoc/PERL5/);
@@ -25,6 +25,7 @@ for (
     [1, 2],
     { a => 1, b => 2},
     Any,
+    \('foo'),
     Foo.new,
 ) -> $obj {
     is-deeply $p5.call('identity', $obj), $obj, "Can round-trip " ~ $obj.^name;
@@ -66,6 +67,15 @@ $p5.run(q/
 /);
 
 ok($p5.call('is_two_point_five', Num.new(2.5)));
+
+$p5.run(q/
+    sub is_string_ref {
+        my ($ref) = @_;
+        return (ref $ref eq 'SCALAR' and $$ref eq 'foo');
+    }
+/);
+
+ok($p5.call('is_string_ref', \('foo')));
 
 $p5.run(q/
     use warnings;
