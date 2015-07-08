@@ -23,6 +23,7 @@ void p5_inline_perl6_xs_init(PerlInterpreter *my_perl) {
     char *file = __FILE__;
     newXS("Perl6::Object::call_method", p5_call_p6_method, file);
     newXS("Perl6::Callable::call", p5_call_p6_callable, file);
+    newXS("v6::load_module_impl", p5_load_module, file);
 }
 
 static int inited = 0;
