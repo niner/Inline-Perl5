@@ -113,7 +113,7 @@ Perl6's EVAL function supports multiple languages, just like the "use"
 statement. It allows for execution of arbitrary Perl 5 code given as string:
 
 ```
-    EVAL "print 'Hello from Perl 5';", :lang<perl5>;
+    EVAL "print 'Hello from Perl 5';", :lang<Perl5>;
 ```
 
 The low level interface to this functionality is Inline::Perl5's run($str)
@@ -255,7 +255,7 @@ can be caught like any other Perl 6 exceptions:
 
 ```
     {
-        EVAL "die 'a Perl 5 exception!';", :lang<perl5>;
+        EVAL "die 'a Perl 5 exception!';", :lang<Perl5>;
         CATCH {
             when X::AdHoc {
                 say "Caught a Perl 5 exception: $_";
@@ -270,7 +270,7 @@ Perl 6's exceptions (die) are translated to Perl 5 exceptions and
 can be caught like any other Perl 5 exceptions:
 
 ```
-    EVAL q:to:PERL5, :lang<perl5>;
+    EVAL q:to:PERL5, :lang<Perl5>;
         use 5.10.0;
         eval {
             v6::run('die("test");');

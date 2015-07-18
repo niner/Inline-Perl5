@@ -3,7 +3,7 @@
 use v6;
 use Test;
 use Inline::Perl5;
-BEGIN EVAL 'use lib qw(t/lib);', :lang<perl5>;
+BEGIN EVAL 'use lib qw(t/lib);', :lang<Perl5>;
 
 use P5Import:from<Perl5> <tests 2>;
 

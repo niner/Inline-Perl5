@@ -6,8 +6,8 @@ use Test;
 BEGIN {
     plan 10; # adjust the skip as well!
 
-    EVAL 'use lib qw(t/lib);', :lang<perl5>;
-    unless EVAL 'eval { require Moose; 1};', :lang<perl5> {
+    EVAL 'use lib qw(t/lib);', :lang<Perl5>;
+    unless EVAL 'eval { require Moose; 1};', :lang<Perl5> {
         skip('Perl 5 Moose module not available', 10);
         exit;
     }
