@@ -22,16 +22,7 @@ sub native(Sub $sub) {
             my $cur = $_ ~~ Str ?? CompUnitRepo.new($_) !! $_;
             if my @files = ($cur.files($base) || $cur.files("blib/$base")) {
                 my $files = @files[0]<files>;
-                my $tmp = $files{$base} || $files{"blib/$base"};
-
-                # copy to a temp dir
-                #
-                # This is required because CompUnitRepo::Local::Installation stores the file
-                # with a different filename (a number with no extension) that NativeCall doesn't
-                # know how to load. We do this copy to fix the filename.
-                $path = $*SPEC.tmpdir ~ '/' ~ $*PID ~ '-' ~ $so;
-
-                $tmp.IO.copy($path);
+                $path = $files{$base} || $files{"blib/$base"};
             }
         }
     }
