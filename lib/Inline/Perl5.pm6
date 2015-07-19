@@ -7,6 +7,8 @@ has Bool $!external_p5 = False;
 has &!call_method;
 has &!call_callable;
 
+my $default_perl5;
+
 use nqp;
 use NativeCall;
 
@@ -696,6 +698,8 @@ method require(Str $module, Num $version?) {
         self.call('v6::load_module', $module);
     }
 
+    return unless self eq $default_perl5; # Only create Perl 6 packages for the primary interpreter to avoid confusion
+
     my $p5 = self;
     EVAL "class GLOBAL::$module does Perl5Package[\$p5, \$module] \{ \}";
 
@@ -752,8 +756,6 @@ class Perl5Callable does Callable {
         $!ptr = OpaquePointer;
     }
 }
-
-my $default_perl5;
 
 method default_perl5 {
     return $default_perl5 //= self.new();

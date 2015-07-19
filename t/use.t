@@ -19,4 +19,9 @@ my $dumper = Data::Dumper.new([1, 2]);
 Test::More::is($dumper.Dump.Str, "\$VAR1 = 1;\n \$VAR2 = 2;\n", 'constructor works');
 Test::More::is(Data::Dumper.Dump([1, 2]).Str, "\$VAR1 = 1;\n \$VAR2 = 2;\n", 'package methods work');
 
+# Only the first interpreter should create a Perl 6 package
+my @p5;
+@p5.push: Inline::Perl5.new xx 10;
+@p5>>.use('File::Temp');
+
 # vim: ft=perl6
