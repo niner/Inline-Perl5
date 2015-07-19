@@ -689,6 +689,7 @@ role Perl5Package[Inline::Perl5 $p5, Str $module] {
     }
 }
 
+my $loaded_modules = SetHash.new;
 method require(Str $module, Num $version?) {
     # wrap the load_module call so exceptions can be translated to Perl 6
     if $version {
@@ -699,6 +700,8 @@ method require(Str $module, Num $version?) {
     }
 
     return unless self eq $default_perl5; # Only create Perl 6 packages for the primary interpreter to avoid confusion
+    return if $loaded_modules{$module};
+    $loaded_modules{$module} = True;
 
     my $p5 = self;
     EVAL "class GLOBAL::$module does Perl5Package[\$p5, \$module] \{ \}";
