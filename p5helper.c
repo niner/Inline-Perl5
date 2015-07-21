@@ -27,6 +27,7 @@ void p5_inline_perl6_xs_init(PerlInterpreter *my_perl) {
 }
 
 static int inited = 0;
+static int destroyed = 0;
 
 PerlInterpreter *p5_init_perl() {
     char *embedding[] = { "", "-e", "0" };
@@ -45,6 +46,7 @@ PerlInterpreter *p5_init_perl() {
 }
 
 void p5_destruct_perl(PerlInterpreter *my_perl) {
+    destroyed = 1;
     PL_perl_destruct_level = 1;
     perl_destruct(my_perl);
     perl_free(my_perl);
@@ -143,6 +145,8 @@ SV *p5_sv_to_ref(PerlInterpreter *my_perl, SV *sv) {
 }
 
 void p5_sv_refcnt_dec(PerlInterpreter *my_perl, SV *sv) {
+    if (destroyed)
+        return;
     SvREFCNT_dec(sv);
 }
 
