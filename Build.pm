@@ -12,6 +12,9 @@ class Build is Panda::Builder {
         shell('perl -MFilter::Simple -e ""')
             or die "\nPlease install the Filter::Simple Perl 5 module!\n";
 
+        shell(q{perl -MConfig -e '$Config{config_args} =~ /-Duseshrplib/ || exit 1'})
+            or die "\nYour perl was not configured to build a shared library; unable to build\n";
+
         my Str $blib = "$dir/blib";
         rm_f("$dir/lib/Inline/p5helper.so");
         rm_rf($blib);
