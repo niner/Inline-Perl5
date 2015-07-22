@@ -74,6 +74,9 @@ is not in the "main" namespace.
     $p5.call('Test::More::plan', 1);
 ```
 
+Please note that since Perl 6 does not have the same concept of "context",
+Perl 5 functions are always called in list context.
+
 ## Create a Perl 5 object / call a Perl 5 package method
 
 Creating Perl 5 objects works just the same as in Perl 5: invoke their
@@ -94,6 +97,9 @@ Or using the low level methods:
     my $dumper = $p5.invoke('Data::Dumper', 'new');
 ```
 
+Please note that since Perl 6 does not have the same concept of "context",
+Perl 5 methods are always called in list context.
+
 ## Invoke a method on a Perl 5 object
 
 Once you have a Perl 5 object in a variable it will behave just like a Perl 6
@@ -106,6 +112,9 @@ object.  You can call methods on it like on any other object.
     $bzip2.print($data);
     $bzip2.close;
 ```
+
+Please note that since Perl 6 does not have the same concept of "context",
+Perl 5 methods are always called in list context.
 
 ## Run arbitrary Perl 5 code
 
