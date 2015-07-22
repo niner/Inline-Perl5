@@ -27,7 +27,8 @@ void p5_inline_perl6_xs_init(PerlInterpreter *my_perl) {
 }
 
 static int inited = 0;
-static int destroyed = 0;
+static int interpreters = 0;
+static int terminate = 0;
 
 PerlInterpreter *p5_init_perl() {
     char *embedding[] = { "", "-e", "0" };
@@ -35,6 +36,9 @@ PerlInterpreter *p5_init_perl() {
     char **argv;
     if (!inited++)
         PERL_SYS_INIT(&argc, &argv);
+
+    interpreters++;
+
     PerlInterpreter *my_perl = perl_alloc();
     PERL_SET_CONTEXT(my_perl);
     PL_perl_destruct_level = 1;
@@ -42,19 +46,21 @@ PerlInterpreter *p5_init_perl() {
     perl_parse(my_perl, xs_init, 3, embedding, NULL);
     PL_exit_flags |= PERL_EXIT_DESTRUCT_END;
     perl_run(my_perl);
+
     return my_perl;
 }
 
 void p5_destruct_perl(PerlInterpreter *my_perl) {
-    destroyed = 1;
     PL_perl_destruct_level = 1;
     perl_destruct(my_perl);
     perl_free(my_perl);
+
+    if (--interpreters == 0 && terminate)
+        PERL_SYS_TERM();
 }
 
 void p5_terminate() {
-    if (inited)
-        PERL_SYS_TERM();
+    terminate = 1;
 }
 
 U32 p5_SvIOK(PerlInterpreter *my_perl, SV* sv) {
@@ -145,8 +151,6 @@ SV *p5_sv_to_ref(PerlInterpreter *my_perl, SV *sv) {
 }
 
 void p5_sv_refcnt_dec(PerlInterpreter *my_perl, SV *sv) {
-    if (destroyed)
-        return;
     SvREFCNT_dec(sv);
 }
 
