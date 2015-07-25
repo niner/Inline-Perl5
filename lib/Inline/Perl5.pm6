@@ -669,13 +669,16 @@ role Perl5Package[Inline::Perl5 $p5, Str $module] {
     }
 
     for Any.^methods>>.name.list, <say> -> $name {
+        next if $?CLASS.^declares_method($name);
+        my $method = method (|args) {
+            return self.defined
+                ?? $p5.invoke($module, $!parent.ptr, $name, self, args.list, args.hash)
+                !! $p5.invoke($module, $name, args.list, args.hash);
+        };
+        $method.set_name($name);
         $?CLASS.^add_method(
             $name,
-            method (|args) {
-                return self.defined
-                    ?? $p5.invoke($module, $!parent.ptr, $name, self, args.list, args.hash)
-                    !! $p5.invoke($module, $name, args.list, args.hash);
-            }
+            $method,
         );
     }
 }
@@ -694,20 +697,42 @@ method require(Str $module, Num $version?) {
     return if $loaded_modules{$module};
     $loaded_modules{$module} = True;
 
-    my $p5 = self;
-    EVAL "class GLOBAL::$module does Perl5Package[\$p5, \$module] \{ \}";
+    my $p5 := self;
+
+    my $class := Metamodel::ClassHOW.new_type( name => $module );
+    $class.^add_role(Perl5Package[$p5, $module]);
+    my $symbols = self.run('[ grep { *{"' ~ $module ~ '::$_"}{CODE} } keys %' ~ $module ~ ':: ]');
+
+    # install methods
+    for @$symbols -> $name {
+        my $method = my method (*@args) {
+            self.FALLBACK($name, @args.list);
+        }
+        $method.set_name($name);
+        $class.^add_method($name, $method);
+    }
+
+    $class.^compose;
+
+    # register the new class by its name
+    my @parts = $module.split('::');
+    my $inner = @parts.pop;
+    my $ns = ::GLOBAL.WHO;
+    $ns = ($ns{$_} := Metamodel::PackageHOW.new_type(name => $_)).WHO for @parts;
+    $ns{$inner} := $class;
+
+    # install subs like Test::More::ok
+    for @$symbols -> $name {
+        ::($module).WHO{"&$name"} := sub (*@args) {
+            self.call("{$module}::$name", @args.list);
+        }
+    }
 
     ::($module).WHO<EXPORT> := Metamodel::PackageHOW.new();
     ::($module).WHO<&EXPORT> := sub EXPORT(*@args) {
         self.invoke($module, 'import', @args.list);
         return EnumMap.new();
     };
-    my $symbols = self.run('[ grep { *{"' ~ $module ~ '::$_"}{CODE} } keys %' ~ $module ~ ':: ]');
-    for @$symbols -> $name {
-        ::($module).WHO{"&$name"} := sub (*@args) {
-            self.call("{$module}::$name", @args.list);
-        }
-    }
 }
 
 method use(Str $module, *@args) {
