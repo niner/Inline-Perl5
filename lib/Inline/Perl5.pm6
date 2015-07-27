@@ -48,7 +48,7 @@ class ObjectKeeper {
     has @!objects;
     has $!last_free = -1;
 
-    method keep(Any:D $value) returns Int {
+    method keep(Mu:D $value) returns Int {
         if $!last_free != -1 {
             my $index = $!last_free;
             $!last_free = @!objects[$!last_free];
@@ -61,7 +61,7 @@ class ObjectKeeper {
         }
     }
 
-    method get(Int $index) returns Any:D {
+    method get(Int $index) returns Mu:D {
         @!objects[$index];
     }
 
@@ -260,7 +260,7 @@ multi method p6_to_p5(Perl5Object $value) returns OpaquePointer {
 multi method p6_to_p5(OpaquePointer $value) returns OpaquePointer {
     $value;
 }
-multi method p6_to_p5(Any:U $value) returns OpaquePointer {
+multi method p6_to_p5(Mu:U $value) returns OpaquePointer {
     p5_undef($!p5);
 }
 
@@ -274,7 +274,7 @@ multi method p6_to_p5(Perl5Object:D $value, OpaquePointer $inst) {
     p5_sv_refcnt_inc($!p5, $inst);
     $inst;
 }
-multi method p6_to_p5(Any:D $value, OpaquePointer $inst = OpaquePointer) {
+multi method p6_to_p5(Mu:D $value, OpaquePointer $inst = OpaquePointer) {
     my $index = $objects.keep($value);
 
     p5_wrap_p6_object(
@@ -432,7 +432,7 @@ method !setup_arguments(@args) {
     my @svs := CArray[OpaquePointer].new();
     my Int $j = 0;
     loop (my Int $i = 0; $i < $len; $i = $i + 1) {
-        if @args[$i] ~~ Pair {
+        if @args[$i].WHAT ~~ Pair {
             @svs[$j++] = self.p6_to_p5(@args[$i].key);
             @svs[$j++] = self.p6_to_p5(@args[$i].value);
         }
@@ -487,7 +487,7 @@ multi method invoke(Str $package, OpaquePointer $obj, Str $function, *@args) {
     my Int $j = 0;
     @svs[$j++] = self.p6_to_p5(@args[0], $obj);
     loop (my Int $i = 1; $i < $len; $i++) {
-        if @args[$i] ~~ Pair {
+        if @args[$i].WHAT ~~ Pair {
             @svs[$j++] = self.p6_to_p5(@args[$i].key);
             @svs[$j++] = self.p6_to_p5(@args[$i].value);
         }
@@ -657,7 +657,7 @@ role Perl5Package[Inline::Perl5 $p5, Str $module] {
         }
     }
 
-    submethod BUILD(:$parent) {
+    submethod BUILD(Mu :$parent) {
         $!parent = $parent;
         $p5.rebless($parent) if $parent;
     }
@@ -668,16 +668,16 @@ role Perl5Package[Inline::Perl5 $p5, Str $module] {
             !! $p5.invoke($module, $name, |@args);
     }
 
-    for Any.^methods>>.name.list, <say> -> $name {
-        $?CLASS.^add_method(
-            $name,
-            method (|args) {
-                return self.defined
-                    ?? $p5.invoke($module, $!parent.ptr, $name, self, args.list, args.hash)
-                    !! $p5.invoke($module, $name, args.list, args.hash);
-            }
-        );
-    }
+#   for Any.^methods>>.name.list, <say> -> $name {
+#       $?CLASS.^add_method(
+#           $name,
+#           method (|args) {
+#               return self.defined
+#                   ?? $p5.invoke($module, $!parent.ptr, $name, self, args.list, args.hash)
+#                   !! $p5.invoke($module, $name, args.list, args.hash);
+#           }
+#       );
+#   }
 }
 
 my $loaded_modules = SetHash.new;
@@ -695,7 +695,7 @@ method require(Str $module, Num $version?) {
     $loaded_modules{$module} = True;
 
     my $p5 = self;
-    EVAL "class GLOBAL::$module does Perl5Package[\$p5, \$module] \{ \}";
+    EVAL "class GLOBAL::$module is Mu does Perl5Package[\$p5, \$module] \{ \}";
 
     ::($module).WHO<EXPORT> := Metamodel::PackageHOW.new();
     ::($module).WHO<&EXPORT> := sub EXPORT(*@args) {
@@ -720,7 +720,7 @@ submethod DESTROY {
     $!p5 = Perl5Interpreter;
 }
 
-class Perl5Object {
+class Perl5Object is Mu {
     has OpaquePointer $.ptr;
     has Inline::Perl5 $.perl5;
 
@@ -813,14 +813,16 @@ BEGIN {
             }
         }
     );
-    for Any.^methods>>.name -> $name {
-        Perl5Object.^add_method(
-            $name,
-            method (|args) {
-                $.perl5.invoke($.ptr, $name, self, args.list, args.hash);
-            }
-        );
-    }
+#   for Any.^methods>>.name -> $name {
+#       my $method = my method (|args) {
+#           $.perl5.invoke($.ptr, $name, self, args.list, args.hash);
+#       };
+#       $method.set_name($name);
+#       Perl5Object.^add_method(
+#           $name,
+#           $method,
+#       );
+#   }
     Perl5Object.^compose;
 }
 

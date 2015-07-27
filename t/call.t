@@ -6,98 +6,98 @@ use Inline::Perl5;
 say "1..12";
 
 my $p5 = Inline::Perl5.new();
-say $p5.run('
-use 5.10.0;
-$| = 1;
+say $p5.run(q:heredoc/PERL5/);
+    use 5.10.0;
+    $| = 1;
 
-sub test {
-    say "ok 1 - executing a parameterless function without return value";
-    return;
-}
-
-sub test_int_params {
-    if ($_[0] == 2 and $_[1] == 1) {
-        say "ok 2 - int params";
+    sub test {
+        say "ok 1 - executing a parameterless function without return value";
+        return;
     }
-    else {
-        say "not ok 2 - int params";
+
+    sub test_int_params {
+        if ($_[0] == 2 and $_[1] == 1) {
+            say "ok 2 - int params";
+        }
+        else {
+            say "not ok 2 - int params";
+        }
+        return;
     }
-    return;
-}
 
-sub test_str_params {
-    if (@_ == 2 and $_[0] eq "Hello" and $_[1] eq "Perl 5") {
-        say "ok 3 - str params";
+    sub test_str_params {
+        if (@_ == 2 and $_[0] eq "Hello" and $_[1] eq "Perl 5") {
+            say "ok 3 - str params";
+        }
+        else {
+            say "not ok 3 - str params";
+        }
+        return;
     }
-    else {
-        say "not ok 3 - str params";
+
+    sub test_int_retval {
+        return 1;
     }
-    return;
-}
 
-sub test_int_retval {
-    return 1;
-}
+    sub test_int_retvals {
+        return 3, 1, 2;
+    }
 
-sub test_int_retvals {
-    return 3, 1, 2;
-}
+    sub test_str_retval {
+        return "Hello Perl 6!";
+    }
 
-sub test_str_retval {
-    return "Hello Perl 6!";
-}
+    sub test_mixed_retvals {
+        return ("Hello", "Perl", 6);
+    }
 
-sub test_mixed_retvals {
-    return ("Hello", "Perl", 6);
-}
+    sub test_undef {
+        my ($self, $undef) = @_;
 
-sub test_undef {
-    my ($self, $undef) = @_;
+        return (@_ == 2 and $self eq "main" and not defined $undef);
+    }
 
-    return (@_ == 2 and $self eq "main" and not defined $undef);
-}
+    sub test_hash {
+        my ($self, $h) = @_;
 
-sub test_hash {
-    my ($self, $h) = @_;
+        return (
+            ref $h eq "HASH"
+            and keys %$h == 2
+            and exists $h->{a}
+            and exists $h->{b}
+            and $h->{a} == 2
+            and ref $h->{b}
+            and ref $h->{b} eq "HASH"
+            and ref $h->{b}{c}
+            and ref $h->{b}{c} eq "ARRAY"
+            and @{ $h->{b}{c} } == 2
+            and $h->{b}{c}[0] == 4
+            and $h->{b}{c}[1] == 3
+        );
+    }
 
-    return (
-        ref $h eq "HASH"
-        and keys %$h == 2
-        and exists $h->{a}
-        and exists $h->{b}
-        and $h->{a} == 2
-        and ref $h->{b}
-        and ref $h->{b} eq "HASH"
-        and ref $h->{b}{c}
-        and ref $h->{b}{c} eq "ARRAY"
-        and @{ $h->{b}{c} } == 2
-        and $h->{b}{c}[0] == 4
-        and $h->{b}{c}[1] == 3
-    );
-}
+    sub test_foo {
+        my ($self, $foo) = @_;
+        return $foo->test;
+    }
 
-sub test_foo {
-    my ($self, $foo) = @_;
-    return $foo->test;
-}
+    package Foo;
 
-package Foo;
+    sub new {
+        my ($class, $val) = @_;
+        return bless \$val, $class;
+    }
 
-sub new {
-    my ($class, $val) = @_;
-    return bless \$val, $class;
-}
+    sub test {
+        my ($self) = @_;
+        return $$self;
+    }
 
-sub test {
-    my ($self) = @_;
-    return $$self;
-}
-
-sub sum {
-    my ($self, $a, $b) = @_;
-    return $a + $b;
-}
-');
+    sub sum {
+        my ($self, $a, $b) = @_;
+        return $a + $b;
+    }
+    PERL5
 
 $p5.call('test');
 $p5.call('test_int_params', 2, 1);
