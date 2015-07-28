@@ -831,7 +831,7 @@ method BUILD(*%args) {
 role Perl5Parent[$package] {
     has $.parent;
 
-    submethod BUILD(:$perl5, :$parent?, *@args, *%args) {
+    submethod BUILD(:$perl5!, :$parent?, *@args, *%args) {
         $!parent = $parent // $perl5.invoke($package, 'new', |@args, |%args.kv);
         $perl5.rebless($!parent);
     }
