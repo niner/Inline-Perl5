@@ -683,6 +683,17 @@ role Perl5Package[Inline::Perl5 $p5, Str $module] {
     }
 }
 
+method subs_in_module(Str $module) {
+    return self.run('[ grep { *{"' ~ $module ~ '::$_"}{CODE} } keys %' ~ $module ~ ':: ]');
+}
+
+method import (Str $module, *@args) {
+    my $before = set self.subs_in_module('main').list;
+    self.invoke($module, 'import', @args.list);
+    my $after = set self.subs_in_module('main').list;
+    return ($after ∖ $before).list;
+}
+
 my $loaded_modules = SetHash.new;
 method require(Str $module, Num $version?) {
     # wrap the load_module call so exceptions can be translated to Perl 6
@@ -701,7 +712,7 @@ method require(Str $module, Num $version?) {
 
     my $class := Metamodel::ClassHOW.new_type( name => $module );
     $class.^add_role(Perl5Package[$p5, $module]);
-    my $symbols = self.run('[ grep { *{"' ~ $module ~ '::$_"}{CODE} } keys %' ~ $module ~ ':: ]');
+    my $symbols = self.subs_in_module($module);
 
     # install methods
     for @$symbols -> $name {
@@ -730,14 +741,18 @@ method require(Str $module, Num $version?) {
 
     ::($module).WHO<EXPORT> := Metamodel::PackageHOW.new();
     ::($module).WHO<&EXPORT> := sub EXPORT(*@args) {
-        self.invoke($module, 'import', @args.list);
-        return EnumMap.new();
+        return EnumMap.new(self.import($module, @args.list).map({
+            my $name = $_;
+            '&' ~ $name => sub (*@args, *%args) {
+                self.call("{$module}::$name", @args.list, %args.list);
+            }
+        }));
     };
 }
 
 method use(Str $module, *@args) {
     self.require($module);
-    self.invoke($module, 'import', @args.list);
+    self.import($module, @args.list);
 }
 
 submethod DESTROY {

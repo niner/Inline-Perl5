@@ -9,7 +9,8 @@ use P5Import:from<Perl5> <tests 2>;
 
 eval-dies-ok "use P5ModuleVersion:from<Perl5>:ver<2.1>;";
 
-is(P5Import::ok(1), 1);
+is(P5Import::p5_ok(1), 1);
+is(p5_ok(1), 1, "importing subs works");
 is(P5Import::import_called(), 1);
 
 done;
