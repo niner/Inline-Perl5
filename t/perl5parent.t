@@ -6,7 +6,7 @@ use Test;
 
 plan 8; # adjust the skip as well!
 
-my $p5 = Inline::Perl5.new();
+BEGIN my $p5 = Inline::Perl5.new();
 
 my $has_moose =  $p5.run('eval { require Moose; 1};');
 if !$has_moose {
@@ -58,40 +58,40 @@ sub test {
 
 PERL5
 
-class Bar does Inline::Perl5::Perl5Parent['Foo'] {
+class Bar does Inline::Perl5::Perl5Parent['Foo', $p5] {
     method bar {
         return "Perl6";
     }
 
 }
 
-is(Bar.new(perl5 => $p5).test, 'Perl6');
-is(Bar.new(perl5 => $p5).test_inherited, 'Perl5');
-is(Bar.new(perl5 => $p5).foo, 'Moose!');
+is(Bar.new.test, 'Perl6');
+is(Bar.new.test_inherited, 'Perl5');
+is(Bar.new.foo, 'Moose!');
 
-class Baz does Inline::Perl5::Perl5Parent['Foo'] {
+class Baz does Inline::Perl5::Perl5Parent['Foo', $p5] {
     method bar {
         return "Perl6!";
     }
 
 }
 
-is(Baz.new(perl5 => $p5).test, 'Perl6!');
+is(Baz.new.test, 'Perl6!');
 
-class Qux does Inline::Perl5::Perl5Parent['Bar'] {
+class Qux does Inline::Perl5::Perl5Parent['Bar', $p5] {
     method qux {
         return "Perl6!!";
     }
 
 }
 
-is(Qux.new(perl5 => $p5).test, 'Perl6!!');
+is(Qux.new.test, 'Perl6!!');
 
 # Test passing a P5 object to the constructor of a P6 subclass
 
 class Perl6ObjectCreator {
     method create($package, $parent) {
-        ::($package).WHAT.new(perl5 => $p5, parent => $parent);
+        ::($package).WHAT.new(parent => $parent);
     }
 }
 

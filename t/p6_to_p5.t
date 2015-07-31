@@ -6,7 +6,7 @@ use Inline::Perl5;
 
 plan 19;
 
-my $p5 = Inline::Perl5.new();
+BEGIN my $p5 = Inline::Perl5.new();
 $p5.run(q:heredoc/PERL5/);
     sub identity {
         return $_[0]
@@ -97,10 +97,10 @@ is($p5.call('test_named', a => 1, b => 2), 3);
 is($p5.invoke('Foo', 'test_named', a => 1, b => 2), 3);
 is($p5.invoke('Foo', 'new').test_named(a => 1, b => 2), 3);
 
-class Bar does Inline::Perl5::Perl5Parent['Foo'] {
+class Bar does Inline::Perl5::Perl5Parent['Foo', $p5] {
 }
 
-is(Bar.new(perl5 => $p5).test_named(a => 1, b => 2), 3);
+is(Bar.new.test_named(a => 1, b => 2), 3);
 
 $p5.DESTROY;
 

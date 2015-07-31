@@ -509,7 +509,8 @@ method execute(OpaquePointer $code_ref, *@args) {
 class Perl6Callbacks {
     has $.p5;
     method create($package, $code) {
-        EVAL "class GLOBAL::$package \{\n$code\n\}";
+        my $p5 = $.p5;
+        EVAL "class GLOBAL::$package does Perl5Parent['$package', \$p5] \{\n$code\n\}";
         return;
     }
     method run($code) {
@@ -828,10 +829,10 @@ method BUILD(*%args) {
     $default_perl5 //= self;
 }
 
-role Perl5Parent[$package] {
+role Perl5Parent[Str:D $package, Inline::Perl5:D $perl5] {
     has $.parent;
 
-    submethod BUILD(:$perl5!, :$parent?, *@args, *%args) {
+    submethod BUILD(:$parent?, *@args, *%args) {
         $!parent = $parent // $perl5.invoke($package, 'new', |@args, |%args.kv);
         $perl5.rebless($!parent);
     }
