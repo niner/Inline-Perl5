@@ -832,9 +832,14 @@ method BUILD(*%args) {
 role Perl5Parent[Str:D $package, Inline::Perl5:D $perl5] {
     has $.parent;
 
-    submethod BUILD(:$parent?, *@args, *%args) {
+    method new(:$parent?, *@args, *%args) {
+        self.CREATE.initialize-perl5-object($parent, @args, %args).BUILDALL(@args, %args);
+    }
+
+    method initialize-perl5-object($parent, @args, %args) {
         $!parent = $parent // $perl5.invoke($package, 'new', |@args, |%args.kv);
         $perl5.rebless($!parent);
+        return self;
     }
 
     ::?CLASS.HOW.add_fallback(::?CLASS, -> $, $ { True },

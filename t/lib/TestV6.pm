@@ -1,19 +1,23 @@
 package Foo::Bar::TestV6;
 
 sub new {
-    return bless {};
+    my ($class, $foo) = @_;
+    return bless {foo => $foo};
+}
+
+sub foo {
+    my ($self) = @_;
+    return $self->{foo};
 }
 
 use v6-inline;
 
 has $.name;
 
-submethod BUILD(:$!name) { }
-
 our sub greet($me) {
     return "hello $me";
 }
 
 method hello {
-    return "hello $.name";
+    return "hello $.foo $.name";
 }
