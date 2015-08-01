@@ -520,7 +520,11 @@ class Perl6Callbacks {
         return &::($name)(|@args);
     }
     method invoke(Str $package, Str $name, @args) {
-        return ::($package)."$name"(|@args);
+        my %named = classify * ~~ Pair, @args;
+        return ::($package)."$name"(|%named<False>, |%(%named<True>));
+    }
+    method create_pair(Any $key, Mu $value) {
+        return $key => $value;
     }
 }
 
@@ -612,6 +616,15 @@ method init_callbacks {
         sub invoke {
             my ($class, $name, @args) = @_;
             return $p6->invoke($class, $name, \@args);
+        }
+
+        sub named(@) {
+            die "Only named arguments allowed after v6::named" if @_ % 2 != 0;
+            my @args;
+            while (@_) {
+                push @args, $p6->create_pair(shift @_, shift @_);
+            }
+            return @args;
         }
 
         sub import {
