@@ -627,6 +627,20 @@ method init_callbacks {
             return @args;
         }
 
+        sub extend {
+            my ($class, $self, $positional, $named) = @_;
+
+            $positional //= [];
+            $named //= {};
+            my $p6 = v6::invoke($class, 'new', @$positional, v6::named %$named, parent => $self);
+            bless $self, "Perl6::Object::$class"; # Explodes if we bless $p6 here!
+            {
+                no strict 'refs';
+                @{"Perl6::Object::${class}::ISA"} = ($class, @{"${class}::ISA"});
+            }
+            return $p6;
+        }
+
         sub import {
             $package = scalar caller;
         }
