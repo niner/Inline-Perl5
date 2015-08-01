@@ -636,6 +636,7 @@ method init_callbacks {
 }
 
 method sv_refcnt_dec($obj) {
+    return unless $!p5; # Destructor may already have run. Destructors of individual P5 objects no longer work.
     p5_sv_refcnt_dec($!p5, $obj);
 }
 
