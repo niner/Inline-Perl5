@@ -12,6 +12,10 @@ is(
     EVAL(q/Foo::Bar::TestV6->create(foo => 'bar', name => 'world')/, :lang<Perl5>).hello,
     'hello bar world',
 );
+is(Foo::Bar::TestV6.new.context, 'array');
+is(Foo::Bar::TestV6.new.test_scalar_context, 'scalar');
+is(Foo::Bar::TestV6.new.test_array_context, 'array');
+is(Foo::Bar::TestV6.new.test_call_context, 'array');
 
 done;
 

@@ -6,6 +6,7 @@ has Perl5Interpreter $!p5;
 has Bool $!external_p5 = False;
 has &!call_method;
 has &!call_callable;
+has Bool $!scalar_context = False;
 
 my $default_perl5;
 
@@ -179,7 +180,7 @@ sub p5_hv_store(Perl5Interpreter, OpaquePointer, Str, OpaquePointer)
 sub p5_call_function(Perl5Interpreter, Str, int, CArray[OpaquePointer])
     returns OpaquePointer { ... }
     native(&p5_call_function);
-sub p5_call_method(Perl5Interpreter, Str, OpaquePointer, Str, int, CArray[OpaquePointer])
+sub p5_call_method(Perl5Interpreter, Str, OpaquePointer, int32, Str, int, CArray[OpaquePointer])
     returns OpaquePointer { ... }
     native(&p5_call_method);
 sub p5_call_package_method(Perl5Interpreter, Str, Str, int, CArray[OpaquePointer])
@@ -215,13 +216,13 @@ sub p5_eval_pv(Perl5Interpreter, Str, int32)
 sub p5_err_sv(Perl5Interpreter)
     returns OpaquePointer { ... }
     native(&p5_err_sv);
-sub p5_wrap_p6_object(Perl5Interpreter, long, OpaquePointer, &call_method (long, Str, OpaquePointer, OpaquePointer --> OpaquePointer), &free_p6_object (long))
+sub p5_wrap_p6_object(Perl5Interpreter, long, OpaquePointer, &call_method (long, Str, int32, OpaquePointer, OpaquePointer --> OpaquePointer), &free_p6_object (long))
     returns OpaquePointer { ... }
     native(&p5_wrap_p6_object);
 sub p5_wrap_p6_callable(Perl5Interpreter, long, OpaquePointer, &call (long, OpaquePointer, OpaquePointer --> OpaquePointer), &free_p6_object (long))
     returns OpaquePointer { ... }
     native(&p5_wrap_p6_callable);
-sub p5_wrap_p6_handle(Perl5Interpreter, long, OpaquePointer, &call_method (long, Str, OpaquePointer, OpaquePointer --> OpaquePointer), &free_p6_object (long))
+sub p5_wrap_p6_handle(Perl5Interpreter, long, OpaquePointer, &call_method (long, Str, int32, OpaquePointer, OpaquePointer --> OpaquePointer), &free_p6_object (long))
     returns OpaquePointer { ... }
     native(&p5_wrap_p6_handle);
 sub p5_is_wrapped_p6_object(Perl5Interpreter, OpaquePointer)
@@ -478,10 +479,10 @@ multi method invoke(Str $package, Str $function, *@args, *%args) {
 }
 
 multi method invoke(OpaquePointer $obj, Str $function, *@args) {
-    self.invoke(Str, $obj, $function, |@args);
+    self.invoke(Str, $obj, False, $function, |@args);
 }
 
-multi method invoke(Str $package, OpaquePointer $obj, Str $function, *@args) {
+multi method invoke(Str $package, OpaquePointer $obj, Bool $context, Str $function, *@args) {
     my $len = @args.elems;
     my @svs := CArray[OpaquePointer].new();
     my Int $j = 0;
@@ -495,7 +496,7 @@ multi method invoke(Str $package, OpaquePointer $obj, Str $function, *@args) {
             @svs[$j++] = self.p6_to_p5(@args[$i]);
         }
     }
-    my $av = p5_call_method($!p5, $package, $obj, $function, $j, @svs);
+    my $av = p5_call_method($!p5, $package, $obj, $context ?? 1 !! 0, $function, $j, @svs);
     self.handle_p5_exception();
     self!unpack_return_values($av);
 }
@@ -693,7 +694,7 @@ role Perl5Package[Inline::Perl5 $p5, Str $module] {
 
     multi method FALLBACK($name, *@args) {
         return self.defined
-            ?? $p5.invoke($module, $!parent.ptr, $name, self, |@args)
+            ?? $p5.invoke($module, $!parent.ptr, False, $name, self, |@args)
             !! $p5.invoke($module, $name, |@args);
     }
 
@@ -824,12 +825,22 @@ method default_perl5 {
     return $default_perl5 //= self.new();
 }
 
+method retrieve_scalar_context() {
+    my $scalar_context = $!scalar_context;
+    $!scalar_context = False;
+    return $scalar_context;
+}
+
+role Perl5Caller {
+}
+
 method BUILD(*%args) {
     $!external_p5 = %args<p5>:exists;
     $!p5 = $!external_p5 ?? %args<p5> !! p5_init_perl();
 
-    &!call_method = sub (Int $index, Str $name, OpaquePointer $args, OpaquePointer $err) returns OpaquePointer {
+    &!call_method = sub (Int $index, Str $name, Int $context, OpaquePointer $args, OpaquePointer $err) returns OpaquePointer {
         my $p6obj = $objects.get($index);
+        $!scalar_context = ?$context;
         my @retvals = $p6obj."$name"(|self.p5_array_to_p6_array($args));
         return self.p6_to_p5(@retvals);
         CATCH {
@@ -839,6 +850,7 @@ method BUILD(*%args) {
             }
         }
     }
+    &!call_method does Perl5Caller;
 
     &!call_callable = sub (Int $index, OpaquePointer $args, OpaquePointer $err) returns OpaquePointer {
         my $callable = $objects.get($index);
@@ -873,7 +885,12 @@ role Perl5Parent[Str:D $package, Inline::Perl5:D $perl5] {
     ::?CLASS.HOW.add_fallback(::?CLASS, -> $, $ { True },
         method ($name) {
             -> \self, |args {
-                $.parent.perl5.invoke($package, $.parent.ptr, $name, self, args.list, args.hash);
+                my $scalar = (
+                    # nqp workaround for broken $?CALLER::ROUTINE
+                    nqp::getcodeobj(nqp::ctxcode(nqp::ctxcaller(nqp::ctx))) ~~ Perl5Caller
+                    and $.parent.perl5.retrieve_scalar_context
+                );
+                $.parent.perl5.invoke($package, $.parent.ptr, $scalar, $name, self, args.list, args.hash);
             }
         }
     );

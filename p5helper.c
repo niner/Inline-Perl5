@@ -280,11 +280,11 @@ AV *p5_call_package_method(PerlInterpreter *my_perl, char *package, char *name, 
     return retval;
 }
 
-AV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, char *name, int len, SV *args[]) {
+AV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, I32 context, char *name, int len, SV *args[]) {
     dSP;
     int i;
     AV * const retval = newAV();
-    int flags = G_ARRAY | G_EVAL;
+    int flags = (context ? G_SCALAR : G_ARRAY) | G_EVAL;
 
     PERL_SET_CONTEXT(my_perl);
 
@@ -422,7 +422,7 @@ typedef struct {
     I32 key; /* to make sure it came from Inline */
     IV index;
     union {
-        SV *(*call_p6_method)(IV, char *, SV *, SV **);
+        SV *(*call_p6_method)(IV, char *, I32, SV *, SV **);
         SV *(*call_p6_callable)(IV, SV *, SV **);
     };
     void (*free_p6_object)(IV);
@@ -450,7 +450,7 @@ MGVTBL p5_inline_mg_vtbl = {
     0x0
 };
 
-SV *p5_wrap_p6_object(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call_p6_method)(IV, char * , SV *, SV **), void (*free_p6_object)(IV)) {
+SV *p5_wrap_p6_object(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call_p6_method)(IV, char * , I32, SV *, SV **), void (*free_p6_object)(IV)) {
     SV * inst;
     SV * inst_ptr;
     if (p5obj == NULL) {
@@ -500,7 +500,7 @@ SV *p5_wrap_p6_callable(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call)(I
     return inst_ptr;
 }
 
-SV *p5_wrap_p6_handle(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call_p6_method)(IV, char * , SV *, SV **), void (*free_p6_object)(IV)) {
+SV *p5_wrap_p6_handle(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call_p6_method)(IV, char * , I32, SV *, SV **), void (*free_p6_object)(IV)) {
     SV *handle = p5_wrap_p6_object(my_perl, i, p5obj, call_p6_method, free_p6_object);
     int flags = G_SCALAR;
     dSP;
@@ -564,7 +564,7 @@ XS(p5_call_p6_method) {
     MAGIC * const mg = mg_find(obj_deref, '~');
     _perl6_magic* const p6mg = (_perl6_magic*)(mg->mg_ptr);
     SV *err = NULL;
-    SV * retval = p6mg->call_p6_method(p6mg->index, name_pv, newRV_noinc((SV *) args), &err);
+    SV * retval = p6mg->call_p6_method(p6mg->index, name_pv, GIMME_V == G_SCALAR, newRV_noinc((SV *) args), &err);
     SPAGAIN; /* refresh local stack pointer, could have been modified by Perl 5 code called from Perl 6 */
     SvREFCNT_dec(args);
     if (err) {
