@@ -7,7 +7,7 @@
     "description"   : "Use Perl 5 code in a Perl 6 program",
     "depends"       : [ "LibraryMake" ],
     "test-depends"  : [ "File::Temp" ],
-    "build-depends" : [ ],
+    "build-depends" : [ "panda" ],
     "provides"      : {
         "Inline::Perl5" : "lib/Inline/Perl5.pm6"
     },
