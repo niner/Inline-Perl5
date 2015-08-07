@@ -547,7 +547,9 @@ method init_callbacks {
         }
 
         sub can {
-            return Perl6::Object::call_method('can', @_);
+            my ($self) = shift;
+
+            return ref $self ? Perl6::Object::call_method('can', $self, @_) : v6::invoke($self, 'can', @_);
         }
 
         package Perl6::Callable;
