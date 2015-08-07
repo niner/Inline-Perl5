@@ -46,6 +46,9 @@ sub baz {
     return "Perl5";
 }
 
+@Perl6::Object::Foo::ISA = ("Perl6::Object");
+@Perl6::Object::Bar::ISA = ("Perl6::Object");
+
 package Bar;
 
 use Moose;

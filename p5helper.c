@@ -409,15 +409,6 @@ AV *p5_call_code_ref(PerlInterpreter *my_perl, SV *code_ref, int len, SV *args[]
     return retval;
 }
 
-void p5_rebless_object(PerlInterpreter *my_perl, SV *obj) {
-    SV * const inst = SvRV(obj);
-    SV * const inst_ptr = newRV_noinc(inst);
-    HV *stash = gv_stashpv("Perl6::Object", 0);
-    if (stash == NULL)
-        croak("Perl6::Object not found!? Forgot to call init_callbacks?");
-    (void)sv_bless(inst_ptr, stash);
-}
-
 typedef struct {
     I32 key; /* to make sure it came from Inline */
     IV index;
@@ -450,11 +441,30 @@ MGVTBL p5_inline_mg_vtbl = {
     0x0
 };
 
+void p5_rebless_object(PerlInterpreter *my_perl, SV *obj, char *package, IV i, SV *(*call_p6_method)(IV, char * , I32, SV *, SV **), void (*free_p6_object)(IV)) {
+    SV * const inst = SvRV(obj);
+    SV * const inst_ptr = newRV_noinc(inst);
+    HV *stash = gv_stashpv(package, GV_ADD);
+    if (stash == NULL)
+        croak("Perl6::Object not found!? Forgot to call init_callbacks?");
+    (void)sv_bless(inst_ptr, stash);
+
+    _perl6_magic priv;
+
+    /* set up magic */
+    priv.key = PERL6_MAGIC_KEY;
+    priv.index = i;
+    priv.call_p6_method = call_p6_method;
+    priv.free_p6_object = free_p6_object;
+    sv_magicext(inst, inst, PERL_MAGIC_ext, &p5_inline_mg_vtbl, (char *) &priv, sizeof(priv));
+
+}
+
 SV *p5_wrap_p6_object(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call_p6_method)(IV, char * , I32, SV *, SV **), void (*free_p6_object)(IV)) {
     SV * inst;
     SV * inst_ptr;
     if (p5obj == NULL) {
-        inst_ptr = newSViv(0);
+        inst_ptr = newSViv(0); // will be upgraded to an RV
         inst = newSVrv(inst_ptr, "Perl6::Object");
     }
     else {

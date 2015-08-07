@@ -1,6 +1,8 @@
 unit class Inline::Perl5;
 
 class Perl5Interpreter is repr('CPointer') { }
+role Perl5Package { ... };
+role Perl5Parent { ... };
 
 has Perl5Interpreter $!p5;
 has Bool $!external_p5 = False;
@@ -189,7 +191,7 @@ sub p5_call_package_method(Perl5Interpreter, Str, Str, int, CArray[OpaquePointer
 sub p5_call_code_ref(Perl5Interpreter, OpaquePointer, int, CArray[OpaquePointer])
     returns OpaquePointer { ... }
     native(&p5_call_code_ref);
-sub p5_rebless_object(Perl5Interpreter, OpaquePointer)
+sub p5_rebless_object(Perl5Interpreter, OpaquePointer, Str, long, &call_method (long, Str, int32, OpaquePointer, OpaquePointer --> OpaquePointer), &free_p6_object (long))
     { ... }
     native(&p5_rebless_object);
 sub p5_destruct_perl(Perl5Interpreter)
@@ -257,6 +259,12 @@ multi method p6_to_p5(Capture:D $value where $value.elems == 1) returns OpaquePo
 multi method p6_to_p5(Perl5Object $value) returns OpaquePointer {
     p5_sv_refcnt_inc($!p5, $value.ptr);
     $value.ptr;
+}
+multi method p6_to_p5(Perl5Package $value) returns OpaquePointer {
+    self.p6_to_p5($value.unwrap-perl5-object());
+}
+multi method p6_to_p5(Perl5Parent $value) returns OpaquePointer {
+    self.p6_to_p5($value.unwrap-perl5-object());
 }
 multi method p6_to_p5(OpaquePointer $value) returns OpaquePointer {
     $value;
@@ -482,6 +490,12 @@ multi method invoke(OpaquePointer $obj, Str $function, *@args) {
     self.invoke(Str, $obj, False, $function, |@args);
 }
 
+method invoke-parent(Str $package, OpaquePointer $obj, Bool $context, Str $function, *@args, *%args) {
+    my $av = p5_call_method($!p5, $package, $obj, $context ?? 1 !! 0, $function, |self!setup_arguments([@args.list, %args.list]));
+    self.handle_p5_exception();
+    self!unpack_return_values($av);
+}
+
 multi method invoke(Str $package, OpaquePointer $obj, Bool $context, Str $function, *@args) {
     my $len = @args.elems;
     my @svs := CArray[OpaquePointer].new();
@@ -636,12 +650,11 @@ method init_callbacks {
             $positional //= [];
             $named //= {};
             my $p6 = v6::invoke($class, 'new', @$positional, v6::named %$named, parent => $self);
-            bless $self, "Perl6::Object::$class"; # Explodes if we bless $p6 here!
             {
                 no strict 'refs';
-                @{"Perl6::Object::${class}::ISA"} = ($class, @{"${class}::ISA"});
+                @{"Perl6::Object::${class}::ISA"} = ("Perl6::Object", $class, @{"${class}::ISA"});
             }
-            return $p6;
+            return $self;
         }
 
         sub import {
@@ -670,8 +683,9 @@ method sv_refcnt_dec($obj) {
     p5_sv_refcnt_dec($!p5, $obj);
 }
 
-method rebless(Perl5Object $obj) {
-    p5_rebless_object($!p5, $obj.ptr);
+method rebless(Perl5Object $obj, Str $package, $p6obj) {
+    my $index = $objects.keep($p6obj);
+    p5_rebless_object($!p5, $obj.ptr, $package, $index, &!call_method, &free_p6_object);
 }
 
 role Perl5Package[Inline::Perl5 $p5, Str $module] {
@@ -691,12 +705,16 @@ role Perl5Package[Inline::Perl5 $p5, Str $module] {
 
     submethod BUILD(:$parent) {
         $!parent = $parent;
-        $p5.rebless($parent) if $parent;
+        $p5.rebless($parent, 'Perl6::Object', self) if $parent;
+    }
+
+    method unwrap-perl5-object() {
+        $!parent;
     }
 
     multi method FALLBACK($name, *@args) {
         return self.defined
-            ?? $p5.invoke($module, $!parent.ptr, False, $name, self, |@args)
+            ?? $p5.invoke-parent($module, $!parent.ptr, False, $name, $!parent, |@args)
             !! $p5.invoke($module, $name, |@args);
     }
 
@@ -704,7 +722,7 @@ role Perl5Package[Inline::Perl5 $p5, Str $module] {
         next if $?CLASS.^declares_method($name);
         my $method = method (|args) {
             return self.defined
-                ?? $p5.invoke($module, $!parent.ptr, $name, self, args.list, args.hash)
+                ?? $p5.invoke-parent($module, $!parent.ptr, False, $name, $!parent, args.list, args.hash)
                 !! $p5.invoke($module, $name, args.list, args.hash);
         };
         $method.set_name($name);
@@ -880,8 +898,12 @@ role Perl5Parent[Str:D $package, Inline::Perl5:D $perl5] {
 
     method initialize-perl5-object($parent, @args, %args) {
         $!parent = $parent // $perl5.invoke($package, 'new', |@args, |%args.kv);
-        $perl5.rebless($!parent);
+        $perl5.rebless($!parent, "Perl6::Object::$package", self);
         return self;
+    }
+
+    method unwrap-perl5-object() {
+        $!parent;
     }
 
     ::?CLASS.HOW.add_fallback(::?CLASS, -> $, $ { True },
@@ -892,7 +914,7 @@ role Perl5Parent[Str:D $package, Inline::Perl5:D $perl5] {
                     nqp::getcodeobj(nqp::ctxcode(nqp::ctxcaller(nqp::ctx))) ~~ Perl5Caller
                     and $.parent.perl5.retrieve_scalar_context
                 );
-                $.parent.perl5.invoke($package, $.parent.ptr, $scalar, $name, self, args.list, args.hash);
+                $.parent.perl5.invoke-parent($package, $.parent.ptr, $scalar, $name, $.parent, args.list, args.hash);
             }
         }
     );
