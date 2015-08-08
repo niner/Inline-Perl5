@@ -56,16 +56,36 @@ sub test_isa {
     return $self->isa(__PACKAGE__);
 }
 
+sub return_1 {
+    return 1;
+}
+
 sub test_can {
     my ($self) = @_;
 
-    return defined $self->can('test_can');
+    die 'can returns positive result for non-existing method' if $self->can('non-existing');
+    return $self->can('return_1')->($self);
 }
 
 sub test_can_subclass {
     my ($self) = @_;
 
-    return defined $self->can('hello');
+    return $self->can('return_2')->($self);
+}
+
+sub test_package_can {
+    my ($self) = @_;
+
+    my $class = ref $self;
+    die 'can returns positive result for non-existing method' if $class->can('non-existing');
+    return $class->can('return_1')->($self);
+}
+
+sub test_package_can_subclass {
+    my ($self) = @_;
+
+    my $class = ref $self;
+    return $class->can('return_2')->($self);
 }
 
 # yes, this happens in real code :/
@@ -93,4 +113,8 @@ method call_context {
 
 method fetch_foo() {
     return self.foo;
+}
+
+method return_2() {
+    return 2;
 }

@@ -545,6 +545,9 @@ class Perl6Callbacks {
 
 method init_callbacks {
     self.run(q:to/PERL5/);
+        use strict;
+        use warnings;
+
         package Perl6::Object;
 
         use overload '""' => sub {
@@ -563,7 +566,9 @@ method init_callbacks {
         sub can {
             my ($self) = shift;
 
-            return ref $self ? Perl6::Object::call_method('can', $self, @_) : v6::invoke($self, 'can', @_);
+            return ref $self
+                ? Perl6::Object::call_method('can', $self, @_)
+                : v6::invoke($self =~ s/\APerl6::Object:://r, 'can', @_);
         }
 
         package Perl6::Callable;
@@ -909,7 +914,9 @@ role Perl5Parent[Str:D $package, Inline::Perl5:D $perl5] {
     method can($name) {
         my @candidates = self.^can($name);
         return @candidates[0] if @candidates;
-        return $.parent.perl5.invoke-parent($package, $.parent.ptr, True, 'can', $.parent, $name);
+        return defined(self)
+            ?? $perl5.invoke-parent($package, $.parent.ptr, True, 'can', $.parent, $name)
+            !! $perl5.invoke($package, 'can', $name);
     }
 
     ::?CLASS.HOW.add_fallback(::?CLASS, -> $, $ { True },
@@ -917,9 +924,9 @@ role Perl5Parent[Str:D $package, Inline::Perl5:D $perl5] {
             -> \self, |args {
                 my $scalar = (
                     callframe(1).code ~~ Perl5Caller
-                    and $.parent.perl5.retrieve_scalar_context
+                    and $perl5.retrieve_scalar_context
                 );
-                $.parent.perl5.invoke-parent($package, $.parent.ptr, $scalar, $name, $.parent, args.list, args.hash);
+                $perl5.invoke-parent($package, $.parent.ptr, $scalar, $name, $.parent, args.list, args.hash);
             }
         }
     );
