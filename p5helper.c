@@ -570,6 +570,9 @@ XS(p5_call_p6_method) {
     STRLEN len;
     char * const name_pv  = SvPV(name, len);
 
+    if (!SvROK(obj)) {
+        croak("Got a non-reference for obj?!");
+    }
     SV * const obj_deref = SvRV(obj);
     MAGIC * const mg = mg_find(obj_deref, '~');
     _perl6_magic* const p6mg = (_perl6_magic*)(mg->mg_ptr);
