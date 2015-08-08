@@ -906,6 +906,12 @@ role Perl5Parent[Str:D $package, Inline::Perl5:D $perl5] {
         $!parent;
     }
 
+    method can($name) {
+        my @candidates = self.^can($name);
+        return @candidates[0] if @candidates;
+        return $.parent.perl5.invoke-parent($package, $.parent.ptr, True, 'can', $.parent, $name);
+    }
+
     ::?CLASS.HOW.add_fallback(::?CLASS, -> $, $ { True },
         method ($name) {
             -> \self, |args {

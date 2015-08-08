@@ -17,6 +17,8 @@ is(Foo::Bar::TestV6.new.test_scalar_context, 'scalar');
 is(Foo::Bar::TestV6.new.test_array_context, 'array');
 is(Foo::Bar::TestV6.new.test_call_context, 'array');
 is(Foo::Bar::TestV6.new.test_isa, 1);
+is(Foo::Bar::TestV6.new.test_can, 1, "can finds the base class' methods");
+is(Foo::Bar::TestV6.new.test_can_subclass, 1, "can finds the subclass' methods");
 is(Foo::Bar::TestV6.new('bar').foo, 'bar');
 is(Foo::Bar::TestV6.new('bar').get_foo, 'bar');
 is(Foo::Bar::TestV6.new('bar').get_foo_indirect, 'bar');

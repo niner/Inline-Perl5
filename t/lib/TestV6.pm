@@ -56,6 +56,18 @@ sub test_isa {
     return $self->isa(__PACKAGE__);
 }
 
+sub test_can {
+    my ($self) = @_;
+
+    return defined $self->can('test_can');
+}
+
+sub test_can_subclass {
+    my ($self) = @_;
+
+    return defined $self->can('hello');
+}
+
 # yes, this happens in real code :/
 sub test_breaking_encapsulation {
     my ($self, $obj) = @_;
