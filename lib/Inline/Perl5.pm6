@@ -916,8 +916,7 @@ role Perl5Parent[Str:D $package, Inline::Perl5:D $perl5] {
         method ($name) {
             -> \self, |args {
                 my $scalar = (
-                    # nqp workaround for broken $?CALLER::ROUTINE
-                    nqp::getcodeobj(nqp::ctxcode(nqp::ctxcaller(nqp::ctx))) ~~ Perl5Caller
+                    callframe(1).code ~~ Perl5Caller
                     and $.parent.perl5.retrieve_scalar_context
                 );
                 $.parent.perl5.invoke-parent($package, $.parent.ptr, $scalar, $name, $.parent, args.list, args.hash);
