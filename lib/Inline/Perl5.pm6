@@ -650,14 +650,14 @@ method init_callbacks {
         }
 
         sub extend {
-            my ($class, $self, $positional, $named) = @_;
+            my ($static_class, $self, $positional, $named, $dynamic_class) = @_;
 
             $positional //= [];
             $named //= {};
-            my $p6 = v6::invoke($class, 'new', @$positional, v6::named %$named, parent => $self);
+            my $p6 = v6::invoke($static_class, 'new', @$positional, v6::named %$named, parent => $self);
             {
                 no strict 'refs';
-                @{"Perl6::Object::${class}::ISA"} = ("Perl6::Object", $class, @{"${class}::ISA"});
+                @{"Perl6::Object::${static_class}::ISA"} = ("Perl6::Object", $dynamic_class // (), $static_class);
             }
             return $self;
         }

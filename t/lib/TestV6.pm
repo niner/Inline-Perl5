@@ -25,7 +25,7 @@ sub get_foo_indirect {
 
 sub create {
     my ($class, %args) = @_;
-    return v6::extend($class, $class->new($args{foo}), [], \%args);
+    return v6::extend(__PACKAGE__, $class->new($args{foo}), [], \%args, $class);
 }
 
 sub context {
