@@ -576,9 +576,10 @@ XS(p5_call_p6_method) {
     MAGIC * const mg = mg_find(obj_deref, '~');
     _perl6_magic* const p6mg = (_perl6_magic*)(mg->mg_ptr);
     SV *err = NULL;
-    SV * retval = p6mg->call_p6_method(p6mg->index, name_pv, GIMME_V == G_SCALAR, newRV_noinc((SV *) args), &err);
+    SV * const args_rv = newRV_noinc((SV *) args);
+    SV * retval = p6mg->call_p6_method(p6mg->index, name_pv, GIMME_V == G_SCALAR, args_rv, &err);
     SPAGAIN; /* refresh local stack pointer, could have been modified by Perl 5 code called from Perl 6 */
-    SvREFCNT_dec(args);
+    SvREFCNT_dec(args_rv);
     if (err) {
         sv_2mortal(err);
         croak_sv(err);
@@ -624,9 +625,10 @@ XS(p5_call_p6_callable) {
     MAGIC * const mg = mg_find(obj_deref, '~');
     _perl6_magic* const p6mg = (_perl6_magic*)(mg->mg_ptr);
     SV *err = NULL;
-    SV * retval = p6mg->call_p6_callable(p6mg->index, newRV_noinc((SV *) args), &err);
+    SV * const args_rv = newRV_noinc((SV *) args);
+    SV * retval = p6mg->call_p6_callable(p6mg->index, args_rv, &err);
     SPAGAIN; /* refresh local stack pointer, could have been modified by Perl 5 code called from Perl 6 */
-    SvREFCNT_dec(args);
+    SvREFCNT_dec(args_rv);
     if (err) {
         sv_2mortal(err);
         croak_sv(err);
