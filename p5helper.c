@@ -443,11 +443,10 @@ MGVTBL p5_inline_mg_vtbl = {
 
 void p5_rebless_object(PerlInterpreter *my_perl, SV *obj, char *package, IV i, SV *(*call_p6_method)(IV, char * , I32, SV *, SV **), void (*free_p6_object)(IV)) {
     SV * const inst = SvRV(obj);
-    SV * const inst_ptr = newRV_noinc(inst);
     HV *stash = gv_stashpv(package, GV_ADD);
     if (stash == NULL)
         croak("Perl6::Object not found!? Forgot to call init_callbacks?");
-    (void)sv_bless(inst_ptr, stash);
+    (void)sv_bless(obj, stash);
 
     _perl6_magic priv;
 
