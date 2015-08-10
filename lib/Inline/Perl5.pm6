@@ -530,13 +530,25 @@ class Perl6Callbacks {
     }
     method run($code) {
         return EVAL $code;
+        CONTROL {
+            note $_.gist;
+            $_.resume;
+        }
     }
     method call(Str $name, @args) {
         return &::($name)(|@args);
+        CONTROL {
+            note $_.gist;
+            $_.resume;
+        }
     }
     method invoke(Str $package, Str $name, @args) {
         my %named = classify * ~~ Pair, @args;
         return ::($package)."$name"(|%named<False>, |%(%named<True>));
+        CONTROL {
+            note $_.gist;
+            $_.resume;
+        }
     }
     method create_pair(Any $key, Mu $value) {
         return $key => $value;
@@ -869,6 +881,10 @@ method BUILD(*%args) {
         $!scalar_context = ?$context;
         my @retvals = $p6obj."$name"(|self.p5_array_to_p6_array($args));
         return self.p6_to_p5(@retvals);
+        CONTROL {
+            note $_.gist;
+            $_.resume;
+        }
         CATCH {
             default {
                 nativecast(CArray[OpaquePointer], $err)[0] = self.p6_to_p5($_);
@@ -882,6 +898,10 @@ method BUILD(*%args) {
         my $callable = $objects.get($index);
         my @retvals = $callable(|self.p5_array_to_p6_array($args));
         return self.p6_to_p5(@retvals);
+        CONTROL {
+            note $_.gist;
+            $_.resume;
+        }
         CATCH {
             default {
                 nativecast(CArray[OpaquePointer], $err)[0] = self.p6_to_p5($_);
