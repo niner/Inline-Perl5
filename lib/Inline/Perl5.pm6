@@ -895,7 +895,7 @@ method BUILD(*%args) {
 }
 
 role Perl5Parent[Str:D $package, Inline::Perl5:D $perl5] {
-    has $.parent;
+    has $!parent;
 
     method new(:$parent?, *@args, *%args) {
         self.CREATE.initialize-perl5-object($parent, @args, %args).BUILDALL(@args, %args);
@@ -915,7 +915,7 @@ role Perl5Parent[Str:D $package, Inline::Perl5:D $perl5] {
         my @candidates = self.^can($name);
         return @candidates[0] if @candidates;
         return defined(self)
-            ?? $perl5.invoke-parent($package, $.parent.ptr, True, 'can', $.parent, $name)
+            ?? $perl5.invoke-parent($package, $!parent.ptr, True, 'can', $!parent, $name)
             !! $perl5.invoke($package, 'can', $name);
     }
 
@@ -926,7 +926,8 @@ role Perl5Parent[Str:D $package, Inline::Perl5:D $perl5] {
                     callframe(1).code ~~ Perl5Caller
                     and $perl5.retrieve_scalar_context
                 );
-                $perl5.invoke-parent($package, $.parent.ptr, $scalar, $name, $.parent, args.list, args.hash);
+                my $parent = self.unwrap-perl5-object;
+                $perl5.invoke-parent($package, $parent.ptr, $scalar, $name, $parent, args.list, args.hash);
             }
         }
     );
