@@ -566,6 +566,7 @@ method init_callbacks {
         sub can {
             my ($self) = shift;
 
+            return if not ref $self and $self eq 'Perl6::Object';
             return ref $self
                 ? Perl6::Object::call_method('can', $self, @_)
                 : v6::invoke($self =~ s/\APerl6::Object:://r, 'can', @_);
