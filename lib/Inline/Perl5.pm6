@@ -665,6 +665,11 @@ method init_callbacks {
             my ($static_class, $self, $args, $dynamic_class) = @_;
 
             $args //= [];
+            undef $dynamic_class
+                if $dynamic_class and (
+                    $dynamic_class eq $static_class
+                    or $dynamic_class eq "Perl6::Object::${static_class}"
+                );
             my $p6 = v6::invoke($static_class, 'new', @$args, v6::named parent => $self);
             {
                 no strict 'refs';
