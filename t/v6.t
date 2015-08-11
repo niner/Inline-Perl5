@@ -10,7 +10,7 @@ use TestV6Sub:from<Perl5>;
 is(Foo::Bar::TestV6::greet('world'), 'hello world');
 is(Foo::Bar::TestV6.new('nice', name => 'world').hello, 'hello nice world');
 is(
-    EVAL(q/Foo::Bar::TestV6->create(foo => 'bar', name => 'world')/, :lang<Perl5>).hello,
+    EVAL(q/Foo::Bar::TestV6->create(foo => 'bar', v6::named name => 'world')/, :lang<Perl5>).hello,
     'hello bar world',
 );
 is(Foo::Bar::TestV6.new.context, 'array');
@@ -28,7 +28,7 @@ is(Foo::Bar::TestV6.new('bar').get_foo_indirect, 'bar');
 is(Foo::Bar::TestV6.new.test_breaking_encapsulation(Foo::Bar::TestV6.new('bar')), 'bar');
 
 is(
-    EVAL(q/Foo::Bar::TestV6Sub->create(foo => 'bar', name => 'world')/, :lang<Perl5>).hello,
+    EVAL(q/Foo::Bar::TestV6Sub->create(foo => 'bar', v6::named name => 'world')/, :lang<Perl5>).hello,
     'hello bar world',
 );
 ok(

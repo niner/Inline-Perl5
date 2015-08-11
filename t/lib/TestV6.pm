@@ -1,7 +1,16 @@
+package Foo::Bar::TestV6Base;
+
+sub create {
+    my ($class, %args) = @_;
+    return $class->new($args{foo});
+}
+
 package Foo::Bar::TestV6;
 
 use strict;
 use warnings;
+
+use base qw(Foo::Bar::TestV6Base);
 
 sub new {
     my ($class, $foo) = @_;
@@ -21,11 +30,6 @@ sub get_foo {
 sub get_foo_indirect {
     my ($self) = @_;
     return $self->fetch_foo;
-}
-
-sub create {
-    my ($class, %args) = @_;
-    return v6::extend(__PACKAGE__, $class->new($args{foo}), [], \%args, $class);
 }
 
 sub context {
@@ -95,7 +99,7 @@ sub test_breaking_encapsulation {
 }
 
 
-use v6-inline;
+use v6::inline constructors => [qw(create)];
 
 has $.name;
 

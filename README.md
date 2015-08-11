@@ -290,14 +290,14 @@ can be caught like any other Perl 5 exceptions:
 
 ## Mix Perl 5 and Perl 6 code in the same file
 
-Inline::Perl5 creates a virtual module called "v6-inline". By saying
-"use v6-inline;" in a Perl 5 module, you can declare that the rest of the file
+Inline::Perl5 creates a virtual module called "v6::inline". By saying
+"use v6::inline;" in a Perl 5 module, you can declare that the rest of the file
 is written in Perl 6:
 
 ```
     package Some::Perl5::Module;
 
-    use v6-inline;
+    use v6::inline;
 
     has $.name;
 
@@ -306,10 +306,11 @@ is written in Perl 6:
     }
 ```
 
-Note that this Perl 5 module obviously will only work when loaded by
-Inline::Perl5. This functionality is aimed at supporting Perl 5 frameworks
-(think Catalyst or DBIx::Class or Dancer or ...) that automatically load
-modules and of course expect these modules to be written in Perl 5.
+Note that this Perl 5 module obviously will only work when Inline::Perl5 is
+loaded, i.e. in a Perl 6 program or if you are using Inline::Perl6 in Perl 5.
+This functionality is aimed at supporting Perl 5 frameworks (think Catalyst
+or DBIx::Class or Dancer or ...) that automatically load modules and of course
+expect these modules to be written in Perl 5.
 
 # BUILDING
 

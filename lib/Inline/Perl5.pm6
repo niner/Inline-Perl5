@@ -622,7 +622,6 @@ method init_callbacks {
 
         package v6;
 
-        my $package;
         my $p6;
 
         sub init {
@@ -663,11 +662,10 @@ method init_callbacks {
         }
 
         sub extend {
-            my ($static_class, $self, $positional, $named, $dynamic_class) = @_;
+            my ($static_class, $self, $args, $dynamic_class) = @_;
 
-            $positional //= [];
-            $named //= {};
-            my $p6 = v6::invoke($static_class, 'new', @$positional, v6::named %$named, parent => $self);
+            $args //= [];
+            my $p6 = v6::invoke($static_class, 'new', @$args, v6::named parent => $self);
             {
                 no strict 'refs';
                 @{"Perl6::Object::${static_class}::ISA"} = ("Perl6::Object", $dynamic_class // (), $static_class);
@@ -676,15 +674,35 @@ method init_callbacks {
         }
 
         sub import {
-            $package = scalar caller;
+            die 'v6-inline got renamed to v6::inline to allow passing an import list';
+        }
+
+        package v6::inline;
+        use Sub::Name ();
+        use mro;
+
+        my $package_to_create;
+
+        sub import {
+            my ($class, %args) = @_;
+            my $package = $package_to_create = scalar caller;
+            foreach my $constructor (@{ $args{constructors} }) {
+                no strict 'refs';
+                *{"${package}::$constructor"} = Sub::Name::subname "${package}::$constructor", sub {
+                    my ($class, @args) = @_;
+                    my $self = $class->next::method(@args);
+                    return v6::extend($package, $self, \@args, $class);
+                };
+            }
         }
 
         use Filter::Simple sub {
-            $p6->create($package, $_);
+            $p6->create($package_to_create, $_);
             $_ = '1;';
         };
 
         $INC{'v6.pm'} = undef;
+        $INC{'v6/inline.pm'} = undef;
 
         1;
         PERL5
