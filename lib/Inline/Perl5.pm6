@@ -706,8 +706,8 @@ method init_callbacks {
             $_ = '1;';
         };
 
-        $INC{'v6.pm'} = undef;
-        $INC{'v6/inline.pm'} = undef;
+        $INC{'v6.pm'} = '';
+        $INC{'v6/inline.pm'} = '';
 
         1;
         PERL5
