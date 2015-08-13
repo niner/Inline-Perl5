@@ -154,7 +154,7 @@ else {
     say "not ok 10 - Any converted to undef";
 }
 
-if ($p5.call('test_hash', 'main', {a => 2, b => {c => [4, 3]}}) == 1) {
+if ($p5.call('test_hash', 'main', $({a => 2, b => {c => [4, 3]}})) == 1) {
     say "ok 11 - Passing hashes to Perl 5";
 }
 else {
