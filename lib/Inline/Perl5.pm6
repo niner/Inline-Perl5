@@ -475,13 +475,13 @@ method !unpack_return_values($av) {
 }
 
 method call(Str $function, *@args, *%args) {
-    my $av = p5_call_function($!p5, $function, |self!setup_arguments([@args.list, %args.list]));
+    my $av = p5_call_function($!p5, $function, |self!setup_arguments([flat @args, %args.list]));
     self.handle_p5_exception();
     self!unpack_return_values($av);
 }
 
 multi method invoke(Str $package, Str $function, *@args, *%args) {
-    my $av = p5_call_package_method($!p5, $package, $function, |self!setup_arguments([@args.list, %args.list]));
+    my $av = p5_call_package_method($!p5, $package, $function, |self!setup_arguments([flat @args.list, %args.list]));
     self.handle_p5_exception();
     self!unpack_return_values($av);
 }
@@ -491,7 +491,7 @@ multi method invoke(OpaquePointer $obj, Str $function, *@args) {
 }
 
 method invoke-parent(Str $package, OpaquePointer $obj, Bool $context, Str $function, *@args, *%args) {
-    my $av = p5_call_method($!p5, $package, $obj, $context ?? 1 !! 0, $function, |self!setup_arguments([@args.list, %args.list]));
+    my $av = p5_call_method($!p5, $package, $obj, $context ?? 1 !! 0, $function, |self!setup_arguments([flat @args.list, %args.list]));
     self.handle_p5_exception();
     self!unpack_return_values($av);
 }
@@ -756,7 +756,7 @@ role Perl5Package[Inline::Perl5 $p5, Str $module] {
     multi method FALLBACK($name, @args, %kwargs) {
         return self.defined
             ?? $p5.invoke-parent($module, $!parent.ptr, False, $name, $!parent, |@args, |%kwargs)
-            !! $p5.invoke($module, $name, |@args, |%kwargs);
+            !! $p5.invoke($module, $name, |@args.list, |%kwargs);
     }
 
     for Any.^methods>>.name.list, <say> -> $name {
@@ -835,7 +835,7 @@ method require(Str $module, Num $version?) {
         return EnumMap.new(self.import($module, @args.list).map({
             my $name = $_;
             '&' ~ $name => sub (*@args, *%args) {
-                self.call("{$module}::$name", @args.list, %args.list);
+                self.call("{$module}::$name", |@args.list, %args.list);
             }
         }));
     };
