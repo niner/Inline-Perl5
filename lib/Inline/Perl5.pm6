@@ -955,6 +955,8 @@ role Perl5Parent[Str:D $package, Inline::Perl5:D $perl5] {
         $!parent;
     }
 
+    method sink() { self }
+
     method can($name) {
         my @candidates = self.^can($name);
         return @candidates[0] if @candidates;
