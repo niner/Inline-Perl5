@@ -753,10 +753,10 @@ role Perl5Package[Inline::Perl5 $p5, Str $module] {
         $!parent;
     }
 
-    multi method FALLBACK($name, *@args) {
+    multi method FALLBACK($name, @args, %kwargs) {
         return self.defined
-            ?? $p5.invoke-parent($module, $!parent.ptr, False, $name, $!parent, |@args)
-            !! $p5.invoke($module, $name, |@args);
+            ?? $p5.invoke-parent($module, $!parent.ptr, False, $name, $!parent, |@args, |%kwargs)
+            !! $p5.invoke($module, $name, |@args, |%kwargs);
     }
 
     for Any.^methods>>.name.list, <say> -> $name {
@@ -807,8 +807,8 @@ method require(Str $module, Num $version?) {
 
     # install methods
     for @$symbols -> $name {
-        my $method = my method (*@args) {
-            self.FALLBACK($name, @args.list);
+        my $method = my method (*@args, *%kwargs) {
+            self.FALLBACK($name, @args, %kwargs);
         }
         $method.set_name($name);
         $class.^add_method($name, $method);
