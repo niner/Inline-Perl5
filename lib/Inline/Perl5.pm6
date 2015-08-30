@@ -544,6 +544,8 @@ class Perl6Callbacks {
     }
     method invoke(Str $package, Str $name, @args) {
         my %named = classify * ~~ Pair, @args;
+        %named<False> //= [];
+        %named<True> //= [];
         return ::($package)."$name"(|%named<False>, |%(%named<True>));
         CONTROL {
             note $_.gist;
