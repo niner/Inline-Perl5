@@ -782,7 +782,7 @@ method import (Str $module, *@args) {
     my $before = set self.subs_in_module('main').list;
     self.invoke($module, 'import', @args.list);
     my $after = set self.subs_in_module('main').list;
-    return ($after ∖ $before).list;
+    return ($after ∖ $before).keys;
 }
 
 my $loaded_modules = SetHash.new;
