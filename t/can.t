@@ -37,6 +37,6 @@ is($p5.call('call_foo_via_can', $foo), 'foo');
 ok(not $p5.call('can_on_perl6_object_package', 'can'));
 ok(not $p5.call('can_on_perl6_object_package', 'non_existing'));
 
-done;
+done-testing;
 
 # vim: ft=perl6

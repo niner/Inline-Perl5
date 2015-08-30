@@ -30,6 +30,6 @@ $p5.run(q/
 
 is $p5.call('bar', $filehandle), 'test!';
 
-done;
+done-testing;
 
 # vim: ft=perl6

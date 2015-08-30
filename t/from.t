@@ -13,6 +13,6 @@ is(P5Import::p5_ok(1), 1);
 is(p5_ok(1), 1, "importing subs works");
 is(P5Import::import_called(), 1);
 
-done;
+done-testing;
 
 # vim: ft=perl6

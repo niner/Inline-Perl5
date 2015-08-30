@@ -30,6 +30,6 @@ is $p5.run('
 
 $p5.DESTROY;
 
-done;
+done-testing;
 
 # vim: ft=perl6

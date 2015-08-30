@@ -10,7 +10,7 @@ is($p5.run(q:to/PERL5/), 2);
         v6::run('1 + 1');
     PERL5
 
-done;
+done-testing;
 
 $p5.DESTROY;
 

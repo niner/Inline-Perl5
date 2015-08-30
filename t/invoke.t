@@ -38,6 +38,6 @@ my @a = $foo.nothing;
 is($foo.count_args($foo.nothing), 1);
 is($foo.count_args($foo.empty_hash), 2);
 
-done;
+done-testing;
 
 # vim: ft=perl6

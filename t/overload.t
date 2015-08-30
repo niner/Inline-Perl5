@@ -34,6 +34,6 @@ my $bar = $p5.invoke('Bar', 'new', 'a string!');
 isnt("$bar", 'a string!');
 like("$bar", /Perl5Object\<\d+\>/);
 
-done;
+done-testing;
 
 # vim: ft=perl6

@@ -20,6 +20,6 @@ $p5.run(q:heredoc/PERL5/);
 is($p5.invoke('Foo', 'foo'), 'autoload');
 is($p5.invoke('Foo', 'new').bar, 'autoload');
 
-done;
+done-testing;
 
 # vim: ft=perl6
