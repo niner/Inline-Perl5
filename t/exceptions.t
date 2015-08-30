@@ -117,6 +117,6 @@ is $p5.call('test_foo', Foo.new), 'foo';
     }
 }
 
-done;
+done-testing;
 
 # vim: ft=perl6

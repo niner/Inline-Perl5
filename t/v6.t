@@ -36,6 +36,6 @@ ok(
     'P5 subclass of P6 extended P5 class isa P5 subclass',
 );
 
-done;
+done-testing;
 
 # vim: ft=perl6
