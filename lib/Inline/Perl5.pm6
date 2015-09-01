@@ -12,7 +12,6 @@ has Bool $!scalar_context = False;
 
 my $default_perl5;
 
-use nqp;
 use NativeCall;
 
 sub native(Sub $sub) {
@@ -1024,7 +1023,7 @@ class Perl5ModuleLoader {
     }
 }
 
-nqp::getcurhllsym('ModuleLoader').p6ml.register_language_module_loader('Perl5', Perl5ModuleLoader, :force(True));
+CompUnitRepo.register_language_module_loader('Perl5', Perl5ModuleLoader, :force(True));
 
 my Bool $inline_perl6_in_use = False;
 sub init_inline_perl6_new_callback(&inline_perl5_new (Perl5Interpreter --> OpaquePointer)) { ... };
