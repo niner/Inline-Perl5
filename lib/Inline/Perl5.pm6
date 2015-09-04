@@ -809,6 +809,7 @@ method require(Str $module, Num $version?) {
 
     # install methods
     for @$symbols -> $name {
+        next if $name eq 'new';
         my $method = my method (*@args, *%kwargs) {
             self.FALLBACK($name, @args, %kwargs);
         }
