@@ -9,4 +9,4 @@ use TakesHash:from<Perl5>;
 
 is(TakesHash.give_hash(:foo<bar>), 'bar');
 
-done;
+done-testing;
