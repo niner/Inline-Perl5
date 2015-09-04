@@ -822,9 +822,14 @@ method require(Str $module, Num $version?) {
     # register the new class by its name
     my @parts = $module.split('::');
     my $inner = @parts.pop;
-    my $ns = ::GLOBAL.WHO;
-    $ns = ($ns{$_} := Metamodel::PackageHOW.new_type(name => $_)).WHO for @parts;
+    my $ns := ::GLOBAL.WHO;
+    for @parts {
+        $ns{$_} := Metamodel::PackageHOW.new_type(name => $_) unless $ns{$_}:exists;
+        $ns := $ns{$_}.WHO;
+    }
+    my @existing = $ns{$inner}.WHO.pairs;
     $ns{$inner} := $class;
+    $class.WHO{$_.key} := $_.value for @existing;
 
     # install subs like Test::More::ok
     for @$symbols -> $name {
