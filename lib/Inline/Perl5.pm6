@@ -250,6 +250,15 @@ multi method p6_to_p5(Str:D $value) returns OpaquePointer {
     my $buf = $value.encode('UTF-8');
     p5_str_to_sv($!p5, $buf.elems, $buf);
 }
+multi method p6_to_p5(IntStr:D $value) returns OpaquePointer {
+    p5_int_to_sv($!p5, $value.Int);
+}
+multi method p6_to_p5(NumStr:D $value) returns OpaquePointer {
+    p5_float_to_sv($!p5, $value.Num);
+}
+multi method p6_to_p5(RatStr:D $value) returns OpaquePointer {
+    p5_float_to_sv($!p5, $value.Num);
+}
 multi method p6_to_p5(blob8:D $value) returns OpaquePointer {
     p5_buf_to_sv($!p5, $value.elems, $value);
 }
