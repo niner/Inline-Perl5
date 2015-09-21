@@ -693,7 +693,6 @@ method init_callbacks {
         }
 
         package v6::inline;
-        use Sub::Name ();
         use mro;
 
         my $package_to_create;
@@ -703,11 +702,11 @@ method init_callbacks {
             my $package = $package_to_create = scalar caller;
             foreach my $constructor (@{ $args{constructors} }) {
                 no strict 'refs';
-                *{"${package}::$constructor"} = Sub::Name::subname "${package}::$constructor", sub {
+                *{"${package}::$constructor"} = v6::set_subname("${package}::", $constructor, sub {
                     my ($class, @args) = @_;
                     my $self = $class->next::method(@args);
                     return v6::extend($package, $self, \@args, $class);
-                };
+                });
             }
         }
 

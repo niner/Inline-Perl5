@@ -9,6 +9,7 @@ EXTERN_C void boot_Socket (pTHX_ CV* cv);
 XS(p5_call_p6_method);
 XS(p5_call_p6_callable);
 XS(p5_load_module);
+XS(p5_set_subname);
 
 EXTERN_C void xs_init(pTHX) {
     char *file = __FILE__;
@@ -17,6 +18,7 @@ EXTERN_C void xs_init(pTHX) {
     newXS("Perl6::Object::call_method", p5_call_p6_method, file);
     newXS("Perl6::Callable::call", p5_call_p6_callable, file);
     newXS("v6::load_module_impl", p5_load_module, file);
+    newXS("v6::set_subname", p5_set_subname, file);
 }
 
 void p5_inline_perl6_xs_init(PerlInterpreter *my_perl) {
@@ -24,6 +26,7 @@ void p5_inline_perl6_xs_init(PerlInterpreter *my_perl) {
     newXS("Perl6::Object::call_method", p5_call_p6_method, file);
     newXS("Perl6::Callable::call", p5_call_p6_callable, file);
     newXS("v6::load_module_impl", p5_load_module, file);
+    newXS("v6::set_subname", p5_set_subname, file);
 }
 
 static int inited = 0;
@@ -668,4 +671,44 @@ XS(p5_load_module) {
     SPAGAIN;
     sp -= items;
     XSRETURN_EMPTY;
+}
+
+static MGVTBL subname_vtbl;
+
+XS(p5_set_subname) {
+    dXSARGS;
+    SV *package = ST(0);
+    SV *name    = ST(1);
+    SV *sub     = ST(2);
+    CV *code    = (CV *) SvRV(sub);
+    HV *stash   = GvHV(gv_fetchsv(package, TRUE, SVt_PVHV));
+    GV *gv = (GV *) newSV(0);
+    MAGIC *mg;
+
+    gv_init_sv(gv, stash, name, GV_ADDMULTI);
+
+    /*
+     * p5_set_subname needs to create a GV to store the name. The CvGV field of
+     * a CV is not refcounted, so perl wouldn't know to SvREFCNT_dec() this GV
+     * if it destroys the containing CV. We use a MAGIC with an empty vtable
+     * simply for the side-effect of using MGf_REFCOUNTED to store the
+     * actually-counted reference to the GV.
+     */
+    Newxz(mg, 1, MAGIC);
+    mg->mg_moremagic = SvMAGIC(code);
+    mg->mg_type = PERL_MAGIC_ext;
+    mg->mg_virtual = &subname_vtbl;
+    SvMAGIC_set(code, mg);
+    mg->mg_flags |= MGf_REFCOUNTED;
+    mg->mg_obj = (SV *) gv;
+    SvRMAGICAL_on(code);
+    CvANON_off(code);
+#ifndef CvGV_set
+    CvGV(code) = gv;
+#else
+    CvGV_set(code, gv);
+#endif
+    sp -= items;
+    PUSHs(sub);
+    XSRETURN(1);
 }
