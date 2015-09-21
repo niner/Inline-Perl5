@@ -848,7 +848,7 @@ method require(Str $module, Num $version?) {
 
     ::($module).WHO<EXPORT> := Metamodel::PackageHOW.new();
     ::($module).WHO<&EXPORT> := sub EXPORT(*@args) {
-        return EnumMap.new(self.import($module, @args.list).map({
+        return Map.new(self.import($module, @args.list).map({
             my $name = $_;
             '&' ~ $name => sub (*@args, *%args) {
                 self.call("{$module}::$name", |@args.list, %args.list);
