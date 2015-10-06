@@ -887,7 +887,7 @@ class Perl5Callable does Callable {
     has OpaquePointer $.ptr;
     has Inline::Perl5 $.perl5;
 
-    method postcircumfix:<( )>(*@args) {
+    method CALL-ME(*@args) {
         $.perl5.execute($.ptr, @args);
     }
 
