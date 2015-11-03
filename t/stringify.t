@@ -22,7 +22,7 @@ $p5.run(q:to/PERL5/);
     PERL5
 
 is($p5.call('stringify', Foo.new), 'Foo!');
-like($p5.call('stringify', Bar.new), /Bar\<\d+\>/);
+like($p5.call('stringify', Bar.new), /Bar\<\-?\d+\>/);
 
 done-testing;
 

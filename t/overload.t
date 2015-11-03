@@ -32,7 +32,7 @@ unlike("$foo", /Perl5Object\<\d+\>/);
 
 my $bar = $p5.invoke('Bar', 'new', 'a string!');
 isnt("$bar", 'a string!');
-like("$bar", /Perl5Object\<\d+\>/);
+like("$bar", /Perl5Object\<\-?\d+\>/);
 
 done-testing;
 
