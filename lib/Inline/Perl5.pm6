@@ -20,21 +20,24 @@ sub native(Sub $sub) {
     my $base = "lib/Inline/$so";
     state Str $path;
     unless $path {
-        for @*INC {
-            my $cur = $_ ~~ Str ?? CompUnitRepo.new($_) !! $_;
-            if my @files = ($cur.files($base) || $cur.files("blib/$base")) {
+        my $repo = $*REPO;
+        while $repo {
+            if my @files = ($repo.files($base, :name<Inline::Perl5>) || $repo.files("blib/$base", :name<Inline::Perl5>)) {
                 my $files = @files[0]<files>;
                 $path = $files{$base} || $files{"blib/$base"};
             }
+            $repo = $repo.next-repo;
         }
     }
     unless $path {    # TEMPORARY !!!!
-        for @*INC.grep(Str) {
-            my $file = "$_.substr(5)/Inline/$so";
+        my $repo = $*REPO;
+        while $repo {
+            my $file = $repo.abspath.substr(5) ~ "/Inline/$so";
             if $file.IO.e {
                 $path = $file;
                 last;
             }
+            $repo = $repo.next-repo;
         }
     }
     unless $path {
@@ -1018,7 +1021,7 @@ class Perl5ModuleLoader {
         $default_perl5 //= Inline::Perl5.new();
         $default_perl5.require($module_name, %opts<ver> ?? %opts<ver>.Num !! Num);
 
-        return ::($module_name).WHO;
+        return CompUnit::Handle.from-unit(::($module_name).WHO);
     }
 }
 
