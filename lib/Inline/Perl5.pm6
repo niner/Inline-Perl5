@@ -32,7 +32,7 @@ sub native(Sub $sub) {
     unless $path {    # TEMPORARY !!!!
         my $repo = $*REPO;
         while $repo {
-            my $file = $repo.abspath.substr(5) ~ "/Inline/$so";
+            my $file = $repo.prefix.abspath.substr(5) ~ "/Inline/$so";
             if $file.IO.e {
                 $path = $file;
                 last;
@@ -41,7 +41,7 @@ sub native(Sub $sub) {
         }
     }
     unless $path {
-        die "unable to find Inline/$so IN \@*INC";
+        die "unable to find Inline/$so";
     }
     trait_mod:<is>($sub, :native($path));
 }
