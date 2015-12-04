@@ -648,7 +648,49 @@ method init_callbacks {
 
         # wrapper for the load_module perlapi call to allow catching exceptions
         sub load_module {
+            # lifted from Devel::InnerPackage to avoid the dependency
+            my $loaded = sub {
+                my ($name) = @_;
+
+                no strict 'refs';
+
+                return 1 if defined ${"${name}::VERSION"};
+                return 1 if @{"${name}::ISA"};
+
+                foreach ( keys %{"${name}::"} ) {
+                    next if substr($_, -2, 2) eq '::';
+                    return 1 if defined &{"${name}::$_"};
+                }
+
+                my $filename = join( '/', split /(?:'|::)/, $name ) . '.pm';
+                return 1 if defined $INC{$filename};
+
+                '';
+            };
+            my $list_packages;
+            $list_packages = sub {
+                my $pack = shift; $pack .= "::" unless $pack =~ m!::$!;
+
+                no strict 'refs';
+
+                my @packs;
+                my @stuff = grep !/^(main|)::$/, keys %{$pack};
+                for my $cand (grep /::$/, @stuff) {
+                    $cand =~ s!::$!!;
+                    my @children = $list_packages->($pack.$cand);
+
+                    push @packs, "$pack$cand" unless $cand =~ /^::/ ||
+                        !$loaded->($pack.$cand); # or @children;
+                    push @packs, @children;
+                }
+                return grep {$_ !~ /::(::ISA::CACHE|SUPER)/} @packs;
+            };
+
+            my %loaded = map { $_ => 1 } $list_packages->('::');
             v6::load_module_impl(@_);
+            my @new;
+            exists $loaded{$_} or push @new, substr $_, 2 foreach $list_packages->('::');
+            return @new;
         }
 
         sub run {
@@ -791,27 +833,14 @@ method subs_in_module(Str $module) {
     return self.run('[ grep { *{"' ~ $module ~ '::$_"}{CODE} } keys %' ~ $module ~ ':: ]');
 }
 
-method import (Str $module, *@args) {
+method import(Str $module, *@args) {
     my $before = set self.subs_in_module('main').list;
     self.invoke($module, 'import', @args.list);
     my $after = set self.subs_in_module('main').list;
     return ($after ∖ $before).keys;
 }
 
-my $loaded_modules = SetHash.new;
-method require(Str $module, Num $version?) {
-    # wrap the load_module call so exceptions can be translated to Perl 6
-    if $version {
-        self.call('v6::load_module', $module, $version);
-    }
-    else {
-        self.call('v6::load_module', $module);
-    }
-
-    return unless self eq $default_perl5; # Only create Perl 6 packages for the primary interpreter to avoid confusion
-    return if $loaded_modules{$module};
-    $loaded_modules{$module} = True;
-
+method !create_wrapper_class(Str $module) {
     my $p5 := self;
 
     my $class := Metamodel::ClassHOW.new_type( name => $module );
@@ -859,6 +888,23 @@ method require(Str $module, Num $version?) {
             }
         }));
     };
+}
+
+my $loaded_modules = SetHash.new;
+method require(Str $module, Num $version?) {
+    # wrap the load_module call so exceptions can be translated to Perl 6
+    my @packages = $version
+        ?? self.call('v6::load_module', $module, $version)
+        !! self.call('v6::load_module', $module);
+
+    return unless self eq $default_perl5; # Only create Perl 6 packages for the primary interpreter to avoid confusion
+
+    for @packages.grep(/^$module>>/) -> $package {
+        next if $loaded_modules{$package};
+        $loaded_modules{$package} = True;
+
+        self!create_wrapper_class($package);
+    }
 }
 
 method use(Str $module, *@args) {
