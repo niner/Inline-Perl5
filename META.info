@@ -11,6 +11,9 @@
     "provides"      : {
         "Inline::Perl5" : "lib/Inline/Perl5.pm6"
     },
+    "resources"      : [
+        "p5helper.so"
+    ],
     "repo-type"     : "git",
     "source-url"    : "git://github.com/niner/Inline-Perl5.git",
     "license"       : "http://www.perlfoundation.org/artistic_license_2_0",

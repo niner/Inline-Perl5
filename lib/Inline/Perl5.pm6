@@ -1,5 +1,7 @@
 unit class Inline::Perl5;
 
+use NativeCall;
+
 class Perl5Interpreter is repr('CPointer') { }
 role Perl5Package { ... };
 role Perl5Parent { ... };
@@ -12,36 +14,13 @@ has Bool $!scalar_context = False;
 
 my $default_perl5;
 
-use NativeCall;
-
 sub native(Sub $sub) {
     my $so = $*VM.config<dll>;
     $so ~~ s!^.*\%s!p5helper!;
-    my $base = "lib/Inline/$so";
-    state Str $path;
+
+    my Str $path = %?RESOURCES{$so}.Str;
     unless $path {
-        my $repo = $*REPO;
-        while $repo {
-            if my @files = ($repo.files($base, :name<Inline::Perl5>) || $repo.files("blib/$base", :name<Inline::Perl5>)) {
-                my $files = @files[0]<files>;
-                $path = $files{$base} || $files{"blib/$base"};
-            }
-            $repo = $repo.next-repo;
-        }
-    }
-    unless $path {    # TEMPORARY !!!!
-        my $repo = $*REPO;
-        while $repo {
-            my $file = $repo.prefix.abspath.substr(5) ~ "/Inline/$so";
-            if $file.IO.e {
-                $path = $file;
-                last;
-            }
-            $repo = $repo.next-repo;
-        }
-    }
-    unless $path {
-        die "unable to find Inline/$so";
+        die "unable to find $so";
     }
     trait_mod:<is>($sub, :native($path));
 }
