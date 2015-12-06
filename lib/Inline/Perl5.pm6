@@ -2,6 +2,8 @@ unit class Inline::Perl5;
 
 use NativeCall;
 
+no precompilation;
+
 class Perl5Interpreter is repr('CPointer') { }
 role Perl5Package { ... };
 role Perl5Parent { ... };
