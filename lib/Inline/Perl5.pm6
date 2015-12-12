@@ -997,17 +997,6 @@ BEGIN {
     Perl5Object.^compose;
 }
 
-class Perl5ModuleLoader {
-    method load_module($module_name, %opts, *@GLOBALish, :$line, :$file) {
-        $default_perl5 //= Inline::Perl5.new();
-        $default_perl5.require($module_name, %opts<ver> ?? %opts<ver>.Num !! Num);
-
-        return CompUnit::Handle.from-unit(::($module_name).WHO);
-    }
-}
-
-CompUnitRepo.register_language_module_loader('Perl5', Perl5ModuleLoader, :force(True));
-
 my Bool $inline_perl6_in_use = False;
 sub init_inline_perl6_new_callback(&inline_perl5_new (Perl5Interpreter --> OpaquePointer)) { ... };
 
