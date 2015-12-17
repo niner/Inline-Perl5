@@ -12,7 +12,7 @@ class Build is Panda::Builder {
         shell('perl -MFilter::Simple -e ""')
             or die "\nPlease install the Filter::Simple Perl 5 module!\n";
 
-        mkdir "$dir/resources";
+        mkdir "$dir/resources" unless "$dir/resources".IO.e;
         make($dir, $dir);
     }
 }
