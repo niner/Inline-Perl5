@@ -12,11 +12,8 @@ class Build is Panda::Builder {
         shell('perl -MFilter::Simple -e ""')
             or die "\nPlease install the Filter::Simple Perl 5 module!\n";
 
-        my Str $blib = "$dir/blib";
-        rm_rf($blib);
-        mkpath("$blib/lib/Inline");
-        mkpath("$blib/lib/../resources");
-        make($dir, "$blib/lib");
+        mkdir "$dir/resources";
+        make($dir, $dir);
     }
 }
 

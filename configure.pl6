@@ -10,6 +10,6 @@ shell('perl -MFilter::Simple -e ""')
 
 my %vars = get-vars('.');
 process-makefile('.', %vars);
-make('.', 'lib');
+make('.', '.');
 
 # vim: ft=perl6
