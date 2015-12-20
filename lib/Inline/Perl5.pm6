@@ -1,6 +1,7 @@
 unit class Inline::Perl5;
 
 use NativeCall;
+use MONKEY-SEE-NO-EVAL;
 
 no precompilation;
 
