@@ -895,9 +895,16 @@ method retrieve_scalar_context() {
 role Perl5Caller {
 }
 
+class X::Inline::Perl5::NoMultiplicity is Exception {
+    method message() {
+        "You need to compile perl with -DMULTIPLICITY for running multiple interpreters."
+    }
+}
+
 method BUILD(*%args) {
     $!external_p5 = %args<p5>:exists;
     $!p5 = $!external_p5 ?? %args<p5> !! p5_init_perl();
+    X::Inline::Perl5::NoMultiplicity.new.throw unless $!p5.defined;
 
     &!call_method = sub (Int $index, Str $name, Int $context, OpaquePointer $args, OpaquePointer $err) returns OpaquePointer {
         my $p6obj = $objects.get($index);

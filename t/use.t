@@ -24,8 +24,14 @@ $p5.use('Test::More');
 $p5.use('Test::More');
 
 # Only the first interpreter should create a Perl 6 package
-my @p5;
-@p5.push: Inline::Perl5.new xx 10;
-@p5>>.use('File::Temp');
+{
+    my @p5;
+    @p5.push: Inline::Perl5.new xx 10;
+    @p5>>.use('File::Temp');
+    CATCH {
+        when X::Inline::Perl5::NoMultiplicity {
+        }
+    }
+}
 
 # vim: ft=perl6

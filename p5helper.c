@@ -37,8 +37,15 @@ PerlInterpreter *p5_init_perl() {
     char *embedding[] = { "", "-e", "0" };
     int argc = 0;
     char **argv;
-    if (!inited++)
+    if (inited) {
+#ifndef MULTIPLICITY
+        return NULL;
+#endif
+    }
+    else {
+        inited = 1;
         PERL_SYS_INIT(&argc, &argv);
+    }
 
     interpreters++;
 
