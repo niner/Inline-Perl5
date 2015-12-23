@@ -12,8 +12,15 @@ class Build is Panda::Builder {
         shell('perl -MFilter::Simple -e ""')
             or die "\nPlease install the Filter::Simple Perl 5 module!\n";
 
+        my %vars = get-vars($dir);
+        %vars<p5helper> = $*VM.platform-library-name('p5helper'.IO);
         mkdir "$dir/resources" unless "$dir/resources".IO.e;
-        make($dir, $dir);
+        mkdir "$dir/resources/libraries" unless "$dir/resources/libraries".IO.e;
+        process-makefile($dir, %vars);
+        my $goback = $*CWD;
+        chdir($dir);
+        shell(%vars<MAKE>);
+        chdir($goback);
     }
 }
 

@@ -9,7 +9,10 @@ shell('perl -MFilter::Simple -e ""')
     or die "\nPlease install the Filter::Simple Perl 5 module!\n";
 
 my %vars = get-vars('.');
+%vars<p5helper> = $*VM.platform-library-name('p5helper'.IO);
+mkdir "resources" unless "resources".IO.e;
+mkdir "resources/libraries" unless "resources/libraries".IO.e;
 process-makefile('.', %vars);
-make('.', '.');
+shell(%vars<MAKE>);
 
 # vim: ft=perl6

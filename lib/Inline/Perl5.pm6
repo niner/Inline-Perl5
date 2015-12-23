@@ -18,12 +18,9 @@ has Bool $!scalar_context = False;
 my $default_perl5;
 
 sub native(Sub $sub) {
-    my $so = $*VM.config<dll>;
-    $so ~~ s!^.*\%s!p5helper!;
-
-    my Str $path = %?RESOURCES{$so}.Str;
+    my Str $path = %?RESOURCES<libraries/p5helper>.Str;
     unless $path {
-        die "unable to find $so";
+        die "unable to find p5helper library";
     }
     trait_mod:<is>($sub, :native($path));
 }

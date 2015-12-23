@@ -1,8 +1,8 @@
 .PHONY: clean test
-all: %DESTDIR%/resources/p5helper%SO%
+all: %DESTDIR%/resources/libraries/%p5helper%
 clean:
-	rm %DESTDIR%/resources/p5helper%SO%
-%DESTDIR%/resources/p5helper%SO%: p5helper.c
-	gcc -Wall p5helper.c `perl -MExtUtils::Embed -e ccopts -e ldopts` -shared -o %DESTDIR%/resources/p5helper%SO% -fPIC -g
+	rm %DESTDIR%/resources/libraries/%p5helper%
+%DESTDIR%/resources/libraries/%p5helper%: p5helper.c
+	gcc -Wall p5helper.c `perl -MExtUtils::Embed -e ccopts -e ldopts` -shared -o %DESTDIR%/resources/libraries/%p5helper% -fPIC -g
 test: all
 	prove -e 'perl6 -Ilib' t
