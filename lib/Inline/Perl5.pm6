@@ -654,9 +654,6 @@ method init_callbacks {
 
                 no strict 'refs';
 
-                return 1 if defined ${"${name}::VERSION"};
-                return 1 if @{"${name}::ISA"};
-
                 foreach ( keys %{"${name}::"} ) {
                     next if substr($_, -2, 2) eq '::';
                     return 1 if defined &{"${name}::$_"};
@@ -679,8 +676,13 @@ method init_callbacks {
                     $cand =~ s!::$!!;
                     my @children = $list_packages->($pack.$cand);
 
-                    push @packs, "$pack$cand" unless $cand =~ /^::/ ||
-                        !$loaded->($pack.$cand); # or @children;
+                    push @packs, "$pack$cand"
+                        if $cand !~ /^::/
+                        && (
+                            defined ${"${pack}${cand}::VERSION"}
+                            || @{"${pack}${cand}::ISA"}
+                            || $loaded->($pack.$cand)
+                        ); # or @children;
                     push @packs, @children;
                 }
                 return grep {$_ !~ /::(::ISA::CACHE|SUPER)/} @packs;
