@@ -74,16 +74,16 @@ sub p5_sv_utf8(Perl5Interpreter, OpaquePointer)
     returns int32 { ... } # should be uint32 once that's supported
     native(&p5_sv_utf8);
 sub p5_is_array(Perl5Interpreter, OpaquePointer)
-    returns int { ... }
+    returns int32 { ... }
     native(&p5_is_array);
 sub p5_is_hash(Perl5Interpreter, OpaquePointer)
-    returns int { ... }
+    returns int32 { ... }
     native(&p5_is_hash);
 sub p5_is_scalar_ref(Perl5Interpreter, OpaquePointer)
-    returns int { ... }
+    returns int32 { ... }
     native(&p5_is_scalar_ref);
 sub p5_is_undef(Perl5Interpreter, OpaquePointer)
-    returns int { ... }
+    returns int32 { ... }
     native(&p5_is_undef);
 sub p5_sv_to_buf(Perl5Interpreter, OpaquePointer, CArray[CArray[int8]])
     returns long { ... }
@@ -188,10 +188,10 @@ sub p5_sv_rv(Perl5Interpreter, OpaquePointer)
     returns OpaquePointer { ... }
     native(&p5_sv_rv);
 sub p5_is_object(Perl5Interpreter, OpaquePointer)
-    returns int { ... }
+    returns int32 { ... }
     native(&p5_is_object);
 sub p5_is_sub_ref(Perl5Interpreter, OpaquePointer)
-    returns int { ... }
+    returns int32 { ... }
     native(&p5_is_sub_ref);
 sub p5_eval_pv(Perl5Interpreter, Str, int32)
     returns OpaquePointer { ... }
@@ -209,7 +209,7 @@ sub p5_wrap_p6_handle(Perl5Interpreter, long, OpaquePointer, &call_method (long,
     returns OpaquePointer { ... }
     native(&p5_wrap_p6_handle);
 sub p5_is_wrapped_p6_object(Perl5Interpreter, OpaquePointer)
-    returns int { ... }
+    returns int32 { ... }
     native(&p5_is_wrapped_p6_object);
 sub p5_unwrap_p6_object(Perl5Interpreter, OpaquePointer)
     returns long { ... }
