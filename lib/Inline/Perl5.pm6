@@ -160,16 +160,16 @@ sub p5_sv_reftype(Perl5Interpreter, OpaquePointer)
 sub p5_hv_store(Perl5Interpreter, OpaquePointer, Str, OpaquePointer)
     { ... }
     native(&p5_hv_store);
-sub p5_call_function(Perl5Interpreter, Str, int, CArray[OpaquePointer])
+sub p5_call_function(Perl5Interpreter, Str, int32, CArray[OpaquePointer])
     returns OpaquePointer { ... }
     native(&p5_call_function);
-sub p5_call_method(Perl5Interpreter, Str, OpaquePointer, int32, Str, int, CArray[OpaquePointer])
+sub p5_call_method(Perl5Interpreter, Str, OpaquePointer, int32, Str, int32, CArray[OpaquePointer])
     returns OpaquePointer { ... }
     native(&p5_call_method);
-sub p5_call_package_method(Perl5Interpreter, Str, Str, int, CArray[OpaquePointer])
+sub p5_call_package_method(Perl5Interpreter, Str, Str, int32, CArray[OpaquePointer])
     returns OpaquePointer { ... }
     native(&p5_call_package_method);
-sub p5_call_code_ref(Perl5Interpreter, OpaquePointer, int, CArray[OpaquePointer])
+sub p5_call_code_ref(Perl5Interpreter, OpaquePointer, int32, CArray[OpaquePointer])
     returns OpaquePointer { ... }
     native(&p5_call_code_ref);
 sub p5_rebless_object(Perl5Interpreter, OpaquePointer, Str, long, &call_method (long, Str, int32, OpaquePointer, OpaquePointer --> OpaquePointer), &free_p6_object (long))
