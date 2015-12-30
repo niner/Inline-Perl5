@@ -21,6 +21,10 @@ EXTERN_C void xs_init(pTHX) {
     newXS("v6::set_subname", p5_set_subname, file);
 }
 
+size_t p5_size_of_iv() {
+    return sizeof(IV);
+}
+
 void p5_inline_perl6_xs_init(PerlInterpreter *my_perl) {
     char *file = __FILE__;
     newXS("Perl6::Object::call_method", p5_call_p6_method, file);
@@ -104,8 +108,8 @@ IV p5_sv_iv(PerlInterpreter *my_perl, SV* sv) {
     return SvIV(sv);
 }
 
-double p5_sv_nv(PerlInterpreter *my_perl, SV* sv) {
-    return (double)SvNV(sv);
+NV p5_sv_nv(PerlInterpreter *my_perl, SV* sv) {
+    return SvNV(sv);
 }
 
 SV *p5_sv_rv(PerlInterpreter *my_perl, SV* sv) {
