@@ -119,10 +119,10 @@ sub p5_int_to_sv(Perl5Interpreter, IV)
 sub p5_float_to_sv(Perl5Interpreter, NV)
     returns OpaquePointer { ... }
     native(&p5_float_to_sv);
-sub p5_str_to_sv(Perl5Interpreter, IV, Blob)
+sub p5_str_to_sv(Perl5Interpreter, size_t, Blob)
     returns OpaquePointer { ... }
     native(&p5_str_to_sv);
-sub p5_buf_to_sv(Perl5Interpreter, IV, Blob)
+sub p5_buf_to_sv(Perl5Interpreter, size_t, Blob)
     returns OpaquePointer { ... }
     native(&p5_buf_to_sv);
 sub p5_sv_to_ref(Perl5Interpreter, OpaquePointer)
