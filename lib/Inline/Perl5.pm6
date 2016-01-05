@@ -58,9 +58,14 @@ class ObjectKeeper {
 sub p5_size_of_iv()
     returns size_t { ... }
 BEGIN native(&p5_size_of_iv);
+sub p5_size_of_nv()
+    returns size_t { ... }
+BEGIN native(&p5_size_of_nv);
 
 BEGIN my constant IV = p5_size_of_iv() == 8 ?? int64 !! int32;
-BEGIN my constant NV = num64;
+BEGIN my constant NVSIZE = p5_size_of_nv();
+BEGIN die "Cannot support 80 bit NVs yet." if NVSIZE == 10;
+BEGIN my constant NV = NVSIZE == 8 ?? num64 !! num32;
 
 sub p5_init_perl()
     returns Perl5Interpreter { ... }

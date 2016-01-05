@@ -22,7 +22,11 @@ EXTERN_C void xs_init(pTHX) {
 }
 
 size_t p5_size_of_iv() {
-    return sizeof(IV);
+    return IVSIZE;
+}
+
+size_t p5_size_of_nv() {
+    return NVSIZE;
 }
 
 void p5_inline_perl6_xs_init(PerlInterpreter *my_perl) {
@@ -176,8 +180,8 @@ SV *p5_int_to_sv(PerlInterpreter *my_perl, IV value) {
     return newSViv(value);
 }
 
-SV *p5_float_to_sv(PerlInterpreter *my_perl, double value) {
-    return newSVnv((NV)value);
+SV *p5_float_to_sv(PerlInterpreter *my_perl, NV value) {
+    return newSVnv(value);
 }
 
 SV *p5_str_to_sv(PerlInterpreter *my_perl, STRLEN len, char* value) {
