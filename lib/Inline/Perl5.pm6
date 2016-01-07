@@ -64,7 +64,7 @@ BEGIN native(&p5_size_of_nv);
 
 BEGIN my constant IV = p5_size_of_iv() == 8 ?? int64 !! int32;
 BEGIN my constant NVSIZE = p5_size_of_nv();
-BEGIN die "Cannot support 80 bit NVs yet." if NVSIZE == 10;
+BEGIN die "Cannot support { NVSIZE * 8 } bit NVs yet." if NVSIZE != 4|8;
 BEGIN my constant NV = NVSIZE == 8 ?? num64 !! num32;
 
 sub p5_init_perl()
