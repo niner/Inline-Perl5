@@ -583,13 +583,10 @@ method init_callbacks {
 
         package Perl6::Callable;
 
-        use overload '&{}' => \&deref_call, fallback => 1;
-
-        sub deref_call {
-            my ($self) = @_;
-            return sub {
-                $self->call(@_);
-            }
+        sub new {
+            my $sub;
+            $sub = sub { Perl6::Callable::call($sub, @_) };
+            return $sub;
         }
 
         package Perl6::Handle;

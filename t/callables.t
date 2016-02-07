@@ -4,13 +4,19 @@ use v6;
 use Test;
 use Inline::Perl5;
 
-plan 4;
+plan 5;
 
 my $p5 = Inline::Perl5.new();
 
 $p5.run(q/
     use strict;
     use warnings;
+
+    sub is_code {
+        my ($code) = @_;
+
+        return ref $code eq 'CODE';
+    }
 
     sub call_something {
         my ($something, $param) = @_;
@@ -38,6 +44,7 @@ sub something($suffix) {
     return 'Perl ' ~ $suffix;
 }
 
+is $p5.call('is_code', &something), 1, 'code reference indistiguishable from Perl 5 code ref';
 is $p5.call('call_something', &something, 6), 'Perl 6';
 is $p5.call('return_code', 'Perl')(5), 'Perl 5';
 my $sub = $p5.call('return_code', 'Foo');
