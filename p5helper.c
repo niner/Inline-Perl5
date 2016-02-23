@@ -69,6 +69,8 @@ PerlInterpreter *p5_init_perl() {
 }
 
 void p5_destruct_perl(PerlInterpreter *my_perl) {
+    PERL_SET_CONTEXT(my_perl);
+
     PL_perl_destruct_level = 1;
     perl_destruct(my_perl);
     perl_free(my_perl);
@@ -82,18 +84,26 @@ void p5_terminate() {
 }
 
 U32 p5_SvIOK(PerlInterpreter *my_perl, SV* sv) {
+    PERL_SET_CONTEXT(my_perl);
+
     return SvIOK(sv);
 }
 
 U32 p5_SvNOK(PerlInterpreter *my_perl, SV* sv) {
+    PERL_SET_CONTEXT(my_perl);
+
     return SvNOK(sv);
 }
 
 U32 p5_SvPOK(PerlInterpreter *my_perl, SV* sv) {
+    PERL_SET_CONTEXT(my_perl);
+
     return SvPOK(sv);
 }
 
 U32 p5_sv_utf8(PerlInterpreter *my_perl, SV* sv) {
+    PERL_SET_CONTEXT(my_perl);
+
     if (SvUTF8(sv)) { // UTF-8 flag set -> can use string as-is
         return 1;
     }
@@ -109,94 +119,138 @@ U32 p5_sv_utf8(PerlInterpreter *my_perl, SV* sv) {
 }
 
 IV p5_sv_iv(PerlInterpreter *my_perl, SV* sv) {
+    PERL_SET_CONTEXT(my_perl);
+
     return SvIV(sv);
 }
 
 NV p5_sv_nv(PerlInterpreter *my_perl, SV* sv) {
+    PERL_SET_CONTEXT(my_perl);
+
     return SvNV(sv);
 }
 
 SV *p5_sv_rv(PerlInterpreter *my_perl, SV* sv) {
+    PERL_SET_CONTEXT(my_perl);
+
     return SvRV(sv);
 }
 
 int p5_is_object(PerlInterpreter *my_perl, SV* sv) {
+    PERL_SET_CONTEXT(my_perl);
+
     return sv_isobject(sv);
 }
 
 int p5_is_sub_ref(PerlInterpreter *my_perl, SV* sv) {
+    PERL_SET_CONTEXT(my_perl);
+
     return (SvROK(sv) && SvTYPE(SvRV(sv)) == SVt_PVCV);
 }
 
 int p5_is_array(PerlInterpreter *my_perl, SV* sv) {
+    PERL_SET_CONTEXT(my_perl);
+
     return (SvROK(sv) && SvTYPE(SvRV(sv)) == SVt_PVAV);
 }
 
 int p5_is_hash(PerlInterpreter *my_perl, SV* sv) {
+    PERL_SET_CONTEXT(my_perl);
+
     return (SvROK(sv) && SvTYPE(SvRV(sv)) == SVt_PVHV);
 }
 
 int p5_is_scalar_ref(PerlInterpreter *my_perl, SV* sv) {
+    PERL_SET_CONTEXT(my_perl);
+
     return (SvROK(sv) && SvTYPE(SvRV(sv)) < SVt_PVAV);
 }
 
 int p5_is_undef(PerlInterpreter *my_perl, SV* sv) {
+    PERL_SET_CONTEXT(my_perl);
+
     return !SvOK(sv);
 }
 
 AV *p5_sv_to_av(PerlInterpreter *my_perl, SV* sv) {
+    PERL_SET_CONTEXT(my_perl);
+
     return (AV *) SvRV(sv);
 }
 
 HV *p5_sv_to_hv(PerlInterpreter *my_perl, SV* sv) {
+    PERL_SET_CONTEXT(my_perl);
+
     return (HV *) SvRV(sv);
 }
 
 char *p5_sv_to_char_star(PerlInterpreter *my_perl, SV *sv) {
+    PERL_SET_CONTEXT(my_perl);
+
     STRLEN len;
     char * const pv  = SvPV(sv, len);
     return pv;
 }
 
 STRLEN p5_sv_to_buf(PerlInterpreter *my_perl, SV *sv, char **buf) {
+    PERL_SET_CONTEXT(my_perl);
+
     STRLEN len;
     *buf  = SvPV(sv, len);
     return len;
 }
 
 SV *p5_sv_to_ref(PerlInterpreter *my_perl, SV *sv) {
+    PERL_SET_CONTEXT(my_perl);
+
     return newRV_noinc(sv);
 }
 
 void p5_sv_refcnt_dec(PerlInterpreter *my_perl, SV *sv) {
+    PERL_SET_CONTEXT(my_perl);
+
     SvREFCNT_dec(sv);
 }
 
 void p5_sv_refcnt_inc(PerlInterpreter *my_perl, SV *sv) {
+    PERL_SET_CONTEXT(my_perl);
+
     SvREFCNT_inc(sv);
 }
 
 SV *p5_int_to_sv(PerlInterpreter *my_perl, IV value) {
+    PERL_SET_CONTEXT(my_perl);
+
     return newSViv(value);
 }
 
 SV *p5_float_to_sv(PerlInterpreter *my_perl, NV value) {
+    PERL_SET_CONTEXT(my_perl);
+
     return newSVnv(value);
 }
 
 SV *p5_str_to_sv(PerlInterpreter *my_perl, STRLEN len, char* value) {
+    PERL_SET_CONTEXT(my_perl);
+
     return newSVpvn_flags(value, len, SVf_UTF8);
 }
 
 SV *p5_buf_to_sv(PerlInterpreter *my_perl, STRLEN len, char* value) {
+    PERL_SET_CONTEXT(my_perl);
+
     return newSVpvn_flags(value, len, 0);
 }
 
 I32 p5_av_top_index(PerlInterpreter *my_perl, AV *av) {
+    PERL_SET_CONTEXT(my_perl);
+
     return av_top_index(av);
 }
 
 SV *p5_av_fetch(PerlInterpreter *my_perl, AV *av, I32 key) {
+    PERL_SET_CONTEXT(my_perl);
+
     SV ** const item = av_fetch(av, key, 0);
     if (item)
         return *item;
@@ -204,66 +258,91 @@ SV *p5_av_fetch(PerlInterpreter *my_perl, AV *av, I32 key) {
 }
 
 void p5_av_push(PerlInterpreter *my_perl, AV *av, SV *sv) {
+    PERL_SET_CONTEXT(my_perl);
+
     av_push(av, sv);
 }
 
 I32 p5_hv_iterinit(PerlInterpreter *my_perl, HV *hv) {
+    PERL_SET_CONTEXT(my_perl);
+
     return hv_iterinit(hv);
 }
 
 HE *p5_hv_iternext(PerlInterpreter *my_perl, HV *hv) {
+    PERL_SET_CONTEXT(my_perl);
+
     return hv_iternext(hv);
 }
 
 SV *p5_hv_iterkeysv(PerlInterpreter *my_perl, HE *entry) {
+    PERL_SET_CONTEXT(my_perl);
+
     return hv_iterkeysv(entry);
 }
 
 SV *p5_hv_iterval(PerlInterpreter *my_perl, HV *hv, HE *entry) {
+    PERL_SET_CONTEXT(my_perl);
+
     return hv_iterval(hv, entry);
 }
 
 void p5_hv_store(PerlInterpreter *my_perl, HV *hv, const char *key, SV *val) {
+    PERL_SET_CONTEXT(my_perl);
+
     hv_store(hv, key, strlen(key), val, 0);
 }
 
 SV *p5_undef(PerlInterpreter *my_perl) {
+    PERL_SET_CONTEXT(my_perl);
+
     return &PL_sv_undef;
 }
 
 HV *p5_newHV(PerlInterpreter *my_perl) {
+    PERL_SET_CONTEXT(my_perl);
+
     return newHV();
 }
 
 AV *p5_newAV(PerlInterpreter *my_perl) {
+    PERL_SET_CONTEXT(my_perl);
+
     return newAV();
 }
 
 SV *p5_newRV_noinc(PerlInterpreter *my_perl, SV *sv) {
+    PERL_SET_CONTEXT(my_perl);
+
     return newRV_noinc(sv);
 }
 
 const char *p5_sv_reftype(PerlInterpreter *my_perl, SV *sv) {
+    PERL_SET_CONTEXT(my_perl);
+
     return sv_reftype(SvRV(sv), 1);
 }
 
 SV *p5_eval_pv(PerlInterpreter *my_perl, const char* p, I32 croak_on_error) {
     PERL_SET_CONTEXT(my_perl);
+
     return eval_pv(p, croak_on_error);
 }
 
 SV *p5_err_sv(PerlInterpreter *my_perl) {
+    PERL_SET_CONTEXT(my_perl);
+
     return sv_mortalcopy(ERRSV);
 }
 
 AV *p5_call_package_method(PerlInterpreter *my_perl, char *package, char *name, int len, SV *args[]) {
+    PERL_SET_CONTEXT(my_perl);
+
     dSP;
     int i;
     I32 count;
     AV * const retval = newAV();
     int flags = G_ARRAY | G_EVAL;
-
-    PERL_SET_CONTEXT(my_perl);
 
     ENTER;
     SAVETMPS;
@@ -299,12 +378,12 @@ AV *p5_call_package_method(PerlInterpreter *my_perl, char *package, char *name, 
 }
 
 AV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, I32 context, char *name, int len, SV *args[]) {
+    PERL_SET_CONTEXT(my_perl);
+
     dSP;
     int i;
     AV * const retval = newAV();
     int flags = (context ? G_SCALAR : G_ARRAY) | G_EVAL;
-
-    PERL_SET_CONTEXT(my_perl);
 
     ENTER;
     SAVETMPS;
@@ -348,13 +427,13 @@ AV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, I32 context
 }
 
 AV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]) {
+    PERL_SET_CONTEXT(my_perl);
+
     dSP;
     int i;
     I32 count;
     AV * const retval = newAV();
     int flags = G_ARRAY | G_EVAL;
-
-    PERL_SET_CONTEXT(my_perl);
 
     ENTER;
     SAVETMPS;
@@ -388,13 +467,13 @@ AV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]) 
 }
 
 AV *p5_call_code_ref(PerlInterpreter *my_perl, SV *code_ref, int len, SV *args[]) {
+    PERL_SET_CONTEXT(my_perl);
+
     dSP;
     int i;
     I32 count;
     AV * const retval = newAV();
     int flags = G_ARRAY | G_EVAL;
-
-    PERL_SET_CONTEXT(my_perl);
 
     ENTER;
     SAVETMPS;
@@ -439,8 +518,9 @@ typedef struct {
 
 #define PERL6_MAGIC_KEY 0x0DD515FE
 
-int p5_free_perl6_obj(pTHX_ SV* obj, MAGIC *mg)
-{
+int p5_free_perl6_obj(pTHX_ SV* obj, MAGIC *mg) {
+    PERL_SET_CONTEXT(my_perl);
+
     if (mg) {
         _perl6_magic* const p6mg = (_perl6_magic*) mg->mg_ptr;
         p6mg->free_p6_object(p6mg->index);
@@ -460,6 +540,8 @@ MGVTBL p5_inline_mg_vtbl = {
 };
 
 void p5_rebless_object(PerlInterpreter *my_perl, SV *obj, char *package, IV i, SV *(*call_p6_method)(IV, char * , I32, SV *, SV **), void (*free_p6_object)(IV)) {
+    PERL_SET_CONTEXT(my_perl);
+
     SV * const inst = SvRV(obj);
     HV *stash = gv_stashpv(package, GV_ADD);
     if (stash == NULL)
@@ -478,6 +560,8 @@ void p5_rebless_object(PerlInterpreter *my_perl, SV *obj, char *package, IV i, S
 }
 
 SV *p5_wrap_p6_object(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call_p6_method)(IV, char * , I32, SV *, SV **), void (*free_p6_object)(IV)) {
+    PERL_SET_CONTEXT(my_perl);
+
     SV * inst;
     SV * inst_ptr;
     if (p5obj == NULL) {
@@ -502,10 +586,10 @@ SV *p5_wrap_p6_object(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call_p6_m
 }
 
 SV *p5_wrap_p6_callable(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call)(IV, SV *, SV **), void (*free_p6_object)(IV)) {
+    PERL_SET_CONTEXT(my_perl);
+
     SV * inst;
     SV * inst_ptr;
-
-    PERL_SET_CONTEXT(my_perl);
 
     if (p5obj == NULL) {
         dSP;
@@ -544,11 +628,11 @@ SV *p5_wrap_p6_callable(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call)(I
 }
 
 SV *p5_wrap_p6_handle(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call_p6_method)(IV, char * , I32, SV *, SV **), void (*free_p6_object)(IV)) {
+    PERL_SET_CONTEXT(my_perl);
+
     SV *handle = p5_wrap_p6_object(my_perl, i, p5obj, call_p6_method, free_p6_object);
     int flags = G_SCALAR;
     dSP;
-
-    PERL_SET_CONTEXT(my_perl);
 
     ENTER;
     SAVETMPS;
@@ -574,6 +658,8 @@ SV *p5_wrap_p6_handle(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call_p6_m
 }
 
 int p5_is_wrapped_p6_object(PerlInterpreter *my_perl, SV *obj) {
+    PERL_SET_CONTEXT(my_perl);
+
     SV * const obj_deref = SvRV(obj);
     /* check for magic! */
     MAGIC * const mg = mg_find(obj_deref, '~');
@@ -581,6 +667,8 @@ int p5_is_wrapped_p6_object(PerlInterpreter *my_perl, SV *obj) {
 }
 
 IV p5_unwrap_p6_object(PerlInterpreter *my_perl, SV *obj) {
+    PERL_SET_CONTEXT(my_perl);
+
     SV * const obj_deref = SvRV(obj);
     MAGIC * const mg = mg_find(obj_deref, '~');
     return ((_perl6_magic*)(mg->mg_ptr))->index;
