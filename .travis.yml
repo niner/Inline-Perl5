@@ -1,0 +1,16 @@
+branches:
+  except:
+    - gh-pages
+sudo: false
+language: perl6
+perl6: 2016.02
+before_install:
+  - curl -L http://install.perlbrew.pl | bash
+  - echo 'source ~/perl5/perlbrew/etc/bashrc' >> ~/.bash_profile
+  - source ~/perl5/perlbrew/etc/bashrc
+  - perlbrew install -Duseshrplib -n --noman -v --switch stable
+install:
+  - source ~/perl5/perlbrew/etc/bashrc
+  - rakudobrew build panda
+  - panda installdeps .
+  - perl6 configure.pl6
