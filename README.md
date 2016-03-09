@@ -60,8 +60,8 @@ They can be used as if they were Perl 6 modules:
 
 ```
     use Test::More:from<Perl5>;
-    Test::More::plan(1);
-    Test::More::ok('yes', 'looks like a Perl 6 function');
+    plan tests => 1;
+    ok 'yes', 'looks like a Perl 6 function';
 ```
 
 Inline::Perl5's call($name, \*@args) method allows calling arbitrary Perl 5
@@ -73,7 +73,7 @@ is not in the "main" namespace.
     my $p5 = Inline::Perl5.new;
     $p5.call('print', 'Hello World');
     $p5.use('Test::More');
-    $p5.call('Test::More::plan', 1);
+    $p5.call('Test::More::plan', tests => 1);
 ```
 
 Please note that since Perl 6 does not have the same concept of "context",
@@ -87,7 +87,7 @@ constructor (usually called "new").
 ```
     use Inline::Perl5;
     use Data::Dumper:from<Perl5>;
-    my $dumper = Data::Dumper.new();
+    my $dumper = Data::Dumper.new;
 ```
 
 Or using the low level methods:
