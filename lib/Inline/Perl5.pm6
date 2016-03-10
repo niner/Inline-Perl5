@@ -834,7 +834,7 @@ method require(Str $module, Num $version?) {
         return Map.new(self.import($module, @args.list).map({
             my $name = $_;
             '&' ~ $name => sub (*@args, *%args) {
-                self.call("{$module}::$name", |@args.list, %args.list);
+                self.call("main::$name", |@args.list, %args.list); # main:: because the sub got exported to main
             }
         }));
     };

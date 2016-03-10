@@ -10,6 +10,8 @@ sub import {
     my ($self, @args) = @_;
     die scalar @args unless @args == 2;
     $import_called = 1;
+    my ( $caller, $script ) = caller;
+    *{"${caller}::p5_ok2"} = \&p5_ok;
     __PACKAGE__->export_to_level(1, $self, qw(p5_ok));
 }
 
