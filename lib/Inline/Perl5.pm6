@@ -3,8 +3,6 @@ unit class Inline::Perl5;
 use NativeCall;
 use MONKEY-SEE-NO-EVAL;
 
-no precompilation;
-
 class Perl5Interpreter is repr('CPointer') { }
 role Perl5Package { ... };
 role Perl5Parent { ... };
@@ -831,6 +829,7 @@ method require(Str $module, Num $version?) {
 
     ::($module).WHO<EXPORT> := Metamodel::PackageHOW.new();
     ::($module).WHO<&EXPORT> := sub EXPORT(*@args) {
+        $*W.do_pragma(Any, 'precompilation', False, []);
         return Map.new(self.import($module, @args.list).map({
             my $name = $_;
             '&' ~ $name => sub (*@args, *%args) {
