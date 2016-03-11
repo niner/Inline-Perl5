@@ -70,6 +70,11 @@ PerlInterpreter *p5_init_perl() {
 
 void p5_destruct_perl(PerlInterpreter *my_perl) {
     PL_perl_destruct_level = 1;
+
+    POPSTACK_TO(PL_mainstack);
+    dounwind(-1);
+    LEAVE_SCOPE(0);
+
     perl_destruct(my_perl);
     perl_free(my_perl);
 
