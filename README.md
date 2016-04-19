@@ -327,7 +327,7 @@ instance from within Perl 6 threads, add the `-Dusemultiplicity` option as well)
 
 If you use plenv:
 
-    plenv install 5.21.1 -Duseshrplib
+    plenv install 5.22.1 -Duseshrplib
 
 If you use the perl that comes with a Linux distribution, you may need to
 install a separate package containing the perl library. E.g. on Debian
