@@ -727,7 +727,7 @@ role Perl5Package[Inline::Perl5 $p5, Str $module] {
         if (self.perl.Str ne $module) { # subclass
             %args<parent> = $p5.invoke($module, 'new', |@args, |%args.kv);
             my $self = self.bless();
-            $self.BUILDALL(@args, %args);
+            $self.BUILDALL(%args);
             return $self;
         }
         else {
@@ -947,7 +947,7 @@ role Perl5Parent[Str:D $package, Inline::Perl5:D $perl5] {
     has $!parent;
 
     method new(:$parent?, *@args, *%args) {
-        self.CREATE.initialize-perl5-object($parent, @args, %args).BUILDALL(@args, %args);
+        self.CREATE.initialize-perl5-object($parent, @args, %args).BUILDALL(%args);
     }
 
     method initialize-perl5-object($parent, @args, %args) {
