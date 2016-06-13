@@ -41,10 +41,7 @@ static int inited = 0;
 static int interpreters = 0;
 static int terminate = 0;
 
-PerlInterpreter *p5_init_perl() {
-    char *embedding[] = { "", "-e", "0" };
-    int argc = 0;
-    char **argv;
+PerlInterpreter *p5_init_perl(int argc, char **argv) {
     if (inited) {
 #ifndef MULTIPLICITY
         return NULL;
@@ -61,7 +58,7 @@ PerlInterpreter *p5_init_perl() {
     PERL_SET_CONTEXT(my_perl);
     PL_perl_destruct_level = 1;
     perl_construct( my_perl );
-    perl_parse(my_perl, xs_init, 3, embedding, NULL);
+    perl_parse(my_perl, xs_init, argc, argv, NULL);
     PL_exit_flags |= PERL_EXIT_DESTRUCT_END;
     perl_run(my_perl);
 

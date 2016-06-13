@@ -58,7 +58,7 @@ BEGIN my constant NVSIZE = p5_size_of_nv();
 BEGIN die "Cannot support { NVSIZE * 8 } bit NVs yet." if NVSIZE != 4|8;
 BEGIN my constant NV = NVSIZE == 8 ?? num64 !! num32;
 
-sub p5_init_perl() is native($p5helper)
+sub p5_init_perl(uint32, CArray[Str]) is native($p5helper)
     returns Perl5Interpreter { ... }
 
 sub p5_inline_perl6_xs_init(Perl5Interpreter) is native($p5helper)
@@ -904,7 +904,13 @@ class X::Inline::Perl5::NoMultiplicity is Exception {
 
 method BUILD(*%args) {
     $!external_p5 = %args<p5>:exists;
-    $!p5 = $!external_p5 ?? %args<p5> !! p5_init_perl();
+    if $!external_p5 {
+        $!p5 = %args<p5>;
+    }
+    else {
+        my @args = @*ARGS;
+        $!p5 = p5_init_perl(@args.elems + 3, CArray[Str].new('', '-e', '0', |@args));
+    }
     X::Inline::Perl5::NoMultiplicity.new.throw unless $!p5.defined;
 
     &!call_method = sub (Int $index, Str $name, Int $context, Pointer $args, Pointer $err) returns Pointer {
