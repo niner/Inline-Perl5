@@ -579,6 +579,9 @@ method init_callbacks {
                 : v6::invoke($self =~ s/\APerl6::Object:://r, 'can', @_);
         }
 
+        sub DESTROY {
+        }
+
         package Perl6::Callable;
 
         sub new {
