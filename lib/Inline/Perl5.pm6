@@ -915,7 +915,7 @@ method BUILD(*%args) {
     }
     else {
         my @args = @*ARGS;
-        $!p5 = p5_init_perl(@args.elems + 3, CArray[Str].new('', '-e', '0', |@args));
+        $!p5 = p5_init_perl(@args.elems + 4, CArray[Str].new('', '-e', '0', '--', |@args));
     }
     X::Inline::Perl5::NoMultiplicity.new.throw unless $!p5.defined;
 
