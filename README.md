@@ -320,7 +320,7 @@ You will need a perl 5 built with the -fPIC option (position independent
 code). Most distributions build their Perl 5 that way. When you use perlbrew,
 you have to build it as:
 
-    perlbrew install perl-5.24.0 -Duseshrplib
+    perlbrew install perl-stable -Duseshrplib
 
 (or, if you want to use more than one Inline::Perl5 interpeter safely, for
 instance from within Perl 6 threads, add the `-Dusemultiplicity` option as well)
