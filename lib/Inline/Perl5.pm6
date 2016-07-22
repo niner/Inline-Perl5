@@ -196,6 +196,9 @@ sub p5_is_object(Perl5Interpreter, Pointer) is native($p5helper)
 sub p5_is_sub_ref(Perl5Interpreter, Pointer) is native($p5helper)
     returns int32 { ... }
 
+sub p5_get_global(Perl5Interpreter, Str) is native($p5helper)
+    returns Pointer { ... }
+
 sub p5_eval_pv(Perl5Interpreter, Str, int32) is native($p5helper)
     returns Pointer { ... }
 
@@ -512,6 +515,10 @@ method execute(Pointer $code_ref, *@args) {
     my $av = p5_call_code_ref($!p5, $code_ref, |self!setup_arguments(@args));
     self.handle_p5_exception();
     self!unpack_return_values($av);
+}
+
+method global(Str $name) {
+    self.p5_to_p6(p5_get_global($!p5, $name))
 }
 
 class Perl6Callbacks {

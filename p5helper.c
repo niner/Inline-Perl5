@@ -249,6 +249,22 @@ const char *p5_sv_reftype(PerlInterpreter *my_perl, SV *sv) {
     return sv_reftype(SvRV(sv), 1);
 }
 
+SV *p5_get_global(PerlInterpreter *my_perl, const char* name) {
+    if (strlen(name) < 2)
+        return;
+
+    if (name[0] == '$')
+        return get_sv(&name[1], 0);
+
+    if (name[0] == '@')
+        return sv_2mortal(newRV_inc(get_av(&name[1], 0)));
+
+    if (name[0] == '%')
+        return sv_2mortal(newRV_inc(get_hv(&name[1], 0)));
+
+    return;
+}
+
 SV *p5_eval_pv(PerlInterpreter *my_perl, const char* p, I32 croak_on_error) {
     PERL_SET_CONTEXT(my_perl);
     return eval_pv(p, croak_on_error);
