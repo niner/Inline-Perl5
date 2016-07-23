@@ -521,6 +521,12 @@ method global(Str $name) {
     self.p5_to_p6(p5_get_global($!p5, $name))
 }
 
+PROCESS::<%PERL5> := class :: does Associative {
+    multi method AT-KEY($name) {
+        Inline::Perl5.default_perl5.global($name)
+    }
+}.new;
+
 class Perl6Callbacks {
     has $.p5;
     method create($package, $code) {
