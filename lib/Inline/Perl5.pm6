@@ -798,7 +798,7 @@ method import (Str $module, *@args) {
     return ($after ∖ $before).keys;
 }
 
-my $loaded_modules = SetHash.new;
+my %loaded_modules;
 method require(Str $module, Num $version?) {
     # wrap the load_module call so exceptions can be translated to Perl 6
     if $version {
@@ -809,26 +809,32 @@ method require(Str $module, Num $version?) {
     }
 
     return unless self eq $default_perl5; # Only create Perl 6 packages for the primary interpreter to avoid confusion
-    return if $loaded_modules{$module};
-    $loaded_modules{$module} = True;
 
-    my $p5 := self;
-
-    my $class := Metamodel::ClassHOW.new_type( name => $module );
-    $class.^add_role(Perl5Package[$p5, $module]);
+    my $class;
+    my $first-time = True;
     my $symbols = self.subs_in_module($module);
-
-    # install methods
-    for @$symbols -> $name {
-        next if $name eq 'new';
-        my $method = my method (*@args, *%kwargs) {
-            self.FALLBACK($name, |@args, |%kwargs);
-        }
-        $method.set_name($name);
-        $class.^add_method($name, $method);
+    if %loaded_modules{$module}:exists {
+        $class := %loaded_modules{$module};
+        $first-time = False;
     }
+    else {
+        my $p5 := self;
 
-    $class.^compose;
+        %loaded_modules{$module} := $class := Metamodel::ClassHOW.new_type(name => $module);
+        $class.^add_role(Perl5Package[$p5, $module]);
+
+        # install methods
+        for @$symbols -> $name {
+            next if $name eq 'new';
+            my $method = my method (*@args, *%kwargs) {
+                self.FALLBACK($name, |@args, |%kwargs);
+            }
+            $method.set_name($name);
+            $class.^add_method($name, $method);
+        }
+
+        $class.^compose;
+    }
 
     # register the new class by its name
     my @parts = $module.split('::');
@@ -842,10 +848,12 @@ method require(Str $module, Num $version?) {
     $ns{$inner} := $class;
     $class.WHO{$_.key} := $_.value for @existing;
 
-    # install subs like Test::More::ok
-    for @$symbols -> $name {
-        ::($module).WHO{"&$name"} := sub (*@args) {
-            self.call("{$module}::$name", @args.list);
+    if $first-time {
+        # install subs like Test::More::ok
+        for @$symbols -> $name {
+            ::($module).WHO{"&$name"} := sub (*@args) {
+                self.call("{$module}::$name", @args.list);
+            }
         }
     }
 
