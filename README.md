@@ -2,7 +2,7 @@
 
 Inline::Perl5
 
-[![Build Status](https://travis-ci.org/awwaiid/Inline-Perl5.svg?branch=master)](https://travis-ci.org/awwaiid/Inline-Perl5)
+[![Build Status](https://travis-ci.org/niner/Inline-Perl5.svg?branch=master)](https://travis-ci.org/niner/Inline-Perl5)
 
 # SYNOPSIS
 
