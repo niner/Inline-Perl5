@@ -10,6 +10,7 @@ shell('perl -MFilter::Simple -e ""')
 
 my %vars = get-vars('.');
 %vars<p5helper> = $*VM.platform-library-name('p5helper'.IO);
+%vars<perlopts> = run(<perl -MExtUtils::Embed -e ccopts -e ldopts>, :out).out.lines.join('');
 mkdir "resources" unless "resources".IO.e;
 mkdir "resources/libraries" unless "resources/libraries".IO.e;
 process-makefile('.', %vars);

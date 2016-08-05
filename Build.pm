@@ -13,6 +13,7 @@ class Build is Panda::Builder {
 
         my %vars = get-vars($dir);
         %vars<p5helper> = $*VM.platform-library-name('p5helper'.IO);
+        %vars<perlopts> = run(<perl -MExtUtils::Embed -e ccopts -e ldopts>, :out).out.lines.join('');
         mkdir "$dir/resources" unless "$dir/resources".IO.e;
         mkdir "$dir/resources/libraries" unless "$dir/resources/libraries".IO.e;
         process-makefile($dir, %vars);
