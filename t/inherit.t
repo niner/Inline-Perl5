@@ -4,11 +4,11 @@ use v6;
 use Test;
 
 BEGIN {
-    plan 10; # adjust the skip as well!
+    plan 14; # adjust the skip as well!
 
     EVAL 'use lib qw(t/lib);', :lang<Perl5>;
     unless EVAL 'eval { require Moose; 1};', :lang<Perl5> {
-        skip('Perl 5 Moose module not available', 10);
+        skip('Perl 5 Moose module not available', 14);
         exit;
     }
 }
@@ -32,6 +32,10 @@ is(P6Bar.new(foo => 'custom').foo, 'custom');
 is(P6Bar.new.call_end, 'end', 'Any methods not interfering with inheritance');
 is(P6Bar.new.call_list, 'list', 'Any methods not interfering with inheritance');
 is(P6Bar.new.say, 'say', 'say method not interfering with inheritance');
+is(P6Bar.new.print, 'print', 'print method not interfering with inheritance');
+is(P6Bar.new.note, 'note', 'print method not interfering with inheritance');
+is(P6Bar.new.put, 'put', 'print method not interfering with inheritance');
+is(P6Bar.new.split, 'split', 'print method not interfering with inheritance');
 
 class Baz is Foo {
     method bar {

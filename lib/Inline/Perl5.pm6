@@ -17,6 +17,8 @@ my $default_perl5;
 
 my constant $p5helper = %?RESOURCES<libraries/p5helper>.Str;
 
+my constant @pass_through_methods = |Any.^methods>>.name.grep(/^\w+$/), |<note print put say split>;
+
 class Perl5Object { ... }
 class Perl5Callable { ... }
 
@@ -772,7 +774,7 @@ role Perl5Package[Inline::Perl5 $p5, Str $module] {
             !! $p5.invoke($module, $name, |@args.list, |%kwargs);
     }
 
-    for Any.^methods>>.name.list, <say> -> $name {
+    for @pass_through_methods -> $name {
         next if $?CLASS.^declares_method($name);
         my $method = method (|args) {
             return self.defined
@@ -1032,7 +1034,8 @@ BEGIN {
             }
         }
     );
-    for Any.^methods>>.name -> $name {
+    for @pass_through_methods -> $name {
+        next if Perl5Object.^declares_method($name);
         Perl5Object.^add_method(
             $name,
             method (|args) {
