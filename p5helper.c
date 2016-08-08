@@ -1,6 +1,6 @@
 #include <EXTERN.h>
-#include <XSUB.h>
 #include <perl.h>
+#include <XSUB.h>
 
 static void xs_init (pTHX);
 EXTERN_C void boot_DynaLoader (pTHX_ CV* cv);
