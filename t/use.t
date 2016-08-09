@@ -6,7 +6,7 @@ use Inline::Perl5;
 my $p5;
 BEGIN {
     $p5 = Inline::Perl5.new();
-    $p5.use('Test::More', 'tests', 4);
+    $p5.use('Test::More', 'tests', 5);
     $p5.call('Test::More::ok', 1, 'use loaded the module');
 }
 
@@ -23,11 +23,12 @@ Test::More::is(Data::Dumper.Dump([1, 2].item).Str, "\$VAR1 = 1;\n \$VAR2 = 2;\n"
 $p5.use('Test::More');
 $p5.use('Test::More');
 
+Test::More::pass('loaded module more than once');
+
 # Only the first interpreter should create a Perl 6 package
 {
-    my @p5;
-    @p5.push: Inline::Perl5.new xx 10;
-    @p5>>.use('File::Temp');
+    my @p5 = Inline::Perl5.new xx 10;
+    $_.use('File::Temp') for @p5;
     CATCH {
         when X::Inline::Perl5::NoMultiplicity {
         }
