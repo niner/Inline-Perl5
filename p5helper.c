@@ -25,8 +25,16 @@ size_t p5_size_of_iv() {
     return IVSIZE;
 }
 
+#if NVSIZE > 8
+#    define MYNVSIZE 8
+#    define MYNV double
+#else
+#    define MYNVSIZE NVSIZE
+#    define MYNV NV
+#endif
+
 size_t p5_size_of_nv() {
-    return NVSIZE;
+    return MYNVSIZE;
 }
 
 void p5_inline_perl6_xs_init(PerlInterpreter *my_perl) {
@@ -114,7 +122,7 @@ IV p5_sv_iv(PerlInterpreter *my_perl, SV* sv) {
     return SvIV(sv);
 }
 
-NV p5_sv_nv(PerlInterpreter *my_perl, SV* sv) {
+MYNV p5_sv_nv(PerlInterpreter *my_perl, SV* sv) {
     return SvNV(sv);
 }
 
@@ -182,7 +190,7 @@ SV *p5_int_to_sv(PerlInterpreter *my_perl, IV value) {
     return newSViv(value);
 }
 
-SV *p5_float_to_sv(PerlInterpreter *my_perl, NV value) {
+SV *p5_float_to_sv(PerlInterpreter *my_perl, MYNV value) {
     return newSVnv(value);
 }
 
