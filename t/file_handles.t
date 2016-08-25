@@ -1,7 +1,14 @@
 use v6;
+use Test;
+BEGIN {
+    plan 2;
+    if (try require File::Temp) === Nil {
+        skip('File::Temp required for file handle tests', 2);
+        exit;
+    }
+}
 use Inline::Perl5;
 use File::Temp;
-use Test;
 
 my $p5 = Inline::Perl5.new;
 
@@ -29,7 +36,5 @@ $p5.run(q/
 /);
 
 is $p5.call('bar', $filehandle), 'test!';
-
-done-testing;
 
 # vim: ft=perl6
