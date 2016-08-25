@@ -1,9 +1,13 @@
 .PHONY: clean test
 CC = %CC%
+PERL6 = %perl6%
+
 all: %p5helper%
 clean:
 	rm "%p5helper%"
 %p5helper%: p5helper.c
 	$(CC) -Wall p5helper.c %perlopts% -shared -o "%p5helper%" -fPIC -g
 test: all
-	prove -e 'perl6 -Ilib' t
+	prove -e "$(PERL6) -Ilib" t
+install: all
+	$(PERL6) configure.pl6 --install

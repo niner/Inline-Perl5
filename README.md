@@ -337,11 +337,15 @@ package already contains everything needed.
 Build Inline::Perl5 with
 
     perl6 configure.pl6
+    make
 
 and test with
 
     make test
 
+and install with
+
+    make install
 
 # AUTHOR
 
