@@ -33,8 +33,14 @@ sub test() {
 }
 
 sub install() {
-    my $repo = $*REPO.repo-chain.grep(CompUnit::Repository::Installable).first(*.can-install)
+    my $repo = %*ENV<DESTREPO>
+        ?? CompUnit::RepositoryRegistry.repository-for-name(%*ENV<DESTREPO>)
+        !! (
+            CompUnit::RepositoryRegistry.repository-for-name('site'),
+            |$*REPO.repo-chain.grep(CompUnit::Repository::Installable)
+        ).first(*.can-install)
         or die "Cannot find a repository to install to";
+    say "Installing into $repo";
     my $dist = Distribution::Path.new($*CWD, :file('META.info'.IO));
 
     # workaround for missing proper handling of libraries in Distribution::Path
