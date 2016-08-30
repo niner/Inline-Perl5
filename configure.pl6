@@ -15,7 +15,7 @@ sub configure() {
         or die "\nPlease install the Filter::Simple Perl 5 module!\n";
 
     my %vars;
-    %vars<CC> = $*VM.config<cc>;
+    %vars<CC> = $*VM.config<cc> // $*VM.config<nativecall.cc> // 'cc';
     %vars<p5helper> = p5helper().Str;
     %vars<perlopts> = run(<perl -MExtUtils::Embed -e ccopts -e ldopts>, :out).out.lines.join('');
     %vars<perl6> = $*EXECUTABLE;
