@@ -18,5 +18,12 @@
     "license"       : "http://www.perlfoundation.org/artistic_license_2_0",
     "support"       : {
         "irc" : "irc://irc.freenode.org/#perl6"
+    },
+    "builder": "Distribution::Builder::MakeFromJSON",
+    "build": {
+        "makefile-variables": {
+            "p5helper": {"library": "p5helper"},
+            "perlopts": {"run": "perl -MExtUtils::Embed -e ccopts -e ldopts"}
+        }
     }
 }

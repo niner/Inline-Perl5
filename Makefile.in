@@ -1,10 +1,14 @@
-.PHONY: clean test
-CC = %CC%
+.PHONY: all clean test install
+CC = %cc%
+RM = %rm%
 PERL6 = %perl6%
 
 all: %p5helper%
 clean:
-	rm "%p5helper%"
+	$(RM) "%p5helper%"
+	rmdir resources/libraries
+	rmdir resources
+	$(RM) Makefile
 %p5helper%: p5helper.c
 	$(CC) -Wall p5helper.c %perlopts% -shared -o "%p5helper%" -fPIC -g
 test: all
