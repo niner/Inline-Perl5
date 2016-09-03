@@ -53,6 +53,18 @@ Inline::Perl5's use() method maps to Perl 5's use statement:
     $p5.use('Test::More');
 ```
 
+## Load a Perl 5 module and import functions
+
+Just list the functions or groups you want to import
+
+```
+    use Digest::SHA1:from<Perl5> <sha1_hex>;
+```
+
+```
+    use Data::Random:from<Perl5> <:all>;
+```
+
 ## Call a Perl 5 function
 
 Inline::Perl5 creates wrappers for loaded Perl 5 modules and their functions.
