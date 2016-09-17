@@ -233,8 +233,19 @@ SV *p5_hv_iterval(PerlInterpreter *my_perl, HV *hv, HE *entry) {
     return hv_iterval(hv, entry);
 }
 
+SV *p5_hv_fetch(PerlInterpreter *my_perl, HV *hv, STRLEN len, const char *key) {
+    SV ** const item = hv_fetch(hv, key, len, 0);
+    if (item)
+        return *item;
+    return NULL;
+}
+
 void p5_hv_store(PerlInterpreter *my_perl, HV *hv, const char *key, SV *val) {
     hv_store(hv, key, strlen(key), val, 0);
+}
+
+int p5_hv_exists(PerlInterpreter *my_perl, HV *hv, STRLEN len, const char *key) {
+    return hv_exists(hv, key, len);
 }
 
 SV *p5_undef(PerlInterpreter *my_perl) {
@@ -251,6 +262,10 @@ AV *p5_newAV(PerlInterpreter *my_perl) {
 
 SV *p5_newRV_noinc(PerlInterpreter *my_perl, SV *sv) {
     return newRV_noinc(sv);
+}
+
+SV *p5_newRV_inc(PerlInterpreter *my_perl, SV *sv) {
+    return newRV_inc(sv);
 }
 
 const char *p5_sv_reftype(PerlInterpreter *my_perl, SV *sv) {
