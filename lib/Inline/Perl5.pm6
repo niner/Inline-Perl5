@@ -12,6 +12,7 @@ has Perl5Interpreter $!p5;
 has Bool $!external_p5 = False;
 has &!call_method;
 has &!call_callable;
+has &!hash_at_key;
 has Bool $!scalar_context = False;
 
 my $default_perl5;
@@ -217,13 +218,13 @@ sub p5_eval_pv(Perl5Interpreter, Str, int32) is native($p5helper)
 sub p5_err_sv(Perl5Interpreter) is native($p5helper)
     returns Pointer { ... }
 
-sub p5_wrap_p6_object(Perl5Interpreter, IV, Pointer, &call_method (IV, Str, int32, Pointer, Pointer --> Pointer), &free_p6_object (IV)) is native($p5helper)
+sub p5_wrap_p6_object(Perl5Interpreter, IV, Pointer, &call_method (IV, Str, int32, Pointer, Pointer --> Pointer), &hash_at_key (IV, Str), &free_p6_object (IV)) is native($p5helper)
     returns Pointer { ... }
 
 sub p5_wrap_p6_callable(Perl5Interpreter, IV, Pointer, &call (IV, Pointer, Pointer --> Pointer), &free_p6_object (IV)) is native($p5helper)
     returns Pointer { ... }
 
-sub p5_wrap_p6_hash(Perl5Interpreter, IV, Pointer, &call_method (IV, Str, int32, Pointer, Pointer --> Pointer), &free_p6_object (IV)) is native($p5helper)
+sub p5_wrap_p6_hash(Perl5Interpreter, IV, Pointer, &call_method (IV, Str, int32, Pointer, Pointer --> Pointer), &hash_at_key (IV, Str --> Pointer), &free_p6_object (IV)) is native($p5helper)
     returns Pointer { ... }
 
 sub p5_wrap_p6_handle(Perl5Interpreter, IV, Pointer, &call_method (IV, Str, int32, Pointer, Pointer --> Pointer), &free_p6_object (IV)) is native($p5helper)
@@ -305,6 +306,7 @@ multi method p6_to_p5(Any:D $value, Pointer $inst = Pointer) {
         $index,
         $inst,
         &!call_method,
+        Any,
         &free_p6_object,
     );
 }
@@ -331,6 +333,7 @@ multi method p6_to_p5(Hash:D $value) returns Pointer {
         $index,
         Any,
         &!call_method,
+        &!hash_at_key,
         &free_p6_object,
     );
 }
@@ -757,19 +760,20 @@ method init_callbacks {
         }
 
         my $at_key = 'AT-KEY';
+        use Carp qw(cluck);
         sub FETCH {
             my ($self, $key) = @_;
-            return $self->[0]->$at_key($key);
+            return Perl6::Object::hash_at_key($self->[0], $key);
         }
         my $assign_key = 'ASSIGN-KEY';
         sub STORE {
             my ($self, $key, $value) = @_;
-            return $self->[0]->$assign_key($key, $value);
+            return Perl6::Object::call_method('ASSIGN-KEY', $self->[0], $key, $value);
         }
         my $delete_key = 'DELETE-KEY';
         sub DELETE {
             my ($self, $key) = @_;
-            return $self->[0]->$delete_key($key);
+            return Perl6::Object::call_method('DELETE-KEY', $self->[0], $key);
         }
         sub CLEAR {
             die 'CLEAR NYI';
@@ -777,12 +781,12 @@ method init_callbacks {
         my $exists_key = 'EXISTS-KEY';
         sub EXISTS {
             my ($self, $key) = @_;
-            return $self->[0]->$exists_key($key);
+            return Perl6::Object::call_method('EXISTS-KEY', $self->[0], $key);
         }
         my $pull_one = 'pull-one';
         sub FIRSTKEY {
             my ($self) = @_;
-            $self->[1] = [ $self->[0]->keys ];
+            $self->[1] = [ Perl6::Object::call_method('keys', $self->[0]) ];
             $self->[2] = 0;
             return $self->NEXTKEY;
         }
@@ -792,7 +796,7 @@ method init_callbacks {
         }
         sub SCALAR {
             my ($self) = @_;
-            return $self->[0]->elems;
+            return Perl6::Object::call_method('elems', $self->[0]);
         }
 
         package v6;
@@ -1135,6 +1139,18 @@ method BUILD(*%args) {
             default {
                 nativecast(CArray[Pointer], $err)[0] = self.p6_to_p5($_);
                 return Pointer;
+            }
+        }
+    }
+
+    &!hash_at_key = sub (Int $index, Str $key) returns Pointer {
+        my $hash = $objects.get($index);
+        my $retval = $hash.AT-KEY($key);
+        return self.p6_to_p5($retval);
+        CONTROL {
+            when CX::Warn {
+                note $_.gist;
+                $_.resume;
             }
         }
     }
