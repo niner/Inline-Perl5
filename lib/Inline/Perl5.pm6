@@ -218,13 +218,13 @@ sub p5_eval_pv(Perl5Interpreter, Str, int32) is native($p5helper)
 sub p5_err_sv(Perl5Interpreter) is native($p5helper)
     returns Pointer { ... }
 
-sub p5_wrap_p6_object(Perl5Interpreter, IV, Pointer, &call_method (IV, Str, int32, Pointer, Pointer --> Pointer), &hash_at_key (IV, Str), &free_p6_object (IV)) is native($p5helper)
+sub p5_wrap_p6_object(Perl5Interpreter, IV, Pointer, &call_method (IV, Str, int32, Pointer, Pointer --> Pointer), &free_p6_object (IV)) is native($p5helper)
     returns Pointer { ... }
 
 sub p5_wrap_p6_callable(Perl5Interpreter, IV, Pointer, &call (IV, Pointer, Pointer --> Pointer), &free_p6_object (IV)) is native($p5helper)
     returns Pointer { ... }
 
-sub p5_wrap_p6_hash(Perl5Interpreter, IV, Pointer, &call_method (IV, Str, int32, Pointer, Pointer --> Pointer), &hash_at_key (IV, Str --> Pointer), &free_p6_object (IV)) is native($p5helper)
+sub p5_wrap_p6_hash(Perl5Interpreter, IV, &call_method (IV, Str, int32, Pointer, Pointer --> Pointer), &hash_at_key (IV, Str --> Pointer), &free_p6_object (IV)) is native($p5helper)
     returns Pointer { ... }
 
 sub p5_wrap_p6_handle(Perl5Interpreter, IV, Pointer, &call_method (IV, Str, int32, Pointer, Pointer --> Pointer), &free_p6_object (IV)) is native($p5helper)
@@ -306,7 +306,6 @@ multi method p6_to_p5(Any:D $value, Pointer $inst = Pointer) {
         $index,
         $inst,
         &!call_method,
-        Any,
         &free_p6_object,
     );
 }
@@ -331,7 +330,6 @@ multi method p6_to_p5(Hash:D $value) returns Pointer {
     return p5_wrap_p6_hash(
         $!p5,
         $index,
-        Any,
         &!call_method,
         &!hash_at_key,
         &free_p6_object,
@@ -759,11 +757,9 @@ method init_callbacks {
             return bless $self, $class;
         }
 
-        my $at_key = 'AT-KEY';
-        use Carp qw(cluck);
         sub FETCH {
             my ($self, $key) = @_;
-            return Perl6::Object::hash_at_key($self->[0], $key);
+            return Perl6::Hash::at_key($self->[0], $key);
         }
         my $assign_key = 'ASSIGN-KEY';
         sub STORE {
