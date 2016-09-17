@@ -13,6 +13,7 @@ has Bool $!external_p5 = False;
 has &!call_method;
 has &!call_callable;
 has &!hash_at_key;
+has &!hash_assign_key;
 has Bool $!scalar_context = False;
 
 my $default_perl5;
@@ -224,7 +225,14 @@ sub p5_wrap_p6_object(Perl5Interpreter, IV, Pointer, &call_method (IV, Str, int3
 sub p5_wrap_p6_callable(Perl5Interpreter, IV, Pointer, &call (IV, Pointer, Pointer --> Pointer), &free_p6_object (IV)) is native($p5helper)
     returns Pointer { ... }
 
-sub p5_wrap_p6_hash(Perl5Interpreter, IV, &call_method (IV, Str, int32, Pointer, Pointer --> Pointer), &hash_at_key (IV, Str --> Pointer), &free_p6_object (IV)) is native($p5helper)
+sub p5_wrap_p6_hash(
+    Perl5Interpreter,
+    IV,
+    &call_method (IV, Str, int32, Pointer, Pointer --> Pointer),
+    &hash_at_key (IV, Str --> Pointer),
+    &hash_assign_key (IV, Str, Pointer),
+    &free_p6_object (IV)
+) is native($p5helper)
     returns Pointer { ... }
 
 sub p5_wrap_p6_handle(Perl5Interpreter, IV, Pointer, &call_method (IV, Str, int32, Pointer, Pointer --> Pointer), &free_p6_object (IV)) is native($p5helper)
@@ -332,6 +340,7 @@ multi method p6_to_p5(Hash:D $value) returns Pointer {
         $index,
         &!call_method,
         &!hash_at_key,
+        &!hash_assign_key,
         &free_p6_object,
     );
 }
@@ -761,10 +770,9 @@ method init_callbacks {
             my ($self, $key) = @_;
             return Perl6::Hash::at_key($self->[0], $key);
         }
-        my $assign_key = 'ASSIGN-KEY';
         sub STORE {
             my ($self, $key, $value) = @_;
-            return Perl6::Object::call_method('ASSIGN-KEY', $self->[0], $key, $value);
+            return Perl6::Hash::assign_key($self->[0], $key, $value);
         }
         my $delete_key = 'DELETE-KEY';
         sub DELETE {
@@ -1140,9 +1148,18 @@ method BUILD(*%args) {
     }
 
     &!hash_at_key = sub (Int $index, Str $key) returns Pointer {
-        my $hash = $objects.get($index);
-        my $retval = $hash.AT-KEY($key);
-        return self.p6_to_p5($retval);
+        return self.p6_to_p5($objects.get($index).AT-KEY($key));
+        CONTROL {
+            when CX::Warn {
+                note $_.gist;
+                $_.resume;
+            }
+        }
+    }
+
+    &!hash_assign_key = sub (Int $index, Str $key, Pointer $value) {
+        $objects.get($index).ASSIGN-KEY($key, self.p5_to_p6($value));
+        Nil;
         CONTROL {
             when CX::Warn {
                 note $_.gist;
