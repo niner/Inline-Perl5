@@ -6,6 +6,16 @@ static void xs_init (pTHX);
 EXTERN_C void boot_DynaLoader (pTHX_ CV* cv);
 EXTERN_C void boot_Socket (pTHX_ CV* cv);
 
+typedef struct {
+    I32 key; /* to make sure it came from Inline */
+    IV index;
+    union {
+        SV *(*call_p6_method)(IV, char *, I32, SV *, SV **);
+        SV *(*call_p6_callable)(IV, SV *, SV **);
+    };
+    void (*free_p6_object)(IV);
+} _perl6_magic;
+
 XS(p5_call_p6_method);
 XS(p5_call_p6_callable);
 XS(p5_load_module);
@@ -143,7 +153,22 @@ int p5_is_array(PerlInterpreter *my_perl, SV* sv) {
 }
 
 int p5_is_hash(PerlInterpreter *my_perl, SV* sv) {
-    return (SvROK(sv) && SvTYPE(SvRV(sv)) == SVt_PVHV);
+    MAGIC *mg;
+    return (
+        (SvROK(sv) && SvTYPE(SvRV(sv)) == SVt_PVHV)
+        ? ((mg = mg_find(SvRV(sv), PERL_MAGIC_tied)) && sv_isa(mg->mg_obj, "Perl6::Hash"))
+            ? 2
+            : 1
+        : 0
+    );
+}
+
+IV p5_unwrap_p6_hash(PerlInterpreter *my_perl, SV *obj) {
+    MAGIC * const tie_mg = mg_find(SvRV(obj), PERL_MAGIC_tied);
+    SV * const hash = tie_mg->mg_obj;
+    SV * const p6hashobj = *(av_fetch((AV *) SvRV(hash), 0, 0));
+    MAGIC * const mg = mg_find(SvRV(p6hashobj), '~');
+    return ((_perl6_magic*)(mg->mg_ptr))->index;
 }
 
 int p5_is_scalar_ref(PerlInterpreter *my_perl, SV* sv) {
@@ -474,16 +499,6 @@ AV *p5_call_code_ref(PerlInterpreter *my_perl, SV *code_ref, int len, SV *args[]
     }
 }
 
-typedef struct {
-    I32 key; /* to make sure it came from Inline */
-    IV index;
-    union {
-        SV *(*call_p6_method)(IV, char *, I32, SV *, SV **);
-        SV *(*call_p6_callable)(IV, SV *, SV **);
-    };
-    void (*free_p6_object)(IV);
-} _perl6_magic;
-
 #define PERL6_MAGIC_KEY 0x0DD515FE
 
 int p5_free_perl6_obj(pTHX_ SV* obj, MAGIC *mg)
@@ -588,6 +603,37 @@ SV *p5_wrap_p6_callable(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call)(I
     mg->mg_virtual = &p5_inline_mg_vtbl;
 
     return inst_ptr;
+}
+
+SV *p5_wrap_p6_hash(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call_p6_method)(IV, char * , I32, SV *, SV **), void (*free_p6_object)(IV)) {
+    PERL_SET_CONTEXT(my_perl);
+    {
+        SV *handle = p5_wrap_p6_object(my_perl, i, p5obj, call_p6_method, free_p6_object);
+        int flags = G_SCALAR;
+        dSP;
+
+        ENTER;
+        SAVETMPS;
+
+        PUSHMARK(SP);
+
+        XPUSHs(newSVpv("Perl6::Hash", 0));
+        XPUSHs(handle);
+
+        PUTBACK;
+
+        call_method("new", flags);
+        SPAGAIN;
+
+        SV *tied_handle = POPs;
+        SvREFCNT_inc(tied_handle);
+
+        PUTBACK;
+        FREETMPS;
+        LEAVE;
+
+        return tied_handle;
+    }
 }
 
 SV *p5_wrap_p6_handle(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call_p6_method)(IV, char * , I32, SV *, SV **), void (*free_p6_object)(IV)) {

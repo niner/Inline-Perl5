@@ -62,6 +62,7 @@ sub test_hash {
 
     return (
         ref $h eq "HASH"
+        and %$h == 2
         and keys %$h == 2
         and exists $h->{a}
         and exists $h->{b}

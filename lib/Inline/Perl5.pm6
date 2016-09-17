@@ -223,6 +223,9 @@ sub p5_wrap_p6_object(Perl5Interpreter, IV, Pointer, &call_method (IV, Str, int3
 sub p5_wrap_p6_callable(Perl5Interpreter, IV, Pointer, &call (IV, Pointer, Pointer --> Pointer), &free_p6_object (IV)) is native($p5helper)
     returns Pointer { ... }
 
+sub p5_wrap_p6_hash(Perl5Interpreter, IV, Pointer, &call_method (IV, Str, int32, Pointer, Pointer --> Pointer), &free_p6_object (IV)) is native($p5helper)
+    returns Pointer { ... }
+
 sub p5_wrap_p6_handle(Perl5Interpreter, IV, Pointer, &call_method (IV, Str, int32, Pointer, Pointer --> Pointer), &free_p6_object (IV)) is native($p5helper)
     returns Pointer { ... }
 
@@ -230,6 +233,9 @@ sub p5_is_wrapped_p6_object(Perl5Interpreter, Pointer) is native($p5helper)
     returns int32 { ... }
 
 sub p5_unwrap_p6_object(Perl5Interpreter, Pointer) is native($p5helper)
+    returns IV { ... }
+
+sub p5_unwrap_p6_hash(Perl5Interpreter, Pointer) is native($p5helper)
     returns IV { ... }
 
 sub p5_terminate() is native($p5helper)
@@ -318,15 +324,18 @@ multi method p6_to_p5(Perl5Callable:D $value) returns Pointer {
     $value.ptr;
 }
 multi method p6_to_p5(Hash:D $value) returns Pointer {
-    my $hv = p5_newHV($!p5);
-    for %$value -> $item {
-        my $value = self.p6_to_p5($item.value);
-        p5_hv_store($!p5, $hv, $item.key, $value);
-    }
-    p5_newRV_noinc($!p5, $hv);
+    my $index = $objects.keep($value);
+
+    return p5_wrap_p6_hash(
+        $!p5,
+        $index,
+        Any,
+        &!call_method,
+        &free_p6_object,
+    );
 }
 multi method p6_to_p5(Perl5Hash:D $value) returns Pointer {
-    p5_newRV_noinc($!p5, $value.hv)
+    p5_newRV_inc($!p5, $value.hv)
 }
 multi method p6_to_p5(Positional:D $value) returns Pointer {
     my $av = p5_newAV($!p5);
@@ -503,7 +512,10 @@ method p5_to_p6(Pointer $value, :$raw = False) {
     elsif p5_is_array($!p5, $value) {
         return self.p5_array_to_p6_array($value);
     }
-    elsif p5_is_hash($!p5, $value) {
+    elsif p5_is_hash($!p5, $value) -> $type {
+        if $type == 2 {
+            return $objects.get(p5_unwrap_p6_hash($!p5, $value));
+        }
         return $raw ?? self!p5_hash_to_writeback_p6_hash($value) !! self!p5_hash_to_p6_hash($value);
     }
     elsif p5_is_undef($!p5, $value) {
@@ -727,6 +739,60 @@ method init_callbacks {
         sub READLINE {
             my ($self) = @_;
             return $$self->get;
+        }
+
+        package Perl6::Hash;
+
+        sub new {
+            my ($class, $hash) = @_;
+            my %tied;
+            tie %tied, $class, $hash;
+            return \%tied;
+        }
+
+        sub TIEHASH {
+            my ($class, $p6hash) = @_;
+            my $self = [ $p6hash ];
+            return bless $self, $class;
+        }
+
+        my $at_key = 'AT-KEY';
+        sub FETCH {
+            my ($self, $key) = @_;
+            return $self->[0]->$at_key($key);
+        }
+        my $assign_key = 'ASSIGN-KEY';
+        sub STORE {
+            my ($self, $key, $value) = @_;
+            return $self->[0]->$assign_key($key, $value);
+        }
+        my $delete_key = 'DELETE-KEY';
+        sub DELETE {
+            my ($self, $key) = @_;
+            return $self->[0]->$delete_key($key);
+        }
+        sub CLEAR {
+            die 'CLEAR NYI';
+        }
+        my $exists_key = 'EXISTS-KEY';
+        sub EXISTS {
+            my ($self, $key) = @_;
+            return $self->[0]->$exists_key($key);
+        }
+        my $pull_one = 'pull-one';
+        sub FIRSTKEY {
+            my ($self) = @_;
+            $self->[1] = [ $self->[0]->keys ];
+            $self->[2] = 0;
+            return $self->NEXTKEY;
+        }
+        sub NEXTKEY {
+            my ($self) = @_;
+            return $self->[2] <= @{ $self->[1] } ? $self->[1][ $self->[2]++ ] : undef;
+        }
+        sub SCALAR {
+            my ($self) = @_;
+            return $self->[0]->elems;
         }
 
         package v6;
