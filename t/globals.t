@@ -15,6 +15,10 @@ EVAL '%a = (a => 1)', :lang<Perl5>;
 is $p5.global('%a'), {a => 1};
 is %*PERL5<%a>, {a => 1};
 
+EVAL '$Foo::Bar::a = 1', :lang<Perl5>;
+is $p5.global('$Foo::Bar::a'), 1;
+is %*PERL5<$Foo::Bar::a>, 1;
+
 done-testing;
 
 # vim: ft=perl6
