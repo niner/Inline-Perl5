@@ -1,6 +1,6 @@
 {
     "name"           : "Inline::Perl5",
-    "version"       : "0.10",
+    "version"       : "0.11",
     "perl"          : "6.c",
     "author"        : "github:niner",
     "authors"       : [ "Stefan Seifert" ],
