@@ -253,6 +253,13 @@ SV *p5_av_fetch(PerlInterpreter *my_perl, AV *av, I32 key) {
     return NULL;
 }
 
+void p5_av_store(PerlInterpreter *my_perl, AV *av, I32 key, SV *val) {
+    SvREFCNT_inc(val);
+    if (av_store(av, key, val) == NULL)
+        SvREFCNT_dec(val);
+    return;
+}
+
 void p5_av_push(PerlInterpreter *my_perl, AV *av, SV *sv) {
     av_push(av, sv);
 }

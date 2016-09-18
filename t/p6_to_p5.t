@@ -4,7 +4,7 @@ use v6;
 use Test;
 use Inline::Perl5;
 
-plan 19;
+plan 18;
 
 BEGIN my $p5 = Inline::Perl5.new();
 $p5.run(q:heredoc/PERL5/);
@@ -22,7 +22,7 @@ for (
     Buf.new('äbc'.encode('latin-1')),
     24,
     2.4.Num,
-    [1, 2],
+#    [1, 2], #TODO - will return as Perl5Array
     { a => 1, b => 2},
     Any,
     \('foo'),

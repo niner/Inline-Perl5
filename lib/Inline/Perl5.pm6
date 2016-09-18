@@ -7,6 +7,7 @@ class Perl5Interpreter is repr('CPointer') { }
 role Perl5Package { ... };
 role Perl5Parent { ... };
 class Perl5Hash { ... };
+class Perl5Array { ... };
 
 has Perl5Interpreter $!p5;
 has Bool $!external_p5 = False;
@@ -134,6 +135,9 @@ sub p5_av_top_index(Perl5Interpreter, Pointer) is native($p5helper)
 
 sub p5_av_fetch(Perl5Interpreter, Pointer, int32) is native($p5helper)
     returns Pointer { ... }
+
+sub p5_av_store(Perl5Interpreter, Pointer, int32, Pointer) is native($p5helper)
+    { ... }
 
 sub p5_av_push(Perl5Interpreter, Pointer, Pointer) is native($p5helper)
     { ... }
@@ -347,6 +351,9 @@ multi method p6_to_p5(Hash:D $value) returns Pointer {
 multi method p6_to_p5(Perl5Hash:D $value) returns Pointer {
     p5_newRV_inc($!p5, $value.hv)
 }
+multi method p6_to_p5(Perl5Array:D $value) returns Pointer {
+    p5_newRV_inc($!p5, $value.av)
+}
 multi method p6_to_p5(Positional:D $value) returns Pointer {
     my $av = p5_newAV($!p5);
     for @$value -> $item {
@@ -453,11 +460,84 @@ my class Perl5Hash does Iterable does Associative {
     }
 }
 
+my class Perl5Array does Iterable does Positional {
+    has Inline::Perl5 $!ip5;
+    has Perl5Interpreter $!p5;
+    has Pointer $.av;
+    method new(:$ip5, :$p5, :$av) {
+        my \arr = self.CREATE;
+        arr.BUILD(:$ip5, :$p5, :$av);
+        arr
+    }
+    submethod BUILD(:$!ip5, :$!p5, :$!av) {
+        p5_sv_refcnt_inc($!p5, $!av);
+    }
+    submethod DESTROY() {
+        p5_sv_refcnt_dec($!p5, $!av);
+    }
+    method ASSIGN-POS(Perl5Array:D: Int() \pos, Mu \assignval) is raw {
+        p5_av_store($!p5, $!av, pos, $!ip5.p6_to_p5(assignval));
+        assignval
+    }
+    method AT-POS(Perl5Array:D: Int() \pos) is raw {
+        $!ip5.p5_to_p6(p5_av_fetch($!p5, $!av, pos))
+    }
+    method EXISTS-POS(Perl5Array:D: Int() \pos) {
+        0 <= pos <= p5_av_top_index($!p5, $!av)
+    }
+    method Array() {
+        my int32 $av_len = p5_av_top_index($!p5, $!av);
+
+        my $arr = [];
+        loop (my int32 $i = 0; $i <= $av_len; $i = $i + 1) {
+            $arr.push($!ip5.p5_to_p6(p5_av_fetch($!p5, $!av, $i)));
+        }
+        $arr
+    }
+    method iterator() {
+        self.Array.iterator
+    }
+    method list() {
+        self.Array.list
+    }
+    method pairs() {
+        self.Array.pairs
+    }
+    method kv() {
+        self.Array.kv
+    }
+    method elems() {
+        p5_av_top_index($!p5, $!av) + 1
+    }
+    method Numeric() {
+        self.elems
+    }
+    method Bool() {
+        ?(p5_av_top_index($!p5, $!av) + 1);
+    }
+    multi method gist(Perl5Array:D:) {
+        self.Array.gist
+    }
+    multi method perl(Perl5Array:D:) {
+        self.Array.perl
+    }
+    multi method Str(Perl5Array:D:) {
+        self.Array.Str
+    }
+}
+
 method !p5_hash_to_writeback_p6_hash(Pointer $sv) {
     p5_sv_refcnt_inc($!p5, $sv);
     my Pointer $hv = p5_sv_to_hv($!p5, $sv);
 
     Perl5Hash.new(ip5 => self, p5 => $!p5, :$hv)
+}
+
+method !p5_array_to_writeback_p6_array(Pointer $sv) {
+    p5_sv_refcnt_inc($!p5, $sv);
+    my Pointer $av = p5_sv_to_av($!p5, $sv);
+
+    Perl5Array.new(ip5 => self, p5 => $!p5, :$av)
 }
 
 method !p5_hash_to_p6_hash(Pointer $sv) {
@@ -520,7 +600,7 @@ method p5_to_p6(Pointer $value) {
         }
     }
     elsif p5_is_array($!p5, $value) {
-        return self.p5_array_to_p6_array($value);
+        return self!p5_array_to_writeback_p6_array($value);
     }
     elsif p5_is_hash($!p5, $value) -> $type {
         if $type == 2 {
@@ -580,11 +660,7 @@ method !unpack_return_values($av) {
         return $retval;
     }
 
-    loop (my int32 $i = 0; $i <= $av_len; $i = $i + 1) {
-        @retvals.push(self.p5_to_p6(p5_av_fetch($!p5, $av, $i)));
-    }
-    p5_sv_refcnt_dec($!p5, $av);
-    @retvals;
+    Perl5Array.new(ip5 => self, p5 => $!p5, :$av)
 }
 
 method call(Str $function, *@args, *%args) {
