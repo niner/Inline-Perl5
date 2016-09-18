@@ -37,8 +37,8 @@ EXTERN_C void xs_init(pTHX) {
     /* DynaLoader is a special case */
     newXS("DynaLoader::boot_DynaLoader", boot_DynaLoader, file);
     newXS("Perl6::Object::call_method", p5_call_p6_method, file);
-    newXS("Perl6::Hash::at_key", p5_hash_at_key, file);
-    newXS("Perl6::Hash::assign_key", p5_hash_assign_key, file);
+    newXS("Perl6::Hash::FETCH", p5_hash_at_key, file);
+    newXS("Perl6::Hash::STORE", p5_hash_assign_key, file);
     newXS("Perl6::Callable::call", p5_call_p6_callable, file);
     newXS("v6::load_module_impl", p5_load_module, file);
     newXS("v6::set_subname", p5_set_subname, file);
@@ -63,8 +63,8 @@ size_t p5_size_of_nv() {
 void p5_inline_perl6_xs_init(PerlInterpreter *my_perl) {
     char *file = __FILE__;
     newXS("Perl6::Object::call_method", p5_call_p6_method, file);
-    newXS("Perl6::Hash::at_key", p5_hash_at_key, file);
-    newXS("Perl6::Hash::assign_key", p5_hash_assign_key, file);
+    newXS("Perl6::Hash::FETCH", p5_hash_at_key, file);
+    newXS("Perl6::Hash::STORE", p5_hash_assign_key, file);
     newXS("Perl6::Callable::call", p5_call_p6_callable, file);
     newXS("v6::load_module_impl", p5_load_module, file);
     newXS("v6::set_subname", p5_set_subname, file);
@@ -793,10 +793,11 @@ XS(p5_call_p6_method) {
 
 XS(p5_hash_at_key) {
     dXSARGS;
-    SV * obj = ST(0);
-    SV * key = ST(1);
+    SV * self = ST(0);
+    SV * key  = ST(1);
 
-    MAGIC * const mg = mg_find(SvRV(obj), '~');
+    SV * const p6hashobj = *(av_fetch((AV *) SvRV(self), 0, 0));
+    MAGIC * const mg = mg_find(SvRV(p6hashobj), '~');
     _perl6_hash_magic* const p6mg = (_perl6_hash_magic*)(mg->mg_ptr);
 
     STRLEN len;
@@ -813,11 +814,12 @@ XS(p5_hash_at_key) {
 
 XS(p5_hash_assign_key) {
     dXSARGS;
-    SV * obj = ST(0);
-    SV * key = ST(1);
-    SV * val = ST(2);
+    SV * self = ST(0);
+    SV * key  = ST(1);
+    SV * val  = ST(2);
 
-    MAGIC * const mg = mg_find(SvRV(obj), '~');
+    SV * const p6hashobj = *(av_fetch((AV *) SvRV(self), 0, 0));
+    MAGIC * const mg = mg_find(SvRV(p6hashobj), '~');
     _perl6_hash_magic* const p6mg = (_perl6_hash_magic*)(mg->mg_ptr);
 
     STRLEN len;

@@ -766,14 +766,6 @@ method init_callbacks {
             return bless $self, $class;
         }
 
-        sub FETCH {
-            my ($self, $key) = @_;
-            return Perl6::Hash::at_key($self->[0], $key);
-        }
-        sub STORE {
-            my ($self, $key, $value) = @_;
-            return Perl6::Hash::assign_key($self->[0], $key, $value);
-        }
         my $delete_key = 'DELETE-KEY';
         sub DELETE {
             my ($self, $key) = @_;
