@@ -281,7 +281,7 @@ multi method p6_to_p5(Any:U $value) returns Pointer {
     p5_undef($!p5);
 }
 
-my $objects = ObjectKeeper.new;
+my $objects = ObjectKeeper.new; #FIXME not thread safe
 
 sub free_p6_object(Int $index) {
     $objects.free($index);
