@@ -527,14 +527,12 @@ my class Perl5Array does Iterable does Positional {
 }
 
 method !p5_hash_to_writeback_p6_hash(Pointer $sv) {
-    p5_sv_refcnt_inc($!p5, $sv);
     my Pointer $hv = p5_sv_to_hv($!p5, $sv);
 
     Perl5Hash.new(ip5 => self, p5 => $!p5, :$hv)
 }
 
 method !p5_array_to_writeback_p6_array(Pointer $sv) {
-    p5_sv_refcnt_inc($!p5, $sv);
     my Pointer $av = p5_sv_to_av($!p5, $sv);
 
     Perl5Array.new(ip5 => self, p5 => $!p5, :$av)
