@@ -3,7 +3,7 @@ use v6.c;
 use Test;
 use MONKEY-SEE-NO-EVAL;
 
-plan 16;
+plan 20;
 
 my &hash-creator = EVAL q:to<PERL5>, :lang<Perl5>;
     sub {
@@ -17,8 +17,12 @@ my &hash-creator = EVAL q:to<PERL5>, :lang<Perl5>;
     }
     PERL5
 
-my $hash = hash-creator(sub (%hash is raw) {
+my $hash = hash-creator(sub (%hash) {
     is(%hash.elems, 2, 'Perl5Hash.elems works');
+    for %hash {
+        ok($_.key);
+        ok($_.value);
+    }
     for %hash.list {
         ok($_.key);
         ok($_.value);

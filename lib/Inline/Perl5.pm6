@@ -386,9 +386,9 @@ my class Perl5Hash does Iterable does Associative {
     has Perl5Interpreter $!p5;
     has Pointer $.hv;
     method new(:$ip5, :$p5, :$hv) {
-        my $self = self.CREATE;
-        $self.BUILD(:$ip5, :$p5, :$hv);
-        $self
+        my \hash = self.CREATE;
+        hash.BUILD(:$ip5, :$p5, :$hv);
+        hash
     }
     submethod BUILD(:$!ip5, :$!p5, :$!hv) {
         p5_sv_refcnt_inc($!p5, $!hv);

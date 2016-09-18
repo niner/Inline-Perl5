@@ -111,11 +111,11 @@ else {
 }
 my @retvals = $p5.call('test_int_retvals');
 if (@retvals == 3 and @retvals[0] == 3 and @retvals[1] == 1 and @retvals[2] == 2) {
-    say "ok 5 - return one int";
+    say "ok 5 - return multiple ints";
 }
 else {
-    say "not ok 5 - return one int";
-    say "    got: {@retvals}";
+    say "not ok 5 - return multiple ints";
+    say "    got: {@retvals} ({@retvals.elems} elems)";
     say "    expected: 3, 1, 2";
 }
 if ($p5.call('test_str_retval') eq 'Hello Perl 6!') {
