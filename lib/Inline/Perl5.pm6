@@ -646,9 +646,11 @@ method !setup_arguments(@args) {
 }
 
 method !unpack_return_values($av) {
+    my @retvals;
+    return @retvals unless defined $av;
+
     my int32 $av_len = p5_av_top_index($!p5, $av);
 
-    my @retvals;
     if $av_len == -1 {
         p5_sv_refcnt_dec($!p5, $av);
         return @retvals; # avoid returning Nil when there are no return values

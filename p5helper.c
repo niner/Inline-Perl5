@@ -392,7 +392,7 @@ AV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, I32 context
     {
         dSP;
         int i;
-        AV * const retval = newAV();
+        AV * retval = NULL;
         int flags = (context ? G_SCALAR : G_ARRAY) | G_EVAL;
 
         ENTER;
@@ -415,8 +415,10 @@ AV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, I32 context
             count = call_sv(rv, flags);
             SPAGAIN;
 
-            if (count > 0)
+            if (count > 0) {
+                retval = newAV();
                 av_extend(retval, count - 1);
+            }
             for (i = count - 1; i >= 0; i--) {
                 SV * const next = POPs;
                 SvREFCNT_inc(next);
@@ -443,7 +445,7 @@ AV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]) 
         dSP;
         int i;
         I32 count;
-        AV * const retval = newAV();
+        AV * retval = NULL;
         int flags = G_ARRAY | G_EVAL;
 
 
@@ -461,8 +463,10 @@ AV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]) 
         count = call_pv(name, flags);
         SPAGAIN;
 
-        if (count > 0)
+        if (count > 0) {
+            retval = newAV();
             av_extend(retval, count - 1);
+        }
         for (i = count - 1; i >= 0; i--) {
             SV * const next = POPs;
             SvREFCNT_inc(next);
