@@ -94,6 +94,9 @@ sub p5_is_scalar_ref(Perl5Interpreter, Pointer) is native($p5helper)
 sub p5_is_undef(Perl5Interpreter, Pointer) is native($p5helper)
     returns int32 { ... }
 
+sub p5_get_type(Perl5Interpreter, Pointer) is native($p5helper)
+    returns int32 { ... }
+
 sub p5_sv_to_buf(Perl5Interpreter, Pointer, CArray[CArray[int8]]) is native($p5helper)
     returns size_t { ... }
 
@@ -563,54 +566,59 @@ method !p5_scalar_ref_to_capture(Pointer $sv) {
 
 method p5_to_p6(Pointer $value) {
     return Any unless defined $value;
-    if p5_is_object($!p5, $value) {
-        if p5_is_wrapped_p6_object($!p5, $value) {
-            return $objects.get(p5_unwrap_p6_object($!p5, $value));
-        }
-        else {
-            p5_sv_refcnt_inc($!p5, $value);
-            return Perl5Object.new(perl5 => self, ptr => $value);
-        }
-    }
-    elsif p5_is_sub_ref($!p5, $value) {
-        p5_sv_refcnt_inc($!p5, $value);
-        return Perl5Callable.new(perl5 => self, ptr => $value);
-    }
-    elsif p5_SvNOK($!p5, $value) {
-        return p5_sv_nv($!p5, $value);
-    }
-    elsif p5_SvIOK($!p5, $value) {
-        return p5_sv_iv($!p5, $value);
-    }
-    elsif p5_SvPOK($!p5, $value) {
-        if p5_sv_utf8($!p5, $value) {
-            return p5_sv_to_char_star($!p5, $value);
-        }
-        else {
-            my $string_ptr = CArray[CArray[int8]].new;
-            $string_ptr[0] = CArray[int8];
-            my $len = p5_sv_to_buf($!p5, $value, $string_ptr);
-            my $buf = Buf.new;
-            for 0..^$len {
-                $buf[$_] = $string_ptr[0][$_];
+    my $type = p5_get_type($!p5, $value);
+
+    my enum P5Types <Unknown Object SubRef NV IV PV Array Hash P6Hash Undef ScalarRef>;
+    given $type {
+        when Object {
+            if p5_is_wrapped_p6_object($!p5, $value) {
+                return $objects.get(p5_unwrap_p6_object($!p5, $value));
             }
-            return $buf;
+            else {
+                p5_sv_refcnt_inc($!p5, $value);
+                return Perl5Object.new(perl5 => self, ptr => $value);
+            }
         }
-    }
-    elsif p5_is_array($!p5, $value) {
-        return self!p5_array_to_writeback_p6_array($value);
-    }
-    elsif p5_is_hash($!p5, $value) -> $type {
-        if $type == 2 {
+        when SubRef {
+            p5_sv_refcnt_inc($!p5, $value);
+            return Perl5Callable.new(perl5 => self, ptr => $value);
+        }
+        when NV {
+            return p5_sv_nv($!p5, $value);
+        }
+        when IV {
+            return p5_sv_iv($!p5, $value);
+        }
+        when PV {
+            if p5_sv_utf8($!p5, $value) {
+                return p5_sv_to_char_star($!p5, $value);
+            }
+            else {
+                my $string_ptr = CArray[CArray[int8]].new;
+                $string_ptr[0] = CArray[int8];
+                my $len = p5_sv_to_buf($!p5, $value, $string_ptr);
+                my $buf = Buf.new;
+                for 0..^$len {
+                    $buf[$_] = $string_ptr[0][$_];
+                }
+                return $buf;
+            }
+        }
+        when Array {
+            return self!p5_array_to_writeback_p6_array($value);
+        }
+        when Hash {
+            return self!p5_hash_to_writeback_p6_hash($value);
+        }
+        when P6Hash {
             return $objects.get(p5_unwrap_p6_hash($!p5, $value));
         }
-        return self!p5_hash_to_writeback_p6_hash($value);
-    }
-    elsif p5_is_undef($!p5, $value) {
-        return Any;
-    }
-    elsif p5_is_scalar_ref($!p5, $value) {
-        return self!p5_scalar_ref_to_capture($value);
+        when Undef {
+            return Any;
+        }
+        when ScalarRef {
+            return self!p5_scalar_ref_to_capture($value);
+        }
     }
     die "Unsupported type $value in p5_to_p6";
 }

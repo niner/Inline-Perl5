@@ -319,6 +319,40 @@ const char *p5_sv_reftype(PerlInterpreter *my_perl, SV *sv) {
     return sv_reftype(SvRV(sv), 1);
 }
 
+I32 p5_get_type(PerlInterpreter *my_perl, SV *sv) {
+    int is_hash;
+    if (p5_is_object(my_perl, sv)) {
+        return 1;
+    }
+    else if (p5_is_sub_ref(my_perl, sv)) {
+        return 2;
+    }
+    else if (p5_SvNOK(my_perl, sv)) {
+        return 3;
+    }
+    else if (p5_SvIOK(my_perl, sv)) {
+        return 4;
+    }
+    else if (p5_SvPOK(my_perl, sv)) {
+        return 5;
+    }
+    else if (p5_is_array(my_perl, sv)) {
+        return 6;
+    }
+    else if ((is_hash = p5_is_hash(my_perl, sv)) > 0) {
+        return 6 + is_hash;
+    }
+    else if (p5_is_undef(my_perl, sv)) {
+        return 9;
+    }
+    else if (p5_is_scalar_ref(my_perl, sv)) {
+        return 10;
+    }
+    else {
+        return 0;
+    }
+}
+
 SV *p5_get_global(PerlInterpreter *my_perl, const char* name) {
     if (strlen(name) < 2)
         return NULL;
