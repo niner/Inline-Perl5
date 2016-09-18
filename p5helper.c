@@ -344,13 +344,12 @@ SV *p5_err_sv(PerlInterpreter *my_perl) {
     return sv_mortalcopy(ERRSV);
 }
 
-AV *p5_call_package_method(PerlInterpreter *my_perl, char *package, char *name, int len, SV *args[]) {
+SV *p5_call_package_method(PerlInterpreter *my_perl, char *package, char *name, int len, SV *args[], I32 *count) {
     PERL_SET_CONTEXT(my_perl);
     {
         dSP;
         int i;
-        I32 count;
-        AV * retval = NULL;
+        SV * retval = NULL;
         int flags = G_ARRAY | G_EVAL;
 
         ENTER;
@@ -365,20 +364,26 @@ AV *p5_call_package_method(PerlInterpreter *my_perl, char *package, char *name, 
 
         PUTBACK;
 
-        count = call_method(name, flags);
+        *count = call_method(name, flags);
         SPAGAIN;
 
-        if (count > 0) {
-            retval = newAV();
-            av_extend(retval, count - 1);
+        if (*count == 1) {
+            retval = POPs;
+            SvREFCNT_inc(retval);
         }
+        else {
+            if (*count > 1) {
+                retval = (SV *)newAV();
+                av_extend((AV *)retval, *count - 1);
+            }
 
-        for (i = count - 1; i >= 0; i--) {
-            SV * const next = POPs;
-            SvREFCNT_inc(next);
+            for (i = *count - 1; i >= 0; i--) {
+                SV * const next = POPs;
+                SvREFCNT_inc(next);
 
-            if (av_store(retval, i, next) == NULL)
-                SvREFCNT_dec(next); /* see perlguts Working with AVs */
+                if (av_store((AV *)retval, i, next) == NULL)
+                    SvREFCNT_dec(next); /* see perlguts Working with AVs */
+            }
         }
 
         PUTBACK;
@@ -389,12 +394,12 @@ AV *p5_call_package_method(PerlInterpreter *my_perl, char *package, char *name, 
     }
 }
 
-AV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, I32 context, char *name, int len, SV *args[]) {
+SV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, I32 context, char *name, int len, SV *args[], I32 *count) {
     PERL_SET_CONTEXT(my_perl);
     {
         dSP;
         int i;
-        AV * retval = NULL;
+        SV * retval = NULL;
         int flags = (context ? G_SCALAR : G_ARRAY) | G_EVAL;
 
         ENTER;
@@ -403,7 +408,6 @@ AV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, I32 context
         HV * const pkg = package != NULL ? gv_stashpv(package, 0) : SvSTASH((SV*)SvRV(obj));
         GV * const gv = Perl_gv_fetchmethod_autoload(aTHX_ pkg, name, TRUE);
         if (gv && isGV(gv)) {
-            I32 count;
             PUSHMARK(SP);
 
             for (i = 0; i < len; i++) {
@@ -414,19 +418,25 @@ AV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, I32 context
 
             SV * const rv = sv_2mortal(newRV((SV*)GvCV(gv)));
 
-            count = call_sv(rv, flags);
+            *count = call_sv(rv, flags);
             SPAGAIN;
 
-            if (count > 0) {
-                retval = newAV();
-                av_extend(retval, count - 1);
+            if (*count == 1) {
+                retval = POPs;
+                SvREFCNT_inc(retval);
             }
-            for (i = count - 1; i >= 0; i--) {
-                SV * const next = POPs;
-                SvREFCNT_inc(next);
+            else {
+                if (*count > 1) {
+                    retval = (SV *)newAV();
+                    av_extend((AV *)retval, *count - 1);
+                }
+                for (i = *count - 1; i >= 0; i--) {
+                    SV * const next = POPs;
+                    SvREFCNT_inc(next);
 
-                if (av_store(retval, i, next) == NULL)
-                    SvREFCNT_dec(next); /* see perlguts Working with AVs */
+                    if (av_store((AV *)retval, i, next) == NULL)
+                        SvREFCNT_dec(next); /* see perlguts Working with AVs */
+                }
             }
         }
         else {
@@ -441,13 +451,12 @@ AV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, I32 context
     }
 }
 
-AV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]) {
+SV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[], I32 *count) {
     PERL_SET_CONTEXT(my_perl);
     {
         dSP;
         int i;
-        I32 count;
-        AV * retval = NULL;
+        SV * retval = NULL;
         int flags = G_ARRAY | G_EVAL;
 
 
@@ -462,19 +471,24 @@ AV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]) 
 
         PUTBACK;
 
-        count = call_pv(name, flags);
+        *count = call_pv(name, flags);
         SPAGAIN;
 
-        if (count > 0) {
-            retval = newAV();
-            av_extend(retval, count - 1);
+        if (*count == 1) {
+            retval = POPs;
+            SvREFCNT_inc(retval);
         }
-        for (i = count - 1; i >= 0; i--) {
-            SV * const next = POPs;
-            SvREFCNT_inc(next);
+        else if (*count > 1) {
+            retval = (SV *)newAV();
+            av_extend((AV *)retval, *count - 1);
 
-            if (av_store(retval, i, next) == NULL)
-                SvREFCNT_dec(next); /* see perlguts Working with AVs */
+            for (i = *count - 1; i >= 0; i--) {
+                SV * const next = POPs;
+                SvREFCNT_inc(next);
+
+                if (av_store((AV *)retval, i, next) == NULL)
+                    SvREFCNT_dec(next); /* see perlguts Working with AVs */
+            }
         }
 
         PUTBACK;
@@ -485,13 +499,12 @@ AV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[]) 
     }
 }
 
-AV *p5_call_code_ref(PerlInterpreter *my_perl, SV *code_ref, int len, SV *args[]) {
+SV *p5_call_code_ref(PerlInterpreter *my_perl, SV *code_ref, int len, SV *args[], I32 *count) {
     PERL_SET_CONTEXT(my_perl);
     {
         dSP;
         int i;
-        I32 count;
-        AV * const retval = newAV();
+        SV * retval;
         int flags = G_ARRAY | G_EVAL;
 
 
@@ -506,17 +519,23 @@ AV *p5_call_code_ref(PerlInterpreter *my_perl, SV *code_ref, int len, SV *args[]
 
         PUTBACK;
 
-        count = call_sv(code_ref, flags);
+        *count = call_sv(code_ref, flags);
         SPAGAIN;
 
-        if (count > 0)
-            av_extend(retval, count - 1);
-        for (i = count - 1; i >= 0; i--) {
-            SV * const next = POPs;
-            SvREFCNT_inc(next);
+        if (*count == 1) {
+            retval = POPs;
+            SvREFCNT_inc(retval);
+        } else if (*count > 1) {
+            retval = (SV *)newAV();
+            av_extend((AV *)retval, *count - 1);
 
-            if (av_store(retval, i, next) == NULL)
-                SvREFCNT_dec(next); /* see perlguts Working with AVs */
+            for (i = *count - 1; i >= 0; i--) {
+                SV * const next = POPs;
+                SvREFCNT_inc(next);
+
+                if (av_store((AV *)retval, i, next) == NULL)
+                    SvREFCNT_dec(next); /* see perlguts Working with AVs */
+            }
         }
 
         PUTBACK;
