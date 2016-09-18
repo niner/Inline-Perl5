@@ -646,23 +646,21 @@ method !setup_arguments(@args) {
 }
 
 method !unpack_return_values($av) {
-    my @retvals;
-    return @retvals unless defined $av;
+    if defined $av {
+        my int32 $av_len = p5_av_top_index($!p5, $av);
 
-    my int32 $av_len = p5_av_top_index($!p5, $av);
-
-    if $av_len == -1 {
-        p5_sv_refcnt_dec($!p5, $av);
-        return @retvals; # avoid returning Nil when there are no return values
+        if $av_len == 0 {
+            my $retval = self.p5_to_p6(p5_av_fetch($!p5, $av, 0));
+            p5_sv_refcnt_dec($!p5, $av);
+            return $retval;
+        }
+        else {
+            Perl5Array.new(ip5 => self, p5 => $!p5, :$av)
+        }
     }
-
-    if $av_len == 0 {
-        my $retval = self.p5_to_p6(p5_av_fetch($!p5, $av, 0));
-        p5_sv_refcnt_dec($!p5, $av);
-        return $retval;
+    else {
+        @
     }
-
-    Perl5Array.new(ip5 => self, p5 => $!p5, :$av)
 }
 
 method call(Str $function, *@args, *%args) {

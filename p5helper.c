@@ -350,7 +350,7 @@ AV *p5_call_package_method(PerlInterpreter *my_perl, char *package, char *name, 
         dSP;
         int i;
         I32 count;
-        AV * const retval = newAV();
+        AV * retval = NULL;
         int flags = G_ARRAY | G_EVAL;
 
         ENTER;
@@ -368,8 +368,10 @@ AV *p5_call_package_method(PerlInterpreter *my_perl, char *package, char *name, 
         count = call_method(name, flags);
         SPAGAIN;
 
-        if (count > 0)
+        if (count > 0) {
+            retval = newAV();
             av_extend(retval, count - 1);
+        }
 
         for (i = count - 1; i >= 0; i--) {
             SV * const next = POPs;
