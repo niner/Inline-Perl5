@@ -351,6 +351,14 @@ multi method p6_to_p5(Hash:D $value) returns Pointer {
         &free_p6_object,
     );
 }
+multi method p6_to_p5(Map:D $value) returns Pointer {
+    my $hv = p5_newHV($!p5);
+    for %$value -> $item {
+        my $value = self.p6_to_p5($item.value);
+        p5_hv_store($!p5, $hv, $item.key, $value);
+    }
+    p5_newRV_noinc($!p5, $hv);
+}
 multi method p6_to_p5(Perl5Hash:D $value) returns Pointer {
     p5_newRV_inc($!p5, $value.hv)
 }

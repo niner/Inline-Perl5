@@ -4,7 +4,7 @@ use v6;
 use Test;
 use Inline::Perl5;
 
-plan 18;
+plan 19;
 
 BEGIN my $p5 = Inline::Perl5.new();
 $p5.run(q:heredoc/PERL5/);
@@ -76,6 +76,15 @@ $p5.run(q/
 /);
 
 ok($p5.call('is_string_ref', \('foo')));
+
+$p5.run(q/
+    sub is_hash_ref {
+        my ($ref) = @_;
+        return (ref $ref eq 'HASH' and %$ref == 1 and $ref->{a} == 1);
+    }
+/);
+
+ok($p5.call('is_hash_ref', Map.new((a => 1)).item), 'Map arrives as a HashRef');
 
 $p5.run(q/
     use warnings;
