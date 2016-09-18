@@ -473,7 +473,7 @@ method !p5_scalar_ref_to_capture(Pointer $sv) {
     return \(self.p5_to_p6(p5_sv_rv($!p5, $sv)));
 }
 
-method p5_to_p6(Pointer $value, :$raw = False) {
+method p5_to_p6(Pointer $value) {
     return Any unless defined $value;
     if p5_is_object($!p5, $value) {
         if p5_is_wrapped_p6_object($!p5, $value) {
@@ -516,7 +516,7 @@ method p5_to_p6(Pointer $value, :$raw = False) {
         if $type == 2 {
             return $objects.get(p5_unwrap_p6_hash($!p5, $value));
         }
-        return $raw ?? self!p5_hash_to_writeback_p6_hash($value) !! self!p5_hash_to_p6_hash($value);
+        return self!p5_hash_to_writeback_p6_hash($value);
     }
     elsif p5_is_undef($!p5, $value) {
         return Any;
@@ -1123,16 +1123,7 @@ method BUILD(*%args) {
 
     &!call_callable = sub (Int $index, Pointer $args, Pointer $err) returns Pointer {
         my $callable = $objects.get($index);
-
-        my $av = p5_sv_to_av($!p5, $args);
-        my int32 $av_len = p5_av_top_index($!p5, $av);
-        my @args;
-        my @params = $callable.signature.params;
-        loop (my int32 $i = 0; $i <= $av_len; $i = $i + 1) {
-            @args.push(self.p5_to_p6(p5_av_fetch($!p5, $av, $i), :raw(@params[$i].raw)));
-        }
-
-        my @retvals = $callable(|@args);
+        my @retvals = $callable(|self.p5_array_to_p6_array($args));
         return self.p6_to_p5(@retvals);
         CONTROL {
             when CX::Warn {

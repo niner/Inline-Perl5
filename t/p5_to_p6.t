@@ -12,9 +12,9 @@ is $p5.run('"Perl 5"'), 'Perl 5';
 is-deeply $p5.run('\"foo"'), \('foo');
 is-deeply $p5.run('[1, 2]'), [1, 2];
 is-deeply $p5.run('[1, [2, 3]]'), [1, [2, 3]];
-is-deeply $p5.run('{a => 1, b => 2}'), {a => 1, b => 2};
-is-deeply $p5.run('{a => 1, b => {c => 3}}'), {a => 1, b => {c => 3}};
-is-deeply $p5.run('[1, {b => {c => 3}}]'), [1, {b => {c => 3}}];
+is $p5.run('{a => 1, b => 2}'), {a => 1, b => 2}; # Can't use is-deeply since we get a Perl5Hash
+is $p5.run('{a => 1, b => {c => 3}}'), {a => 1, b => {c => 3}};
+is $p5.run('[1, {b => {c => 3}}]'), [1, {b => {c => 3}}];
 ok $p5.run('undef') === Any, 'p5 undef maps to p6 Any';
 
 is $p5.run('
