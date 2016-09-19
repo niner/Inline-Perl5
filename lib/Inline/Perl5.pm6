@@ -448,8 +448,20 @@ my class Perl5Hash does Iterable does Associative {
     method list() {
         self.Hash.list
     }
+    method keys() {
+        self.Hash.keys
+    }
+    method values() {
+        self.Hash.values
+    }
     method pairs() {
         self.Hash.pairs
+    }
+    method antipairs() {
+        self.Hash.antipairs
+    }
+    method invert() {
+        self.Hash.invert
     }
     method kv() {
         self.Hash.kv
@@ -457,8 +469,23 @@ my class Perl5Hash does Iterable does Associative {
     method elems() {
         self.Hash.elems
     }
+    method Int() {
+        self.elems
+    }
+    method Numeric() {
+        self.elems
+    }
     method Bool() {
         self.Hash.Bool
+    }
+    method Capture() {
+        self.Hash.Capture
+    }
+    method push(*@new) {
+        self.Hash.push(|@new)
+    }
+    method append(+@values) {
+        self.Hash.append(|@values)
     }
     multi method gist(Perl5Hash:D:) {
         self.Hash.gist
