@@ -538,7 +538,7 @@ SV *p5_call_code_ref(PerlInterpreter *my_perl, SV *code_ref, int len, SV *args[]
     {
         dSP;
         int i;
-        SV * retval;
+        SV * retval = NULL;
         int flags = G_ARRAY | G_EVAL;
 
 
