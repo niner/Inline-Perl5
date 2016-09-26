@@ -378,13 +378,14 @@ SV *p5_err_sv(PerlInterpreter *my_perl) {
     return sv_mortalcopy(ERRSV);
 }
 
-SV *p5_call_package_method(PerlInterpreter *my_perl, char *package, char *name, int len, SV *args[], I32 *count) {
+SV *p5_call_package_method(PerlInterpreter *my_perl, char *package, char *name, int len, SV *args[], I32 *count, I32*err) {
     PERL_SET_CONTEXT(my_perl);
     {
         dSP;
         int i;
         SV * retval = NULL;
         int flags = G_ARRAY | G_EVAL;
+        SV *err_tmp;
 
         ENTER;
         SAVETMPS;
@@ -400,6 +401,9 @@ SV *p5_call_package_method(PerlInterpreter *my_perl, char *package, char *name, 
 
         *count = call_method(name, flags);
         SPAGAIN;
+
+        err_tmp = ERRSV;
+        *err = SvTRUE(err_tmp);
 
         if (*count == 1) {
             retval = POPs;
@@ -428,13 +432,14 @@ SV *p5_call_package_method(PerlInterpreter *my_perl, char *package, char *name, 
     }
 }
 
-SV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, I32 context, char *name, int len, SV *args[], I32 *count) {
+SV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, I32 context, char *name, int len, SV *args[], I32 *count, I32 *err) {
     PERL_SET_CONTEXT(my_perl);
     {
         dSP;
         int i;
         SV * retval = NULL;
         int flags = (context ? G_SCALAR : G_ARRAY) | G_EVAL;
+        SV *err_tmp;
 
         ENTER;
         SAVETMPS;
@@ -454,6 +459,9 @@ SV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, I32 context
 
             *count = call_sv(rv, flags);
             SPAGAIN;
+
+            err_tmp = ERRSV;
+            *err = SvTRUE(err_tmp);
 
             if (*count == 1) {
                 retval = POPs;
@@ -485,14 +493,14 @@ SV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, I32 context
     }
 }
 
-SV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[], I32 *count) {
+SV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[], I32 *count, I32 *err) {
     PERL_SET_CONTEXT(my_perl);
     {
         dSP;
         int i;
         SV * retval = NULL;
         int flags = G_ARRAY | G_EVAL;
-
+        SV *err_tmp;
 
         ENTER;
         SAVETMPS;
@@ -507,6 +515,9 @@ SV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[], 
 
         *count = call_pv(name, flags);
         SPAGAIN;
+
+        err_tmp = ERRSV;
+        *err = SvTRUE(err_tmp);
 
         if (*count == 1) {
             retval = POPs;
@@ -533,14 +544,14 @@ SV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[], 
     }
 }
 
-SV *p5_call_code_ref(PerlInterpreter *my_perl, SV *code_ref, int len, SV *args[], I32 *count) {
+SV *p5_call_code_ref(PerlInterpreter *my_perl, SV *code_ref, int len, SV *args[], I32 *count, I32 *err) {
     PERL_SET_CONTEXT(my_perl);
     {
         dSP;
         int i;
         SV * retval = NULL;
         int flags = G_ARRAY | G_EVAL;
-
+        SV *err_tmp;
 
         ENTER;
         SAVETMPS;
@@ -555,6 +566,9 @@ SV *p5_call_code_ref(PerlInterpreter *my_perl, SV *code_ref, int len, SV *args[]
 
         *count = call_sv(code_ref, flags);
         SPAGAIN;
+
+        err_tmp = ERRSV;
+        *err = SvTRUE(err_tmp);
 
         if (*count == 1) {
             retval = POPs;
