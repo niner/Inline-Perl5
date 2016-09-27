@@ -378,7 +378,7 @@ SV *p5_err_sv(PerlInterpreter *my_perl) {
     return sv_mortalcopy(ERRSV);
 }
 
-SV *p5_call_package_method(PerlInterpreter *my_perl, char *package, char *name, int len, SV *args[], I32 *count, I32*err) {
+SV *p5_call_package_method(PerlInterpreter *my_perl, char *package, char *name, int len, SV *args[], I32 *count, I32 *err, I32 *type) {
     PERL_SET_CONTEXT(my_perl);
     {
         dSP;
@@ -408,6 +408,7 @@ SV *p5_call_package_method(PerlInterpreter *my_perl, char *package, char *name, 
         if (*count == 1) {
             retval = POPs;
             SvREFCNT_inc(retval);
+            *type = p5_get_type(my_perl, retval);
         }
         else {
             if (*count > 1) {
@@ -432,7 +433,7 @@ SV *p5_call_package_method(PerlInterpreter *my_perl, char *package, char *name, 
     }
 }
 
-SV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, I32 context, char *name, int len, SV *args[], I32 *count, I32 *err) {
+SV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, I32 context, char *name, int len, SV *args[], I32 *count, I32 *err, I32 *type) {
     PERL_SET_CONTEXT(my_perl);
     {
         dSP;
@@ -467,6 +468,7 @@ SV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, I32 context
             if (*count == 1) {
                 retval = POPs;
                 SvREFCNT_inc(retval);
+                *type = p5_get_type(my_perl, retval);
             }
             else {
                 if (*count > 1) {
@@ -494,7 +496,7 @@ SV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, I32 context
     }
 }
 
-SV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[], I32 *count, I32 *err) {
+SV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[], I32 *count, I32 *err, I32 *type) {
     PERL_SET_CONTEXT(my_perl);
     {
         dSP;
@@ -523,6 +525,7 @@ SV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[], 
         if (*count == 1) {
             retval = POPs;
             SvREFCNT_inc(retval);
+            *type = p5_get_type(my_perl, retval);
         }
         else if (*count > 1) {
             retval = (SV *)newAV();
@@ -545,7 +548,7 @@ SV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[], 
     }
 }
 
-SV *p5_call_code_ref(PerlInterpreter *my_perl, SV *code_ref, int len, SV *args[], I32 *count, I32 *err) {
+SV *p5_call_code_ref(PerlInterpreter *my_perl, SV *code_ref, int len, SV *args[], I32 *count, I32 *err, I32 *type) {
     PERL_SET_CONTEXT(my_perl);
     {
         dSP;
@@ -574,6 +577,7 @@ SV *p5_call_code_ref(PerlInterpreter *my_perl, SV *code_ref, int len, SV *args[]
         if (*count == 1) {
             retval = POPs;
             SvREFCNT_inc(retval);
+            *type = p5_get_type(my_perl, retval);
         } else if (*count > 1) {
             retval = (SV *)newAV();
             av_extend((AV *)retval, *count - 1);
