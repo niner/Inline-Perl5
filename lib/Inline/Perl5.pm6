@@ -313,13 +313,13 @@ multi method p6_to_p5(Perl5Object:D $value, Pointer $inst) {
     p5_sv_refcnt_inc($!p5, $inst);
     $inst;
 }
-multi method p6_to_p5(Any:D $value, Pointer $inst = Pointer) {
+multi method p6_to_p5(Any:D $value) {
     my $index = $objects.keep($value);
 
     p5_wrap_p6_object(
         $!p5,
         $index,
-        $inst,
+        Pointer,
         &!call_method,
         &free_p6_object,
     );
