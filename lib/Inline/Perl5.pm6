@@ -752,7 +752,7 @@ multi method invoke(Str $package, Pointer $obj, Bool $context, Str $function, *@
     my @svs := CArray[Pointer].new();
     my Int $j = 0;
     @svs[$j++] = $obj;
-    loop (my Int $i = 1; $i < $len; $i++) {
+    loop (my Int $i = 0; $i < $len; $i++) {
         if @args[$i] ~~ Pair {
             @svs[$j++] = self.p6_to_p5(@args[$i].key);
             @svs[$j++] = self.p6_to_p5(@args[$i].value);
@@ -1362,7 +1362,7 @@ BEGIN {
     Perl5Object.^add_fallback(-> $, $ { True },
         method ($name ) {
             -> \self, |args {
-                $.perl5.invoke($.ptr, $name, self, args.list, args.hash);
+                $.perl5.invoke($.ptr, $name, args.list, args.hash);
             }
         }
     );
@@ -1371,7 +1371,7 @@ BEGIN {
         Perl5Object.^add_method(
             $name,
             method (|args) {
-                $.perl5.invoke($.ptr, $name, self, args.list, args.hash);
+                $.perl5.invoke($.ptr, $name, args.list, args.hash);
             }
         );
     }
