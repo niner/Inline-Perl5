@@ -449,7 +449,8 @@ SV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, I32 context
         if (gv && isGV(gv)) {
             PUSHMARK(SP);
 
-            for (i = 0; i < len; i++) {
+            XPUSHs(package != NULL ? sv_2mortal(args[0]) : args[0]);
+            for (i = 1; i < len; i++) {
                 XPUSHs(sv_2mortal(args[i]));
             }
 
