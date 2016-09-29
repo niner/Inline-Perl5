@@ -187,7 +187,7 @@ sub p5_hv_exists(Perl5Interpreter, Pointer, size_t, Blob) is native($p5helper)
 sub p5_call_function(Perl5Interpreter, Str, int32, CArray[Pointer], int32 is rw, int32 is rw, int32 is rw) is native($p5helper)
     returns Pointer { ... }
 
-sub p5_call_method(Perl5Interpreter, Str, Pointer, int32, Str, int32, CArray[Pointer], int32 is rw, int32 is rw, int32 is rw) is native($p5helper)
+sub p5_call_method(Perl5Interpreter, Str, Pointer, int32, Str, int32, Pointer, int32 is rw, int32 is rw, int32 is rw) is native($p5helper)
     returns Pointer { ... }
 
 sub p5_call_package_method(Perl5Interpreter, Str, Str, int32, CArray[Pointer], int32 is rw, int32 is rw, int32 is rw) is native($p5helper)
@@ -694,7 +694,7 @@ method !unpack_return_values($av, int32 $count, int32 $type = 0) {
         }
     }
     else {
-        @
+        Empty
     }
 }
 
@@ -738,13 +738,15 @@ method invoke-parent(Str $package, Pointer $obj, Bool $context, Str $function, *
     my int32 $retvals;
     my int32 $err;
     my int32 $type;
+    my ($j, @svs) := self!setup_arguments([flat @args.list, %args.list]);
     my $av = p5_call_method(
         $!p5,
         $package,
         $obj,
         $context ?? 1 !! 0,
         $function,
-        |self!setup_arguments([flat @args.list, %args.list]),
+        $j,
+        nativecast(Pointer, $j == 1 ?? @svs[0] !! @svs),
         $retvals,
         $err,
         $type,
@@ -777,7 +779,27 @@ multi method invoke(Str $package, Pointer $obj, Bool $context, Str $function, *@
         $context ?? 1 !! 0,
         $function,
         $j,
-        @svs,
+        nativecast(Pointer, @svs),
+        $retvals,
+        $err,
+        $type,
+    );
+    self.handle_p5_exception() if $err;
+    self!unpack_return_values($av, $retvals, $type);
+}
+
+multi method invoke(Str $package, Pointer $obj, Bool $context, Str $function) {
+    my int32 $retvals;
+    my int32 $err;
+    my int32 $type;
+    my $av = p5_call_method(
+        $!p5,
+        $package,
+        $obj,
+        $context ?? 1 !! 0,
+        $function,
+        1,
+        $obj,
         $retvals,
         $err,
         $type,
