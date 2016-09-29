@@ -719,7 +719,8 @@ multi method invoke(Str $package, Str $function, *@args, *%args) {
     my int32 $err;
     my int32 $type;
     my $av = p5_call_package_method(
-        $!p5, $package,
+        $!p5,
+        $package,
         $function,
         |self!setup_arguments([flat @args.list, %args.list]),
         $retvals,
@@ -730,23 +731,18 @@ multi method invoke(Str $package, Str $function, *@args, *%args) {
     self!unpack_return_values($av, $retvals, $type);
 }
 
-multi method invoke(Pointer $obj, Str $function, *@args) {
-    self.invoke(Str, $obj, False, $function, |@args);
-}
-
-method invoke-parent(Str $package, Pointer $obj, Bool $context, Str $function, *@args, *%args) {
+multi method invoke(Pointer $obj, Str $function) {
     my int32 $retvals;
     my int32 $err;
     my int32 $type;
-    my ($j, @svs) := self!setup_arguments([flat @args.list, %args.list]);
     my $av = p5_call_method(
         $!p5,
-        $package,
+        Str,
         $obj,
-        $context ?? 1 !! 0,
+        0,
         $function,
-        $j,
-        nativecast(Pointer, $j == 1 ?? @svs[0] !! @svs),
+        1,
+        $obj,
         $retvals,
         $err,
         $type,
@@ -755,7 +751,7 @@ method invoke-parent(Str $package, Pointer $obj, Bool $context, Str $function, *
     self!unpack_return_values($av, $retvals, $type);
 }
 
-multi method invoke(Str $package, Pointer $obj, Bool $context, Str $function, *@args) {
+multi method invoke(Pointer $obj, Str $function, *@args) {
     my $len = @args.elems;
     my @svs := CArray[Pointer].new();
     my Int $j = 0;
@@ -774,9 +770,9 @@ multi method invoke(Str $package, Pointer $obj, Bool $context, Str $function, *@
     my int32 $type;
     my $av = p5_call_method(
         $!p5,
-        $package,
+        Str,
         $obj,
-        $context ?? 1 !! 0,
+        0,
         $function,
         $j,
         nativecast(Pointer, @svs),
@@ -788,18 +784,19 @@ multi method invoke(Str $package, Pointer $obj, Bool $context, Str $function, *@
     self!unpack_return_values($av, $retvals, $type);
 }
 
-multi method invoke(Str $package, Pointer $obj, Bool $context, Str $function) {
+method invoke-parent(Str $package, Pointer $obj, Bool $context, Str $function, *@args, *%args) {
     my int32 $retvals;
     my int32 $err;
     my int32 $type;
+    my ($j, @svs) := self!setup_arguments([flat @args.list, %args.list]);
     my $av = p5_call_method(
         $!p5,
         $package,
         $obj,
         $context ?? 1 !! 0,
         $function,
-        1,
-        $obj,
+        $j,
+        nativecast(Pointer, $j == 1 ?? @svs[0] !! @svs),
         $retvals,
         $err,
         $type,
@@ -1393,7 +1390,9 @@ BEGIN {
     Perl5Object.^add_fallback(-> $, $ { True },
         method ($name ) {
             -> \self, |args {
-                $.perl5.invoke($.ptr, $name, args.list, args.hash);
+                args
+                    ?? $.perl5.invoke($.ptr, $name, args.list, args.hash)
+                    !! $.perl5.invoke($.ptr, $name);
             }
         }
     );
@@ -1402,7 +1401,9 @@ BEGIN {
         Perl5Object.^add_method(
             $name,
             method (|args) {
-                $.perl5.invoke($.ptr, $name, args.list, args.hash);
+                args
+                    ?? $.perl5.invoke($.ptr, $name, args.list, args.hash)
+                    !! $.perl5.invoke($.ptr, $name);
             }
         );
     }
