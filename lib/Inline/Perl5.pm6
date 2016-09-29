@@ -1284,8 +1284,6 @@ method BUILD(*%args) {
     &!call_method = sub (Int $index, Str $name, Int $context, Pointer $args, Pointer $err) returns Pointer {
         my $p6obj = $objects.get($index);
         $!scalar_context = ?$context;
-        my @retvals = $p6obj."$name"(|self.p5_array_to_p6_array($args));
-        return self.p6_to_p5(@retvals);
         CONTROL {
             when CX::Warn {
                 note $_.gist;
@@ -1298,6 +1296,7 @@ method BUILD(*%args) {
                 return Pointer;
             }
         }
+        self.p6_to_p5($p6obj."$name"(|self.p5_array_to_p6_array($args)).list);
     }
     &!call_method does Perl5Caller;
 
