@@ -299,6 +299,9 @@ multi method p6_to_p5(Perl5Parent $value) returns Pointer {
 multi method p6_to_p5(Pointer $value) returns Pointer {
     $value;
 }
+multi method p6_to_p5(Nil) returns Pointer {
+    Pointer.new(0);
+}
 multi method p6_to_p5(Any:U $value) returns Pointer {
     p5_undef($!p5);
 }
@@ -666,18 +669,36 @@ method run($perl) {
     self.p5_to_p6($res);
 }
 
-method !setup_arguments(@args) {
-    my $len = @args.elems;
+multi method setup_arguments(@args) {
     my @svs := CArray[Pointer].new();
-    my Int $j = 0;
-    loop (my Int $i = 0; $i < $len; $i = $i + 1) {
-        if @args[$i] ~~ Pair {
-            @svs[$j++] = self.p6_to_p5(@args[$i].key);
-            @svs[$j++] = self.p6_to_p5(@args[$i].value);
+    my Int $i = 0;
+    for @args {
+        if $_.isa(Pair) {
+            @svs[$i++] = self.p6_to_p5($_.key);
+            @svs[$i++] = self.p6_to_p5($_.value);
         }
         else {
-            @svs[$j++] = self.p6_to_p5(@args[$i]);
+            @svs[$i++] = self.p6_to_p5($_);
         }
+    }
+    return $i, @svs;
+}
+
+multi method setup_arguments(@args, %args) {
+    my @svs := CArray[Pointer].new();
+    my Int $j = 0;
+    for @args {
+        if $_.isa(Pair) {
+            @svs[$j++] = self.p6_to_p5($_.key);
+            @svs[$j++] = self.p6_to_p5($_.value);
+        }
+        else {
+            @svs[$j++] = self.p6_to_p5($_);
+        }
+    }
+    for %args {
+        @svs[$j++] = self.p6_to_p5($_.key);
+        @svs[$j++] = self.p6_to_p5($_.value);
     }
     return $j, @svs;
 }
@@ -694,7 +715,7 @@ method !unpack_return_values($av, int32 $count, int32 $type = 0) {
         }
     }
     else {
-        Empty
+        Nil
     }
 }
 
@@ -705,7 +726,23 @@ method call(Str $function, *@args, *%args) {
     my $av = p5_call_function(
         $!p5,
         $function,
-        |self!setup_arguments([flat @args, %args.list]),
+        |self.setup_arguments(@args, %args),
+        $retvals,
+        $err,
+        $type,
+    );
+    self.handle_p5_exception() if $err;
+    self!unpack_return_values($av, $retvals, $type);
+}
+
+method call-args(Str $function, Capture \args) {
+    my int32 $retvals;
+    my int32 $err;
+    my int32 $type;
+    my $av = p5_call_function(
+        $!p5,
+        $function,
+        |self.setup_arguments(args.list, args.hash),
         $retvals,
         $err,
         $type,
@@ -722,7 +759,7 @@ multi method invoke(Str $package, Str $function, *@args, *%args) {
         $!p5,
         $package,
         $function,
-        |self!setup_arguments([flat @args.list, %args.list]),
+        |self.setup_arguments(@args, %args),
         $retvals,
         $err,
         $type,
@@ -751,19 +788,22 @@ multi method invoke(Pointer $obj, Str $function) {
     self!unpack_return_values($av, $retvals, $type);
 }
 
-multi method invoke(Pointer $obj, Str $function, *@args) {
-    my $len = @args.elems;
+method invoke-args(Pointer $obj, Str $function, Capture $args) {
     my @svs := CArray[Pointer].new();
     my Int $j = 0;
     @svs[$j++] = $obj;
-    loop (my Int $i = 0; $i < $len; $i++) {
-        if @args[$i] ~~ Pair {
-            @svs[$j++] = self.p6_to_p5(@args[$i].key);
-            @svs[$j++] = self.p6_to_p5(@args[$i].value);
+    for $args.list {
+        if $_.isa(Pair) {
+            @svs[$j++] = self.p6_to_p5($_.key);
+            @svs[$j++] = self.p6_to_p5($_.value);
         }
         else {
-            @svs[$j++] = self.p6_to_p5(@args[$i]);
+            @svs[$j++] = self.p6_to_p5($_);
         }
+    }
+    for $args.hash {
+        @svs[$j++] = self.p6_to_p5($_.key);
+        @svs[$j++] = self.p6_to_p5($_.value);
     }
     my int32 $retvals;
     my int32 $err;
@@ -784,11 +824,47 @@ multi method invoke(Pointer $obj, Str $function, *@args) {
     self!unpack_return_values($av, $retvals, $type);
 }
 
-method invoke-parent(Str $package, Pointer $obj, Bool $context, Str $function, *@args, *%args) {
+multi method invoke(Pointer $obj, Str $function, *@args, *%args) {
+    my @svs := CArray[Pointer].new();
+    my Int $j = 0;
+    @svs[$j++] = $obj;
+    for @args {
+        if $_.isa(Pair) {
+            @svs[$j++] = self.p6_to_p5($_.key);
+            @svs[$j++] = self.p6_to_p5($_.value);
+        }
+        else {
+            @svs[$j++] = self.p6_to_p5($_);
+        }
+    }
+    for %args {
+        @svs[$j++] = self.p6_to_p5($_.key);
+        @svs[$j++] = self.p6_to_p5($_.value);
+    }
     my int32 $retvals;
     my int32 $err;
     my int32 $type;
-    my ($j, @svs) := self!setup_arguments([flat @args.list, %args.list]);
+    my $av = p5_call_method(
+        $!p5,
+        Str,
+        $obj,
+        0,
+        $function,
+        $j,
+        nativecast(Pointer, @svs),
+        $retvals,
+        $err,
+        $type,
+    );
+    self.handle_p5_exception() if $err;
+    self!unpack_return_values($av, $retvals, $type);
+}
+
+method invoke-parent(Str $package, Pointer $obj, Bool $context, Str $function, @args, %args) {
+    my int32 $retvals;
+    my int32 $err;
+    my int32 $type;
+    my ($j, @svs) := self.setup_arguments(@args, %args);
     my $av = p5_call_method(
         $!p5,
         $package,
@@ -809,7 +885,7 @@ method execute(Pointer $code_ref, *@args) {
     my int32 $retvals;
     my int32 $err;
     my int32 $type;
-    my $av = p5_call_code_ref($!p5, $code_ref, |self!setup_arguments(@args), $retvals, $err, $type);
+    my $av = p5_call_code_ref($!p5, $code_ref, |self.setup_arguments(@args), $retvals, $err, $type);
     self.handle_p5_exception() if $err;
     self!unpack_return_values($av, $retvals, $type);
 }
@@ -1094,7 +1170,7 @@ role Perl5Package[Inline::Perl5 $p5, Str $module] {
             return $self;
         }
         else {
-            return $p5.invoke($module, 'new', @args.list, %args.hash);
+            return $p5.invoke($module, 'new', |@args.list, |%args.hash);
         }
     }
 
@@ -1109,7 +1185,7 @@ role Perl5Package[Inline::Perl5 $p5, Str $module] {
 
     multi method FALLBACK($name, *@args, *%kwargs) {
         return self.defined
-            ?? $p5.invoke-parent($module, $!parent.ptr, False, $name, $!parent, |@args, |%kwargs)
+            ?? $p5.invoke-parent($module, $!parent.ptr, False, $name, [flat $!parent, |@args], %kwargs)
             !! $p5.invoke($module, $name, |@args.list, |%kwargs);
     }
 
@@ -1117,7 +1193,7 @@ role Perl5Package[Inline::Perl5 $p5, Str $module] {
         next if $?CLASS.^declares_method($name);
         my $method = method (|args) {
             return self.defined
-                ?? $p5.invoke-parent($module, $!parent.ptr, False, $name, $!parent, args.list, args.hash)
+                ?? $p5.invoke-parent($module, $!parent.ptr, False, $name, [flat $!parent, args.list], args.hash.item)
                 !! $p5.invoke($module, $name, args.list, args.hash);
         };
         $method.set_name($name);
@@ -1203,8 +1279,8 @@ method require(Str $module, Num $version?) {
         $*W.do_pragma(Any, 'precompilation', False, []);
         return Map.new(self.import($module, @args.list).map({
             my $name = $_;
-            '&' ~ $name => sub (*@args, *%args) {
-                self.call("main::$name", |@args.list, %args.list); # main:: because the sub got exported to main
+            '&' ~ $name => sub (|args) {
+                self.call-args("main::$name", args); # main:: because the sub got exported to main
             }
         }));
     };
@@ -1367,7 +1443,7 @@ role Perl5Parent[Str:D $package, Inline::Perl5:D $perl5] {
         my @candidates = self.^can($name);
         return @candidates[0] if @candidates;
         return defined(self)
-            ?? $perl5.invoke-parent($package, $!parent.ptr, True, 'can', $!parent, $name)
+            ?? $perl5.invoke-parent($package, $!parent.ptr, True, 'can', [$!parent, $name], Map)
             !! $perl5.invoke($package, 'can', $name);
     }
 
@@ -1379,7 +1455,7 @@ role Perl5Parent[Str:D $package, Inline::Perl5:D $perl5] {
                     and $perl5.retrieve_scalar_context
                 );
                 my $parent = self.unwrap-perl5-object;
-                $perl5.invoke-parent($package, $parent.ptr, $scalar, $name, $parent, args.list, args.hash);
+                $perl5.invoke-parent($package, $parent.ptr, $scalar, $name, [flat $parent, args.list], args.hash);
             }
         }
     );
@@ -1387,10 +1463,10 @@ role Perl5Parent[Str:D $package, Inline::Perl5:D $perl5] {
 
 BEGIN {
     Perl5Object.^add_fallback(-> $, $ { True },
-        method ($name ) {
+        method ($name) {
             -> \self, |args {
                 args
-                    ?? $.perl5.invoke($.ptr, $name, args.list, args.hash)
+                    ?? $.perl5.invoke-args($.ptr, $name, args)
                     !! $.perl5.invoke($.ptr, $name);
             }
         }
@@ -1401,7 +1477,7 @@ BEGIN {
             $name,
             method (|args) {
                 args
-                    ?? $.perl5.invoke($.ptr, $name, args.list, args.hash)
+                    ?? $.perl5.invoke-args($.ptr, $name, args)
                     !! $.perl5.invoke($.ptr, $name);
             }
         );

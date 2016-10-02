@@ -394,7 +394,8 @@ SV *p5_call_package_method(PerlInterpreter *my_perl, char *package, char *name, 
 
         XPUSHs(newSVpv(package, 0));
         for (i = 0; i < len; i++) {
-            XPUSHs(sv_2mortal(args[i]));
+            if (args[i] != NULL) /* skip Nil which gets turned into NULL */
+                XPUSHs(sv_2mortal(args[i]));
         }
 
         PUTBACK;
@@ -453,11 +454,13 @@ SV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, I32 context
             if (len > 1) {
                 XPUSHs(package != NULL ? sv_2mortal(args[0]) : args[0]);
                 for (i = 1; i < len; i++) {
-                    XPUSHs(sv_2mortal(args[i]));
+                    if (args[i] != NULL) /* skip Nil which gets turned into NULL */
+                        XPUSHs(sv_2mortal(args[i]));
                 }
             }
             else if (len > 0)
-                XPUSHs(package != NULL ? sv_2mortal((SV*)args) : (SV*)args);
+                if (args != NULL) /* skip Nil which gets turned into NULL */
+                    XPUSHs(package != NULL ? sv_2mortal((SV*)args) : (SV*)args);
 
             PUTBACK;
 
@@ -515,7 +518,8 @@ SV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[], 
         PUSHMARK(SP);
 
         for (i = 0; i < len; i++) {
-            XPUSHs(sv_2mortal(args[i]));
+            if (args[i] != NULL) /* skip Nil which gets turned into NULL */
+                XPUSHs(sv_2mortal(args[i]));
         }
 
         PUTBACK;
@@ -567,7 +571,8 @@ SV *p5_call_code_ref(PerlInterpreter *my_perl, SV *code_ref, int len, SV *args[]
         PUSHMARK(SP);
 
         for (i = 0; i < len; i++) {
-            XPUSHs(sv_2mortal(args[i]));
+            if (args[i] != NULL) /* skip Nil which gets turned into NULL */
+                XPUSHs(sv_2mortal(args[i]));
         }
 
         PUTBACK;
