@@ -198,6 +198,12 @@ AV *p5_sv_to_av(PerlInterpreter *my_perl, SV* sv) {
     return (AV *) SvRV(sv);
 }
 
+AV *p5_sv_to_av_inc(PerlInterpreter *my_perl, SV* sv) {
+    AV * const retval = (AV *) SvRV(sv);
+    SvREFCNT_inc((SV *)retval);
+    return retval;
+}
+
 HV *p5_sv_to_hv(PerlInterpreter *my_perl, SV* sv) {
     return (HV *) SvRV(sv);
 }

@@ -106,6 +106,9 @@ sub p5_sv_to_char_star(Perl5Interpreter, Pointer) is native($p5helper)
 sub p5_sv_to_av(Perl5Interpreter, Pointer) is native($p5helper)
     returns Pointer { ... }
 
+sub p5_sv_to_av_inc(Perl5Interpreter, Pointer) is native($p5helper)
+    returns Pointer { ... }
+
 sub p5_sv_to_hv(Perl5Interpreter, Pointer) is native($p5helper)
     returns Pointer { ... }
 
@@ -570,7 +573,7 @@ method !p5_hash_to_writeback_p6_hash(Pointer $sv) {
 }
 
 method !p5_array_to_writeback_p6_array(Pointer $sv) {
-    my Pointer $av = p5_sv_to_av($!p5, $sv);
+    my Pointer $av = p5_sv_to_av_inc($!p5, $sv);
 
     Perl5Array.new(ip5 => self, p5 => $!p5, :$av)
 }
