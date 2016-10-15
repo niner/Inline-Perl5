@@ -377,7 +377,22 @@ SV *p5_get_global(PerlInterpreter *my_perl, const char* name) {
 
 SV *p5_eval_pv(PerlInterpreter *my_perl, const char* p, I32 croak_on_error) {
     PERL_SET_CONTEXT(my_perl);
-    return eval_pv(p, croak_on_error);
+    {
+        dSP;
+        SV * retval;
+        ENTER;
+        SAVETMPS;
+        PUSHMARK(SP);
+
+        retval = eval_pv(p, croak_on_error);
+        SvREFCNT_inc(retval);
+
+        SPAGAIN;
+        PUTBACK;
+        FREETMPS;
+        LEAVE;
+        return retval;
+    }
 }
 
 SV *p5_err_sv(PerlInterpreter *my_perl) {
