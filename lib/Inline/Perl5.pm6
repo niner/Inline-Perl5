@@ -7,6 +7,7 @@ class Perl5Interpreter is repr('CPointer') { }
 role Perl5Package { ... };
 role Perl5Parent { ... };
 role Perl5Extension { ... };
+role Perl5Attributes { ... };
 class Perl5Hash { ... };
 class Perl5Array { ... };
 
@@ -1151,12 +1152,14 @@ method init_callbacks {
             return;
         }
 
+        use attributes ();
         sub install_p6_method_wrapper {
-            my ($package, $name) = @_;
+            my ($package, $name, @attributes) = @_;
             no strict 'refs';
-            *{"${package}::$name"} = v6::set_subname("${package}::", $name, sub {
+            *{"${package}::$name"} = my $code = v6::set_subname("${package}::", $name, sub {
                 return Perl6::Object::call_method($name, @_);
             });
+            attributes->import($package, $code, @attributes) if @attributes;
             return;
         }
 
@@ -1215,8 +1218,8 @@ method rebless(Perl5Object $obj, Str $package, $p6obj) {
     p5_rebless_object($!p5, $obj.ptr, $package, $index, &!call_method, &free_p6_object);
 }
 
-method install_wrapper_method(Str:D $package, Str $name) {
-    self.call('v6::inline::install_p6_method_wrapper', $package, $name);
+method install_wrapper_method(Str:D $package, Str $name, *@attributes) {
+    self.call('v6::inline::install_p6_method_wrapper', $package, $name, |@attributes);
 }
 
 role Perl5Package[Inline::Perl5 $p5, Str $module] {
@@ -1567,7 +1570,9 @@ role Perl5Extension[Str:D $package, Inline::Perl5:D $perl5] {
     }
 
     for ::?CLASS.^methods -> &method {
-        $perl5.install_wrapper_method($package, &method.name);
+        &method.does(Perl5Attributes)
+            ?? $perl5.install_wrapper_method($package, &method.name, |&method.attributes)
+            !! $perl5.install_wrapper_method($package, &method.name);
     }
 
     ::?CLASS.HOW.add_fallback(::?CLASS, -> $, $ { True },
@@ -1582,6 +1587,10 @@ role Perl5Extension[Str:D $package, Inline::Perl5:D $perl5] {
             }
         }
     );
+}
+
+role Perl5Attributes[Routine $r] {
+    has @.attributes;
 }
 
 BEGIN {

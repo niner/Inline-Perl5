@@ -26,6 +26,7 @@ is(Foo::Bar::TestV6.new('bar').foo, 'bar');
 is(Foo::Bar::TestV6.new('bar').get_foo, 'bar');
 is(Foo::Bar::TestV6.new('bar').get_foo_indirect, 'bar');
 is(Foo::Bar::TestV6.new.test_breaking_encapsulation(Foo::Bar::TestV6.new('bar')), 'bar');
+is(Foo::Bar::TestV6.new.check_attrs, <Test1 Test2>);
 
 is(
     EVAL(q/Foo::Bar::TestV6Sub->create(foo => 'bar')->set_name('world')/, :lang<Perl5>).hello,

@@ -118,8 +118,28 @@ sub test_breaking_encapsulation {
     return $obj->{foo};
 }
 
+my @attributes;
+sub MODIFY_CODE_ATTRIBUTES {
+    my ($class, $code, @attrs) = @_;
 
-use v6::inline constructors => [qw(create)];
+    my @bad = grep { $_ ne 'Test1' and $_ ne 'Test2' } @attrs;
+    push @attributes, @attrs;
+
+    return @bad;
+}
+
+sub FETCH_CODE_ATTRIBUTES {
+    return @attributes;
+}
+
+sub check_attrs {
+    my ($self) = @_;
+
+    use attributes();
+    return attributes::get(\&hasattrs);
+}
+
+use v6::inline;
 
 has $.name;
 
@@ -146,4 +166,15 @@ method fetch_foo() {
 
 method return_2() {
     return 2;
+}
+
+multi trait_mod:<is>(Routine $declarand, :@p5attrs!) {
+    unless $declarand.does(Inline::Perl5::Perl5Attributes) {
+        $declarand does Inline::Perl5::Perl5Attributes[$declarand];
+    }
+    $declarand.attributes.append(@p5attrs);
+}
+
+method hasattrs() is p5attrs['Test1', 'Test2'] {
+    return 1;
 }
