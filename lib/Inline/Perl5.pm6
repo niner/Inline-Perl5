@@ -1589,7 +1589,7 @@ role Perl5Extension[Str:D $package, Inline::Perl5:D $perl5] {
     );
 }
 
-role Perl5Attributes[Routine $r] {
+role Perl5Attributes {
     has @.attributes;
 }
 
