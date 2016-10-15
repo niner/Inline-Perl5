@@ -119,7 +119,7 @@ sub test_breaking_encapsulation {
 }
 
 
-use v6::code constructors => [qw(create)];
+use v6::inline constructors => [qw(create)];
 
 has $.name;
 

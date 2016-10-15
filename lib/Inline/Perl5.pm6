@@ -922,11 +922,6 @@ PROCESS::<%PERL5> := class :: does Associative {
 
 class Perl6Callbacks {
     has $.p5;
-    method create($package, $code) {
-        my $p5 = $.p5;
-        EVAL "class GLOBAL::$package does Perl5Parent['$package', \$p5] \{\n$code\n\}";
-        return;
-    }
     method create_extension($package, $code) {
         my $p5 = $.p5;
         EVAL "class GLOBAL::$package does Perl5Extension['$package', \$p5] \{\n$code\n\}";
@@ -1148,33 +1143,6 @@ method init_callbacks {
         package v6::inline;
         use mro;
 
-        {
-            my $package_to_create;
-
-            sub import {
-                my ($class, %args) = @_;
-                my $package = $package_to_create = scalar caller;
-                foreach my $constructor (@{ $args{constructors} }) {
-                    v6::code::install_function($package, $constructor, sub {
-                        my ($class, @args) = @_;
-                        my $self = $class->next::method(@args);
-                        return v6::extend($package, $self, \@args, $class);
-                    });
-                }
-            }
-
-            use Filter::Simple sub {
-                $p6->create($package_to_create, $_);
-                $_ = '1;';
-            };
-        }
-
-        $INC{'v6.pm'} = '';
-        $INC{'v6/inline.pm'} = '';
-
-        package v6::code;
-        use mro;
-
         sub install_function {
             my ($package, $name, $code) = @_;
 
@@ -1223,7 +1191,9 @@ method init_callbacks {
             };
         }
 
-        $INC{'v6/code.pm'} = '';
+
+        $INC{'v6.pm'} = '';
+        $INC{'v6/inline.pm'} = '';
 
         1;
         PERL5
@@ -1246,7 +1216,7 @@ method rebless(Perl5Object $obj, Str $package, $p6obj) {
 }
 
 method install_wrapper_method(Str:D $package, Str $name) {
-    self.call('v6::code::install_p6_method_wrapper', $package, $name);
+    self.call('v6::inline::install_p6_method_wrapper', $package, $name);
 }
 
 role Perl5Package[Inline::Perl5 $p5, Str $module] {
