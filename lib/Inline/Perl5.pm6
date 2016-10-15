@@ -6,6 +6,7 @@ use MONKEY-SEE-NO-EVAL;
 class Perl5Interpreter is repr('CPointer') { }
 role Perl5Package { ... };
 role Perl5Parent { ... };
+role Perl5Extension { ... };
 class Perl5Hash { ... };
 class Perl5Array { ... };
 
@@ -299,6 +300,23 @@ multi method p6_to_p5(Perl5Package $value) returns Pointer {
 multi method p6_to_p5(Perl5Parent $value) returns Pointer {
     self.p6_to_p5($value.unwrap-perl5-object());
 }
+multi method p6_to_p5(Perl5Extension $value) returns Pointer {
+    self.p6_to_p5($value.unwrap-perl5-object());
+}
+
+my $objects = ObjectKeeper.new; #FIXME not thread safe
+
+multi method p6_to_p5(Perl5Extension $value, Pointer $target) returns Pointer {
+    my $index = $objects.keep($value);
+
+    p5_wrap_p6_object(
+        $!p5,
+        $index,
+        $target,
+        &!call_method,
+        &free_p6_object,
+    );
+}
 multi method p6_to_p5(Pointer $value) returns Pointer {
     $value;
 }
@@ -308,8 +326,6 @@ multi method p6_to_p5(Nil) returns Pointer {
 multi method p6_to_p5(Any:U $value) returns Pointer {
     p5_undef($!p5);
 }
-
-my $objects = ObjectKeeper.new; #FIXME not thread safe
 
 sub free_p6_object(Int $index) {
     $objects.free($index);
@@ -668,7 +684,9 @@ method handle_p5_exception() is hidden-from-backtrace {
 method run($perl) {
     my $res = p5_eval_pv($!p5, $perl, 0);
     self.handle_p5_exception();
-    self.p5_to_p6($res);
+    my $retval = self.p5_to_p6($res);
+    p5_sv_refcnt_dec($!p5, $res);
+    $retval
 }
 
 multi method setup_arguments(@args) {
@@ -909,6 +927,11 @@ class Perl6Callbacks {
         EVAL "class GLOBAL::$package does Perl5Parent['$package', \$p5] \{\n$code\n\}";
         return;
     }
+    method create_extension($package, $code) {
+        my $p5 = $.p5;
+        EVAL "class GLOBAL::$package does Perl5Extension['$package', \$p5] \{\n$code\n\}";
+        return;
+    }
     method run($code) {
         return EVAL $code;
         CONTROL {
@@ -1111,6 +1134,13 @@ method init_callbacks {
             return $self;
         }
 
+        sub shadow_object {
+            my ($static_class, $dynamic_class, $object) = @_;
+
+            v6::invoke($static_class, 'new_shadow_of_p5_object', $object);
+            return $object;
+        }
+
         sub import {
             die 'v6-inline got renamed to v6::inline to allow passing an import list';
         }
@@ -1118,28 +1148,82 @@ method init_callbacks {
         package v6::inline;
         use mro;
 
-        my $package_to_create;
+        {
+            my $package_to_create;
 
-        sub import {
-            my ($class, %args) = @_;
-            my $package = $package_to_create = scalar caller;
-            foreach my $constructor (@{ $args{constructors} }) {
-                no strict 'refs';
-                *{"${package}::$constructor"} = v6::set_subname("${package}::", $constructor, sub {
-                    my ($class, @args) = @_;
-                    my $self = $class->next::method(@args);
-                    return v6::extend($package, $self, \@args, $class);
-                });
+            sub import {
+                my ($class, %args) = @_;
+                my $package = $package_to_create = scalar caller;
+                foreach my $constructor (@{ $args{constructors} }) {
+                    v6::code::install_function($package, $constructor, sub {
+                        my ($class, @args) = @_;
+                        my $self = $class->next::method(@args);
+                        return v6::extend($package, $self, \@args, $class);
+                    });
+                }
             }
-        }
 
-        use Filter::Simple sub {
-            $p6->create($package_to_create, $_);
-            $_ = '1;';
-        };
+            use Filter::Simple sub {
+                $p6->create($package_to_create, $_);
+                $_ = '1;';
+            };
+        }
 
         $INC{'v6.pm'} = '';
         $INC{'v6/inline.pm'} = '';
+
+        package v6::code;
+        use mro;
+
+        sub install_function {
+            my ($package, $name, $code) = @_;
+
+            no strict 'refs';
+            *{"${package}::$name"} = v6::set_subname("${package}::", $name, $code);
+            return;
+        }
+
+        sub install_p6_method_wrapper {
+            my ($package, $name) = @_;
+            no strict 'refs';
+            *{"${package}::$name"} = v6::set_subname("${package}::", $name, sub {
+                return Perl6::Object::call_method($name, @_);
+            });
+            return;
+        }
+
+        {
+            my @inlined;
+            BEGIN {
+                no strict "refs";
+                *{"CORE::GLOBAL::bless"} = sub {
+                    my ($self, $class) = @_;
+                    $class //= scalar caller;
+                    CORE::bless($self, $class);
+                    foreach my $package (@inlined) {
+                        if ($self->isa($package)) {
+                            v6::shadow_object($package, $class, $self);
+                            last;
+                        }
+                    }
+                    $self
+                };
+            };
+            my $package_to_create;
+
+            sub import {
+                my ($class, %args) = @_;
+                my $package = $package_to_create = scalar caller;
+                push @inlined, $package;
+            }
+
+            use Filter::Simple sub {
+                $p6->create_extension($package_to_create, $_);
+                $_ = '1;';
+            };
+        }
+
+        $INC{'v6/code.pm'} = '';
 
         1;
         PERL5
@@ -1159,6 +1243,10 @@ method sv_refcnt_dec($obj) {
 method rebless(Perl5Object $obj, Str $package, $p6obj) {
     my $index = $objects.keep($p6obj);
     p5_rebless_object($!p5, $obj.ptr, $package, $index, &!call_method, &free_p6_object);
+}
+
+method install_wrapper_method(Str:D $package, Str $name) {
+    self.call('v6::code::install_p6_method_wrapper', $package, $name);
 }
 
 role Perl5Package[Inline::Perl5 $p5, Str $module] {
@@ -1299,7 +1387,7 @@ submethod DESTROY {
 }
 
 class Perl5Object {
-    has Pointer $.ptr;
+    has Pointer $.ptr is rw;
     has Inline::Perl5 $.perl5;
 
     method sink() { self }
@@ -1309,7 +1397,7 @@ class Perl5Object {
         return $stringify ?? $stringify(self) !! callsame;
     }
 
-    method DESTROY {
+    submethod DESTROY {
         $!perl5.sv_refcnt_dec($!ptr) if $!ptr;
         $!ptr = Pointer;
     }
@@ -1323,7 +1411,7 @@ class Perl5Callable does Callable {
         $.perl5.execute($.ptr, @args);
     }
 
-    method DESTROY {
+    submethod DESTROY {
         $!perl5.sv_refcnt_dec($!ptr) if $!ptr;
         $!ptr = Pointer;
     }
@@ -1460,6 +1548,67 @@ role Perl5Parent[Str:D $package, Inline::Perl5:D $perl5] {
                 );
                 my $parent = self.unwrap-perl5-object;
                 $perl5.invoke-parent($package, $parent.ptr, $scalar, $name, [flat $parent, args.list], args.hash);
+            }
+        }
+    );
+}
+
+role Perl5Extension[Str:D $package, Inline::Perl5:D $perl5] {
+    has $!target;
+
+    method new_shadow_of_p5_object($target) {
+        self.CREATE.initialize-perl5-object($target); #.BUILDALL(my @, my %);
+        Nil
+    }
+
+    method new(*@args, *%args) {
+        $perl5.invoke($package, 'new', |@args, |%args.kv)
+    }
+
+    method initialize-perl5-object($target) {
+        $!target = $target;
+        $perl5.p6_to_p5(self, $!target.ptr);
+        $perl5.sv_refcnt_dec($!target.ptr); # Was increased by p5_to_p6 but we must not keep $!target alive
+        return self;
+    }
+
+    method unwrap-perl5-object() {
+        $!target;
+    }
+
+    submethod DESTROY {
+        # Prevent Perl5Object.DESTROY from decreasing the refcnt, as we did that
+        # already in initialize-perl5-object
+        $!target.ptr = Pointer;
+    }
+
+    method sink() { self }
+
+    method can($name) {
+        my @candidates = self.^can($name);
+        return @candidates[0] if @candidates;
+        return defined(self)
+            ?? $perl5.invoke-parent($package, $!target.ptr, True, 'can', $!target, $name)
+            !! $perl5.invoke($package, 'can', $name);
+    }
+
+    for ::?CLASS.^attributes.grep(*.has_accessor) -> $attribute {
+        $perl5.install_wrapper_method($package, $attribute.name.substr(2));
+    }
+
+    for ::?CLASS.^methods -> &method {
+        $perl5.install_wrapper_method($package, &method.name);
+    }
+
+    ::?CLASS.HOW.add_fallback(::?CLASS, -> $, $ { True },
+        method ($name) {
+            -> \self, |args {
+                my $scalar = (
+                    callframe(1).code ~~ Perl5Caller
+                    and $perl5.retrieve_scalar_context
+                );
+                my $target = self.unwrap-perl5-object;
+                $perl5.invoke-parent($package, $target.ptr, $scalar, $name, [flat $target, args.list], args.hash);
             }
         }
     );

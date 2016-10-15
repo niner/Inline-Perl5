@@ -1,8 +1,26 @@
+use strict;
+use warnings;
+
 package Foo::Bar::TestV6Base;
+
+our $counter = 0;
+
+my @objects;
 
 sub create {
     my ($class, %args) = @_;
-    return $class->new($args{foo});
+    $counter++;
+    my $self = $class->new($args{foo});
+    #push @objects, $self;
+    $self;
+}
+
+our $destructor_runs = 0;
+
+sub DESTROY {
+    my ($self) = @_;
+    $counter--;
+    $destructor_runs++;
 }
 
 package Foo::Bar::TestV6;
@@ -14,7 +32,9 @@ use base qw(Foo::Bar::TestV6Base);
 
 sub new {
     my ($class, $foo) = @_;
-    return bless {foo => $foo};
+    $Foo::Bar::TestV6Base::counter++;
+    my $self = {foo => $foo};
+    return bless $self, $class;
 }
 
 sub foo {
@@ -99,12 +119,17 @@ sub test_breaking_encapsulation {
 }
 
 
-use v6::inline constructors => [qw(create)];
+use v6::code constructors => [qw(create)];
 
 has $.name;
 
 our sub greet($me) {
     return "hello $me";
+}
+
+method set_name($name) {
+    $!name = $name;
+    self
 }
 
 method hello {

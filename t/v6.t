@@ -7,10 +7,10 @@ use lib:from<Perl5> <t/lib>;
 use TestV6:from<Perl5>;
 use TestV6Sub:from<Perl5>;
 
-is(Foo::Bar::TestV6::greet('world'), 'hello world');
-is(Foo::Bar::TestV6.new('nice', name => 'world').hello, 'hello nice world');
+is(Foo::Bar::TestV6::greet('world'), 'hello world', 'greet works');
+is(Foo::Bar::TestV6.new('nice').set_name('world').hello, 'hello nice world', 'hello works');
 is(
-    EVAL(q/Foo::Bar::TestV6->create(foo => 'bar', v6::named name => 'world')/, :lang<Perl5>).hello,
+    EVAL(q/Foo::Bar::TestV6->create(foo => 'bar')->set_name('world')/, :lang<Perl5>).hello,
     'hello bar world',
 );
 is(Foo::Bar::TestV6.new.context, 'array');
@@ -28,13 +28,20 @@ is(Foo::Bar::TestV6.new('bar').get_foo_indirect, 'bar');
 is(Foo::Bar::TestV6.new.test_breaking_encapsulation(Foo::Bar::TestV6.new('bar')), 'bar');
 
 is(
-    EVAL(q/Foo::Bar::TestV6Sub->create(foo => 'bar', v6::named name => 'world')/, :lang<Perl5>).hello,
+    EVAL(q/Foo::Bar::TestV6Sub->create(foo => 'bar')->set_name('world')/, :lang<Perl5>).hello,
     'hello bar world',
 );
 ok(
-    EVAL(q/Foo::Bar::TestV6Sub->create(foo => 'bar', name => 'world')->isa('Foo::Bar::TestV6Sub')/, :lang<Perl5>),
+    EVAL(q/Foo::Bar::TestV6Sub->create(foo => 'bar')->set_name('world')->isa('Foo::Bar::TestV6Sub')/, :lang<Perl5>),
     'P5 subclass of P6 extended P5 class isa P5 subclass',
+) or diag (
+    EVAL(q/ref Foo::Bar::TestV6Sub->create(foo => 'bar')/, :lang<Perl5>);
 );
+
+use nqp;
+nqp::force_gc;
+
+ok(%*PERL5<$Foo::Bar::TestV6Base::destructor_runs>, "Destructor ran");
 
 done-testing;
 

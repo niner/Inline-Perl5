@@ -631,6 +631,7 @@ SV *p5_call_code_ref(PerlInterpreter *my_perl, SV *code_ref, int len, SV *args[]
 
 #define PERL6_MAGIC_KEY 0x0DD515FE
 #define PERL6_HASH_MAGIC_KEY 0x0DD515FF
+#define PERL6_EXTENSION_MAGIC_KEY 0x0DD51600
 
 int p5_free_perl6_obj(pTHX_ SV* obj, MAGIC *mg)
 {
@@ -700,12 +701,11 @@ SV *p5_wrap_p6_object(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call_p6_m
     else {
         inst_ptr = p5obj;
         inst = SvRV(inst_ptr);
-        SvREFCNT_inc(inst_ptr);
     }
     _perl6_magic priv;
 
     /* set up magic */
-    priv.key = PERL6_MAGIC_KEY;
+    priv.key = p5obj == NULL ? PERL6_MAGIC_KEY : PERL6_EXTENSION_MAGIC_KEY;
     priv.index = i;
     priv.call_p6_method = call_p6_method;
     priv.free_p6_object = free_p6_object;
