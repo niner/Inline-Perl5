@@ -510,7 +510,6 @@ my class Perl5Array does Iterable does Positional {
         arr
     }
     submethod BUILD(:$!ip5, :$!p5, :$!av) {
-        p5_sv_refcnt_inc($!p5, $!av);
     }
     submethod DESTROY() {
         p5_sv_refcnt_dec($!p5, $!av);
