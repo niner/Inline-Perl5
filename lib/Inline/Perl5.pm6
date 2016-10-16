@@ -1437,7 +1437,7 @@ method BUILD(*%args) {
                 return Pointer;
             }
         }
-        self.p6_to_p5($p6obj."$name"(|self.p5_array_to_p6_array($args)).list);
+        self.p6_to_p5(@ = $p6obj."$name"(|self.p5_array_to_p6_array($args)));
     }
     &!call_method does Perl5Caller;
 
