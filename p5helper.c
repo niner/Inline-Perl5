@@ -2,6 +2,8 @@
 #include <perl.h>
 #include <XSUB.h>
 
+#define declare_cbs perl6_callbacks *cbs = (perl6_callbacks*)SvIV(*hv_fetchs(PL_modglobal, "Inline::Perl5 callbacks", 0));
+
 static void xs_init (pTHX);
 EXTERN_C void boot_DynaLoader (pTHX_ CV* cv);
 EXTERN_C void boot_Socket (pTHX_ CV* cv);
@@ -9,21 +11,20 @@ EXTERN_C void boot_Socket (pTHX_ CV* cv);
 typedef struct {
     I32 key; /* to make sure it came from Inline */
     IV index;
-    union {
-        SV *(*call_p6_method)(IV, char *, I32, SV *, SV **);
-        SV *(*call_p6_callable)(IV, SV *, SV **);
-    };
-    void (*free_p6_object)(IV);
 } _perl6_magic;
 
 typedef struct {
     I32 key; /* to make sure it came from Inline */
     IV index;
+} _perl6_hash_magic;
+
+typedef struct {
     SV *(*call_p6_method)(IV, char *, I32, SV *, SV **);
+    SV *(*call_p6_callable)(IV, SV *, SV **);
+    void (*free_p6_object)(IV);
     SV *(*hash_at_key)(IV, char *);
     SV *(*hash_assign_key)(IV, char *, SV *);
-    void (*free_p6_object)(IV);
-} _perl6_hash_magic;
+} perl6_callbacks;
 
 XS(p5_call_p6_method);
 XS(p5_call_p6_callable);
@@ -70,11 +71,35 @@ void p5_inline_perl6_xs_init(PerlInterpreter *my_perl) {
     newXS("v6::set_subname", p5_set_subname, file);
 }
 
+PerlInterpreter *p5_init_callbacks(
+    SV  *(*call_p6_method)(IV, char * , I32, SV *, SV **),
+    SV  *(*call_p6_callable)(IV, SV *, SV **),
+    void (*free_p6_object)(IV),
+    SV  *(*hash_at_key)(IV, char *),
+    SV  *(*hash_assign_key)(IV, char *, SV *)
+) {
+    perl6_callbacks *cbs = malloc(sizeof(perl6_callbacks));
+    cbs->call_p6_method   = call_p6_method;
+    cbs->call_p6_callable = call_p6_callable;
+    cbs->free_p6_object   = free_p6_object;
+    cbs->hash_at_key      = hash_at_key;
+    cbs->hash_assign_key  = hash_assign_key;
+    hv_stores(PL_modglobal, "Inline::Perl5 callbacks", newSViv((IV)cbs));
+}
+
 static int inited = 0;
 static int interpreters = 0;
 static int terminate = 0;
 
-PerlInterpreter *p5_init_perl(int argc, char **argv) {
+PerlInterpreter *p5_init_perl(
+    int argc,
+    char **argv,
+    SV  *(*call_p6_method)(IV, char * , I32, SV *, SV **),
+    SV  *(*call_p6_callable)(IV, SV *, SV **),
+    void (*free_p6_object)(IV),
+    SV  *(*hash_at_key)(IV, char *),
+    SV  *(*hash_assign_key)(IV, char *, SV *)
+) {
     if (inited) {
 #ifndef MULTIPLICITY
         return NULL;
@@ -94,6 +119,14 @@ PerlInterpreter *p5_init_perl(int argc, char **argv) {
     perl_parse(my_perl, xs_init, argc, argv, NULL);
     PL_exit_flags |= PERL_EXIT_DESTRUCT_END;
     perl_run(my_perl);
+
+    p5_init_callbacks(
+        call_p6_method,
+        call_p6_callable,
+        free_p6_object,
+        hash_at_key,
+        hash_assign_key
+    );
 
     return my_perl;
 }
@@ -637,7 +670,12 @@ int p5_free_perl6_obj(pTHX_ SV* obj, MAGIC *mg)
 {
     if (mg) {
         _perl6_magic* const p6mg = (_perl6_magic*) mg->mg_ptr;
-        p6mg->free_p6_object(p6mg->index);
+        /* need to be extra careful here as PL_modglobal could have been cleaned already */
+        SV **cbs_entry = hv_fetchs(PL_modglobal, "Inline::Perl5 callbacks", 0);
+        if (cbs_entry) {
+            perl6_callbacks *cbs = (perl6_callbacks*)SvIV(*cbs_entry);
+            cbs->free_p6_object(p6mg->index);
+        }
     }
     return 0;
 }
@@ -646,7 +684,12 @@ int p5_free_perl6_hash(pTHX_ SV* obj, MAGIC *mg)
 {
     if (mg) {
         _perl6_hash_magic* const p6mg = (_perl6_hash_magic*) mg->mg_ptr;
-        p6mg->free_p6_object(p6mg->index);
+        /* need to be extra careful here as PL_modglobal could have been cleaned already */
+        SV **cbs_entry = hv_fetchs(PL_modglobal, "Inline::Perl5 callbacks", 0);
+        if (cbs_entry) {
+            perl6_callbacks *cbs = (perl6_callbacks*)SvIV(*cbs_entry);
+            cbs->free_p6_object(p6mg->index);
+        }
     }
     return 0;
 }
@@ -685,13 +728,11 @@ void p5_rebless_object(PerlInterpreter *my_perl, SV *obj, char *package, IV i, S
     /* set up magic */
     priv.key = PERL6_MAGIC_KEY;
     priv.index = i;
-    priv.call_p6_method = call_p6_method;
-    priv.free_p6_object = free_p6_object;
     sv_magicext(inst, inst, PERL_MAGIC_ext, &p5_inline_mg_vtbl, (char *) &priv, sizeof(priv));
 
 }
 
-SV *p5_wrap_p6_object(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call_p6_method)(IV, char * , I32, SV *, SV **), void (*free_p6_object)(IV)) {
+SV *p5_wrap_p6_object(PerlInterpreter *my_perl, IV i, SV *p5obj) {
     SV * inst;
     SV * inst_ptr;
     if (p5obj == NULL) {
@@ -707,14 +748,12 @@ SV *p5_wrap_p6_object(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call_p6_m
     /* set up magic */
     priv.key = p5obj == NULL ? PERL6_MAGIC_KEY : PERL6_EXTENSION_MAGIC_KEY;
     priv.index = i;
-    priv.call_p6_method = call_p6_method;
-    priv.free_p6_object = free_p6_object;
     sv_magicext(inst, inst, PERL_MAGIC_ext, &p5_inline_mg_vtbl, (char *) &priv, sizeof(priv));
 
     return inst_ptr;
 }
 
-SV *p5_wrap_p6_callable(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call)(IV, SV *, SV **), void (*free_p6_object)(IV)) {
+SV *p5_wrap_p6_callable(PerlInterpreter *my_perl, IV i, SV *p5obj) {
     SV * inst;
     SV * inst_ptr;
 
@@ -747,8 +786,6 @@ SV *p5_wrap_p6_callable(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call)(I
     /* set up magic */
     priv.key = PERL6_MAGIC_KEY;
     priv.index = i;
-    priv.call_p6_callable = call;
-    priv.free_p6_object = free_p6_object;
     sv_magic(inst, inst, PERL_MAGIC_ext, (char *) &priv, sizeof(priv));
     MAGIC * const mg = mg_find(inst, PERL_MAGIC_ext);
     mg->mg_virtual = &p5_inline_mg_vtbl;
@@ -758,11 +795,7 @@ SV *p5_wrap_p6_callable(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call)(I
 
 SV *p5_wrap_p6_hash(
     PerlInterpreter *my_perl,
-    IV i,
-    SV *(*call_p6_method)(IV, char * , I32, SV *, SV **),
-    SV *(*hash_at_key)(IV, char *),
-    SV *(*hash_assign_key)(IV, char *, SV *),
-    void (*free_p6_object)(IV)
+    IV i
 ) {
     PERL_SET_CONTEXT(my_perl);
     {
@@ -778,10 +811,6 @@ SV *p5_wrap_p6_hash(
         /* set up magic */
         priv.key = PERL6_HASH_MAGIC_KEY;
         priv.index = i;
-        priv.call_p6_method  = call_p6_method;
-        priv.hash_at_key     = hash_at_key;
-        priv.hash_assign_key = hash_assign_key;
-        priv.free_p6_object  = free_p6_object;
         sv_magicext(inst, inst, PERL_MAGIC_ext, &p5_inline_hash_mg_vtbl, (char *) &priv, sizeof(priv));
 
         ENTER;
@@ -808,10 +837,10 @@ SV *p5_wrap_p6_hash(
     }
 }
 
-SV *p5_wrap_p6_handle(PerlInterpreter *my_perl, IV i, SV *p5obj, SV *(*call_p6_method)(IV, char * , I32, SV *, SV **), void (*free_p6_object)(IV)) {
+SV *p5_wrap_p6_handle(PerlInterpreter *my_perl, IV i, SV *p5obj) {
     PERL_SET_CONTEXT(my_perl);
     {
-        SV *handle = p5_wrap_p6_object(my_perl, i, p5obj, call_p6_method, free_p6_object);
+        SV *handle = p5_wrap_p6_object(my_perl, i, p5obj);
         int flags = G_SCALAR;
         dSP;
 
@@ -877,7 +906,10 @@ XS(p5_call_p6_method) {
     _perl6_magic* const p6mg = (_perl6_magic*)(mg->mg_ptr);
     SV *err = NULL;
     SV * const args_rv = newRV_noinc((SV *) args);
-    SV * retval = p6mg->call_p6_method(p6mg->index, name_pv, GIMME_V == G_SCALAR, args_rv, &err);
+
+    declare_cbs;
+
+    SV * retval = cbs->call_p6_method(p6mg->index, name_pv, GIMME_V == G_SCALAR, args_rv, &err);
     SPAGAIN; /* refresh local stack pointer, could have been modified by Perl 5 code called from Perl 6 */
     SvREFCNT_dec(args_rv);
     if (err) {
@@ -918,7 +950,8 @@ XS(p5_hash_at_key) {
     STRLEN len;
     char * const key_pv  = SvPV(key, len);
 
-    SV * retval = p6mg->hash_at_key(p6mg->index, key_pv);
+    declare_cbs;
+    SV * retval = cbs->hash_at_key(p6mg->index, key_pv);
 
     sv_2mortal(retval);
     sp -= items;
@@ -940,7 +973,8 @@ XS(p5_hash_assign_key) {
     STRLEN len;
     char * const key_pv  = SvPV(key, len);
 
-    p6mg->hash_assign_key(p6mg->index, key_pv, val);
+    declare_cbs;
+    cbs->hash_assign_key(p6mg->index, key_pv, val);
 
     sp -= items;
 
@@ -967,7 +1001,9 @@ XS(p5_call_p6_callable) {
     _perl6_magic* const p6mg = (_perl6_magic*)(mg->mg_ptr);
     SV *err = NULL;
     SV * const args_rv = newRV_noinc((SV *) args);
-    SV * retval = p6mg->call_p6_callable(p6mg->index, args_rv, &err);
+
+    declare_cbs;
+    SV * retval = cbs->call_p6_callable(p6mg->index, args_rv, &err);
     SPAGAIN; /* refresh local stack pointer, could have been modified by Perl 5 code called from Perl 6 */
     SvREFCNT_dec(args_rv);
     if (err) {
