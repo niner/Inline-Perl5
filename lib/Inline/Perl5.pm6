@@ -431,7 +431,7 @@ my class Perl5Hash does Iterable does Associative {
         p5_sv_refcnt_inc($!p5, $!hv);
     }
     submethod DESTROY() {
-        p5_sv_refcnt_dec($!p5, $!hv);
+        $!ip5.sv_refcnt_dec($!hv);
     }
     method ASSIGN-KEY(Perl5Hash:D: Str() \key, Mu \assignval) is raw {
         p5_hv_store($!p5, $!hv, key, $!ip5.p6_to_p5(assignval));
@@ -529,7 +529,7 @@ my class Perl5Array does Iterable does Positional {
     submethod BUILD(:$!ip5, :$!p5, :$!av) {
     }
     submethod DESTROY() {
-        p5_sv_refcnt_dec($!p5, $!av);
+        $!ip5.sv_refcnt_dec($!av);
     }
     method ASSIGN-POS(Perl5Array:D: Int() \pos, Mu \assignval) is raw {
         p5_av_store($!p5, $!av, pos, $!ip5.p6_to_p5(assignval));
