@@ -71,7 +71,7 @@ void p5_inline_perl6_xs_init(PerlInterpreter *my_perl) {
     newXS("v6::set_subname", p5_set_subname, file);
 }
 
-PerlInterpreter *p5_init_callbacks(
+void p5_init_callbacks(
     SV  *(*call_p6_method)(IV, char * , I32, SV *, SV **),
     SV  *(*call_p6_callable)(IV, SV *, SV **),
     void (*free_p6_object)(IV),
