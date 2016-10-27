@@ -1,9 +1,9 @@
 unit class Inline::Perl5;
 
-use NativeCall;
 use MONKEY-SEE-NO-EVAL;
+use Inline::Language::ObjectKeeper;
+use Inline::Perl5::Interpreter;
 
-class Perl5Interpreter is repr('CPointer') { }
 role Perl5Package { ... };
 role Perl5Parent { ... };
 role Perl5Extension { ... };
@@ -11,297 +11,54 @@ role Perl5Attributes { ... };
 class Perl5Hash { ... };
 class Perl5Array { ... };
 
-has Perl5Interpreter $!p5;
+has Inline::Perl5::Interpreter $!p5;
 has Bool $!external_p5 = False;
 has Bool $!scalar_context = False;
 
 my $default_perl5;
-
-my constant $p5helper = %?RESOURCES<libraries/p5helper>.Str;
 
 my constant @pass_through_methods = |Any.^methods>>.name.grep(/^\w+$/), |<note print put say split>;
 
 class Perl5Object { ... }
 class Perl5Callable { ... }
 
-class ObjectKeeper {
-    has @!objects;
-    has $!last_free = -1;
-
-    method keep(Any:D $value) returns Int {
-        if $!last_free != -1 {
-            my $index = $!last_free;
-            $!last_free = @!objects[$!last_free];
-            @!objects[$index] = $value;
-            return $index;
-        }
-        else {
-            @!objects.push($value);
-            return @!objects.end;
-        }
-    }
-
-    method get(Int $index) returns Any:D {
-        @!objects[$index];
-    }
-
-    method free(Int $index) {
-        @!objects[$index] = $!last_free;
-        $!last_free = $index;
-    }
-}
-
-sub p5_size_of_iv() is native($p5helper)
-    returns size_t { ... }
-
-sub p5_size_of_nv() is native($p5helper)
-    returns size_t { ... }
-
-BEGIN my constant IV = p5_size_of_iv() == 8 ?? int64 !! int32;
-BEGIN my constant NVSIZE = p5_size_of_nv();
-BEGIN die "Cannot support { NVSIZE * 8 } bit NVs yet." if NVSIZE != 4|8;
-BEGIN my constant NV = NVSIZE == 8 ?? num64 !! num32;
-
-sub p5_init_perl(
-    uint32,
-    CArray[Str],
-    &call_method (IV, Str, int32, Pointer, Pointer --> Pointer),
-    &call (IV, Pointer, Pointer --> Pointer),
-    &free_p6_object (IV),
-    &hash_at_key (IV, Str --> Pointer),
-    &hash_assign_key (IV, Str, Pointer),
-) is native($p5helper)
-    returns Perl5Interpreter { ... }
-
-sub p5_init_callbacks(
-    &call_method (IV, Str, int32, Pointer, Pointer --> Pointer),
-    &call (IV, Pointer, Pointer --> Pointer),
-    &free_p6_object (IV),
-    &hash_at_key (IV, Str --> Pointer),
-    &hash_assign_key (IV, Str, Pointer),
-) is native($p5helper)
-    { ... }
-
-sub p5_inline_perl6_xs_init(Perl5Interpreter) is native($p5helper)
-    { ... }
-
-sub p5_SvIOK(Perl5Interpreter, Pointer) is native($p5helper)
-    returns uint32 { ... }
-
-sub p5_SvNOK(Perl5Interpreter, Pointer) is native($p5helper)
-    returns uint32 { ... }
-
-sub p5_SvPOK(Perl5Interpreter, Pointer) is native($p5helper)
-    returns uint32 { ... }
-
-sub p5_sv_utf8(Perl5Interpreter, Pointer) is native($p5helper)
-    returns uint32 { ... }
-
-sub p5_is_array(Perl5Interpreter, Pointer) is native($p5helper)
-    returns int32 { ... }
-
-sub p5_is_hash(Perl5Interpreter, Pointer) is native($p5helper)
-    returns int32 { ... }
-
-sub p5_is_scalar_ref(Perl5Interpreter, Pointer) is native($p5helper)
-    returns int32 { ... }
-
-sub p5_is_undef(Perl5Interpreter, Pointer) is native($p5helper)
-    returns int32 { ... }
-
-sub p5_get_type(Perl5Interpreter, Pointer) is native($p5helper)
-    returns int32 { ... }
-
-sub p5_sv_to_buf(Perl5Interpreter, Pointer, CArray[CArray[int8]]) is native($p5helper)
-    returns size_t { ... }
-
-sub p5_sv_to_char_star(Perl5Interpreter, Pointer) is native($p5helper)
-    returns Str { ... }
-
-sub p5_sv_to_av(Perl5Interpreter, Pointer) is native($p5helper)
-    returns Pointer { ... }
-
-sub p5_sv_to_av_inc(Perl5Interpreter, Pointer) is native($p5helper)
-    returns Pointer { ... }
-
-sub p5_sv_to_hv(Perl5Interpreter, Pointer) is native($p5helper)
-    returns Pointer { ... }
-
-sub p5_sv_refcnt_dec(Perl5Interpreter, Pointer) is native($p5helper)
-    { ... }
-
-sub p5_sv_2mortal(Perl5Interpreter, Pointer) is native($p5helper)
-    { ... }
-
-sub p5_sv_refcnt_inc(Perl5Interpreter, Pointer) is native($p5helper)
-    { ... }
-
-sub p5_int_to_sv(Perl5Interpreter, IV) is native($p5helper)
-    returns Pointer { ... }
-
-sub p5_float_to_sv(Perl5Interpreter, NV) is native($p5helper)
-    returns Pointer { ... }
-
-sub p5_str_to_sv(Perl5Interpreter, size_t, Blob) is native($p5helper)
-    returns Pointer { ... }
-
-sub p5_buf_to_sv(Perl5Interpreter, size_t, Blob) is native($p5helper)
-    returns Pointer { ... }
-
-sub p5_sv_to_ref(Perl5Interpreter, Pointer) is native($p5helper)
-    returns Pointer { ... }
-
-sub p5_av_top_index(Perl5Interpreter, Pointer) is native($p5helper)
-    returns int32 { ... }
-
-sub p5_av_fetch(Perl5Interpreter, Pointer, int32) is native($p5helper)
-    returns Pointer { ... }
-
-sub p5_av_store(Perl5Interpreter, Pointer, int32, Pointer) is native($p5helper)
-    { ... }
-
-sub p5_av_push(Perl5Interpreter, Pointer, Pointer) is native($p5helper)
-    { ... }
-
-sub p5_hv_iterinit(Perl5Interpreter, Pointer) is native($p5helper)
-    returns int32 { ... }
-
-sub p5_hv_iternext(Perl5Interpreter, Pointer) is native($p5helper)
-    returns Pointer { ... }
-
-sub p5_hv_iterkeysv(Perl5Interpreter, Pointer) is native($p5helper)
-    returns Pointer { ... }
-
-sub p5_hv_iterval(Perl5Interpreter, Pointer, Pointer) is native($p5helper)
-    returns Pointer { ... }
-
-sub p5_undef(Perl5Interpreter) is native($p5helper)
-    returns Pointer { ... }
-
-sub p5_newHV(Perl5Interpreter) is native($p5helper)
-    returns Pointer { ... }
-
-sub p5_newAV(Perl5Interpreter) is native($p5helper)
-    returns Pointer { ... }
-
-sub p5_newRV_inc(Perl5Interpreter, Pointer) is native($p5helper)
-    returns Pointer { ... }
-
-sub p5_newRV_noinc(Perl5Interpreter, Pointer) is native($p5helper)
-    returns Pointer { ... }
-
-sub p5_sv_reftype(Perl5Interpreter, Pointer) is native($p5helper)
-    returns Str { ... }
-
-sub p5_hv_fetch(Perl5Interpreter, Pointer, size_t, Blob) is native($p5helper)
-    returns Pointer { ... }
-
-sub p5_hv_store(Perl5Interpreter, Pointer, Str, Pointer) is native($p5helper)
-    { ... }
-
-sub p5_hv_exists(Perl5Interpreter, Pointer, size_t, Blob) is native($p5helper)
-    returns int32 { ... }
-
-sub p5_call_function(Perl5Interpreter, Str, int32, CArray[Pointer], int32 is rw, int32 is rw, int32 is rw) is native($p5helper)
-    returns Pointer { ... }
-
-sub p5_call_method(Perl5Interpreter, Str, Pointer, int32, Str, int32, Pointer, int32 is rw, int32 is rw, int32 is rw) is native($p5helper)
-    returns Pointer { ... }
-
-sub p5_call_package_method(Perl5Interpreter, Str, Str, int32, CArray[Pointer], int32 is rw, int32 is rw, int32 is rw) is native($p5helper)
-    returns Pointer { ... }
-
-sub p5_call_code_ref(Perl5Interpreter, Pointer, int32, CArray[Pointer], int32 is rw, int32 is rw, int32 is rw) is native($p5helper)
-    returns Pointer { ... }
-
-sub p5_rebless_object(Perl5Interpreter, Pointer, Str, IV) is native($p5helper)
-    { ... }
-
-sub p5_destruct_perl(Perl5Interpreter) is native($p5helper)
-    { ... }
-
-sub p5_sv_iv(Perl5Interpreter, Pointer) is native($p5helper)
-    returns IV { ... }
-
-sub p5_sv_nv(Perl5Interpreter, Pointer) is native($p5helper)
-    returns NV { ... }
-
-sub p5_sv_rv(Perl5Interpreter, Pointer) is native($p5helper)
-    returns Pointer { ... }
-
-sub p5_is_object(Perl5Interpreter, Pointer) is native($p5helper)
-    returns int32 { ... }
-
-sub p5_is_sub_ref(Perl5Interpreter, Pointer) is native($p5helper)
-    returns int32 { ... }
-
-sub p5_get_global(Perl5Interpreter, Str) is native($p5helper)
-    returns Pointer { ... }
-
-sub p5_eval_pv(Perl5Interpreter, Str, int32) is native($p5helper)
-    returns Pointer { ... }
-
-sub p5_err_sv(Perl5Interpreter) is native($p5helper)
-    returns Pointer { ... }
-
-sub p5_wrap_p6_object(Perl5Interpreter, IV, Pointer) is native($p5helper)
-    returns Pointer { ... }
-
-sub p5_wrap_p6_callable(Perl5Interpreter, IV, Pointer) is native($p5helper)
-    returns Pointer { ... }
-
-sub p5_wrap_p6_hash(
-    Perl5Interpreter,
-    IV,
-) is native($p5helper)
-    returns Pointer { ... }
-
-sub p5_wrap_p6_handle(Perl5Interpreter, IV, Pointer) is native($p5helper)
-    returns Pointer { ... }
-
-sub p5_is_wrapped_p6_object(Perl5Interpreter, Pointer) is native($p5helper)
-    returns int32 { ... }
-
-sub p5_unwrap_p6_object(Perl5Interpreter, Pointer) is native($p5helper)
-    returns IV { ... }
-
-sub p5_unwrap_p6_hash(Perl5Interpreter, Pointer) is native($p5helper)
-    returns IV { ... }
-
-sub p5_terminate() is native($p5helper)
-    { ... }
-
+# I'd like to call this from Inline::Perl5::Interpreter
+# But it raises an error in the END { ... } call
+use NativeCall;
+my constant $p5helper = %?RESOURCES<libraries/p5helper>.Str;
+sub p5_terminate() is native($p5helper) { ... }
 
 multi method p6_to_p5(Int:D $value) returns Pointer {
-    p5_int_to_sv($!p5, $value);
+    $!p5.p5_int_to_sv($value);
 }
 multi method p6_to_p5(Num:D $value) returns Pointer {
-    p5_float_to_sv($!p5, $value);
+    $!p5.p5_float_to_sv($value);
 }
 multi method p6_to_p5(Rat:D $value) returns Pointer {
-    p5_float_to_sv($!p5, $value.Num);
+    $!p5.p5_float_to_sv($value.Num);
 }
 multi method p6_to_p5(Str:D $value) returns Pointer {
     my $buf = $value.encode('UTF-8');
-    p5_str_to_sv($!p5, $buf.elems, $buf);
+    $!p5.p5_str_to_sv($buf.elems, $buf);
 }
 multi method p6_to_p5(IntStr:D $value) returns Pointer {
-    p5_int_to_sv($!p5, $value.Int);
+    $!p5.p5_int_to_sv($value.Int);
+    # $!p5.p5_int_to_sv($value.Int);
 }
 multi method p6_to_p5(NumStr:D $value) returns Pointer {
-    p5_float_to_sv($!p5, $value.Num);
+    $!p5.p5_float_to_sv($value.Num);
 }
 multi method p6_to_p5(RatStr:D $value) returns Pointer {
-    p5_float_to_sv($!p5, $value.Num);
+    $!p5.p5_float_to_sv($value.Num);
 }
 multi method p6_to_p5(blob8:D $value) returns Pointer {
-    p5_buf_to_sv($!p5, $value.elems, $value);
+    $!p5.p5_buf_to_sv($value.elems, $value);
 }
 multi method p6_to_p5(Capture:D $value where $value.elems == 1) returns Pointer {
-    p5_sv_to_ref($!p5, self.p6_to_p5($value[0]));
+    $!p5.p5_sv_to_ref(self.p6_to_p5($value[0]));
 }
 multi method p6_to_p5(Perl5Object $value) returns Pointer {
-    p5_sv_refcnt_inc($!p5, $value.ptr);
+    $!p5.p5_sv_refcnt_inc($value.ptr);
     $value.ptr;
 }
 multi method p6_to_p5(Perl5Package $value) returns Pointer {
@@ -314,13 +71,12 @@ multi method p6_to_p5(Perl5Extension $value) returns Pointer {
     self.p6_to_p5($value.unwrap-perl5-object());
 }
 
-my $objects = ObjectKeeper.new; #FIXME not thread safe
+my $objects = Inline::Language::ObjectKeeper.new; #FIXME not thread safe
 
 multi method p6_to_p5(Perl5Extension $value, Pointer $target) returns Pointer {
     my $index = $objects.keep($value);
 
-    p5_wrap_p6_object(
-        $!p5,
+    $!p5.p5_wrap_p6_object(
         $index,
         $target,
     );
@@ -332,7 +88,7 @@ multi method p6_to_p5(Nil) returns Pointer {
     Pointer.new(0);
 }
 multi method p6_to_p5(Any:U $value) returns Pointer {
-    p5_undef($!p5);
+    $!p5.p5_undef();
 }
 
 sub free_p6_object(Int $index) {
@@ -342,8 +98,7 @@ sub free_p6_object(Int $index) {
 multi method p6_to_p5(Any:D $value) {
     my $index = $objects.keep($value);
 
-    p5_wrap_p6_object(
-        $!p5,
+    $!p5.p5_wrap_p6_object(
         $index,
         Pointer,
     );
@@ -351,73 +106,70 @@ multi method p6_to_p5(Any:D $value) {
 multi method p6_to_p5(Callable:D $value, Pointer $inst = Pointer) {
     my $index = $objects.keep($value);
 
-    p5_wrap_p6_callable(
-        $!p5,
+    $!p5.p5_wrap_p6_callable(
         $index,
         $inst,
     );
 }
 multi method p6_to_p5(Perl5Callable:D $value) returns Pointer {
-    p5_sv_refcnt_inc($!p5, $value.ptr);
+    $!p5.p5_sv_refcnt_inc($value.ptr);
     $value.ptr;
 }
 multi method p6_to_p5(Hash:D $value) returns Pointer {
     my $index = $objects.keep($value);
 
-    return p5_wrap_p6_hash(
-        $!p5,
+    return $!p5.p5_wrap_p6_hash(
         $index,
     );
 }
 multi method p6_to_p5(Map:D $value) returns Pointer {
-    my $hv = p5_newHV($!p5);
+    my $hv = $!p5.p5_newHV();
     for %$value -> $item {
         my $value = self.p6_to_p5($item.value);
-        p5_hv_store($!p5, $hv, $item.key, $value);
+        $!p5.p5_hv_store($hv, $item.key, $value);
     }
-    p5_newRV_noinc($!p5, $hv);
+    $!p5.p5_newRV_noinc($hv);
 }
 multi method p6_to_p5(Perl5Hash:D $value) returns Pointer {
-    p5_newRV_inc($!p5, $value.hv)
+    $!p5.p5_newRV_inc($value.hv)
 }
 multi method p6_to_p5(Perl5Array:D $value) returns Pointer {
-    p5_newRV_inc($!p5, $value.av)
+    $!p5.p5_newRV_inc($value.av)
 }
 multi method p6_to_p5(Positional:D $value) returns Pointer {
-    my $av = p5_newAV($!p5);
+    my $av = $!p5.p5_newAV();
     for @$value -> $item {
-        p5_av_push($!p5, $av, self.p6_to_p5($item));
+        $!p5.p5_av_push($av, self.p6_to_p5($item));
     }
-    p5_newRV_inc($!p5, $av);
+    $!p5.p5_newRV_inc($av);
 }
 multi method p6_to_p5(IO::Handle:D $value) returns Pointer {
     my $index = $objects.keep($value);
 
-    p5_wrap_p6_handle(
-        $!p5,
+    $!p5.p5_wrap_p6_handle(
         $index,
         Any,
     );
 }
 
 method p5_sv_reftype(Pointer $sv) {
-    return p5_sv_reftype($!p5, $sv);
+    return $!p5.p5_sv_reftype($sv);
 }
 
 method p5_array_to_p6_array(Pointer $sv) {
-    my $av = p5_sv_to_av($!p5, $sv);
-    my int32 $av_len = p5_av_top_index($!p5, $av);
+    my $av = $!p5.p5_sv_to_av($sv);
+    my int32 $av_len = $!p5.p5_av_top_index($av);
 
     my $arr = [];
     loop (my int32 $i = 0; $i <= $av_len; $i = $i + 1) {
-        $arr.push(self.p5_to_p6(p5_av_fetch($!p5, $av, $i)));
+        $arr.push(self.p5_to_p6($!p5.p5_av_fetch($av, $i)));
     }
     $arr;
 }
 
 my class Perl5Hash does Iterable does Associative {
     has Inline::Perl5 $!ip5;
-    has Perl5Interpreter $!p5;
+    has Inline::Perl5::Interpreter $!p5;
     has Pointer $.hv;
     method new(:$ip5, :$p5, :$hv) {
         my \hash = self.CREATE;
@@ -425,34 +177,34 @@ my class Perl5Hash does Iterable does Associative {
         hash
     }
     submethod BUILD(:$!ip5, :$!p5, :$!hv) {
-        p5_sv_refcnt_inc($!p5, $!hv);
+        $!p5.p5_sv_refcnt_inc($!hv);
     }
     submethod DESTROY() {
         $!ip5.sv_refcnt_dec($!hv);
     }
     method ASSIGN-KEY(Perl5Hash:D: Str() \key, Mu \assignval) is raw {
-        p5_hv_store($!p5, $!hv, key, $!ip5.p6_to_p5(assignval));
+        $!p5.p5_hv_store($!hv, key, $!ip5.p6_to_p5(assignval));
         assignval
     }
     method AT-KEY(Perl5Hash:D: Str() \key) is raw {
         my $buf = key.encode('UTF-8');
-        $!ip5.p5_to_p6(p5_hv_fetch($!p5, $!hv, $buf.elems, $buf))
+        $!ip5.p5_to_p6($!p5.p5_hv_fetch($!hv, $buf.elems, $buf))
     }
     method EXISTS-KEY(Perl5Hash:D: Str() \key) {
         my $buf = key.encode('UTF-8');
-        p5_hv_exists($!p5, $!hv, $buf.elems, $buf)
+        $!p5.p5_hv_exists($!hv, $buf.elems, $buf)
     }
     method Hash() {
-        my int32 $len = p5_hv_iterinit($!p5, $!hv);
+        my int32 $len = $!p5.p5_hv_iterinit($!hv);
 
         my $hash = {};
 
         for 0 .. $len - 1 {
-            my Pointer $next = p5_hv_iternext($!p5, $!hv);
-            my Pointer $key = p5_hv_iterkeysv($!p5, $next);
+            my Pointer $next = $!p5.p5_hv_iternext($!hv);
+            my Pointer $key = $!p5.p5_hv_iterkeysv($next);
             die 'Hash entry without key!?' unless $key;
-            my Str $p6_key = p5_sv_to_char_star($!p5, $key);
-            my $val = $!ip5.p5_to_p6(p5_hv_iterval($!p5, $!hv, $next));
+            my Str $p6_key = $!p5.p5_sv_to_char_star($key);
+            my $val = $!ip5.p5_to_p6($!p5.p5_hv_iterval($!hv, $next));
             $hash{$p6_key} = $val;
         }
 
@@ -516,7 +268,7 @@ my class Perl5Hash does Iterable does Associative {
 
 my class Perl5Array does Iterable does Positional {
     has Inline::Perl5 $!ip5;
-    has Perl5Interpreter $!p5;
+    has Inline::Perl5::Interpreter $!p5;
     has Pointer $.av;
     method new(:$ip5, :$p5, :$av) {
         my \arr = self.CREATE;
@@ -529,21 +281,21 @@ my class Perl5Array does Iterable does Positional {
         $!ip5.sv_refcnt_dec($!av);
     }
     method ASSIGN-POS(Perl5Array:D: Int() \pos, Mu \assignval) is raw {
-        p5_av_store($!p5, $!av, pos, $!ip5.p6_to_p5(assignval));
+        $!p5.p5_av_store($!av, pos, $!ip5.p6_to_p5(assignval));
         assignval
     }
     method AT-POS(Perl5Array:D: Int() \pos) is raw {
-        $!ip5.p5_to_p6(p5_av_fetch($!p5, $!av, pos))
+        $!ip5.p5_to_p6($!p5.p5_av_fetch($!av, pos))
     }
     method EXISTS-POS(Perl5Array:D: Int() \pos) {
-        0 <= pos <= p5_av_top_index($!p5, $!av)
+        0 <= pos <= $!p5.p5_av_top_index($!av)
     }
     method Array() {
-        my int32 $av_len = p5_av_top_index($!p5, $!av);
+        my int32 $av_len = $!p5.p5_av_top_index($!av);
 
         my $arr = [];
         loop (my int32 $i = 0; $i <= $av_len; $i = $i + 1) {
-            $arr.push($!ip5.p5_to_p6(p5_av_fetch($!p5, $!av, $i)));
+            $arr.push($!ip5.p5_to_p6($!p5.p5_av_fetch($!av, $i)));
         }
         $arr
     }
@@ -560,13 +312,13 @@ my class Perl5Array does Iterable does Positional {
         self.Array.kv
     }
     method elems() {
-        p5_av_top_index($!p5, $!av) + 1
+        $!p5.p5_av_top_index($!av) + 1
     }
     method Numeric() {
         self.elems
     }
     method Bool() {
-        ?(p5_av_top_index($!p5, $!av) + 1);
+        ?($!p5.p5_av_top_index($!av) + 1);
     }
     multi method gist(Perl5Array:D:) {
         self.Array.gist
@@ -580,30 +332,30 @@ my class Perl5Array does Iterable does Positional {
 }
 
 method !p5_hash_to_writeback_p6_hash(Pointer $sv) {
-    my Pointer $hv = p5_sv_to_hv($!p5, $sv);
+    my Pointer $hv = $!p5.p5_sv_to_hv($sv);
 
     Perl5Hash.new(ip5 => self, p5 => $!p5, :$hv)
 }
 
 method !p5_array_to_writeback_p6_array(Pointer $sv) {
-    my Pointer $av = p5_sv_to_av_inc($!p5, $sv);
+    my Pointer $av = $!p5.p5_sv_to_av_inc($sv);
 
     Perl5Array.new(ip5 => self, p5 => $!p5, :$av)
 }
 
 method !p5_hash_to_p6_hash(Pointer $sv) {
-    my Pointer $hv = p5_sv_to_hv($!p5, $sv);
+    my Pointer $hv = $!p5.p5_sv_to_hv($sv);
 
-    my int32 $len = p5_hv_iterinit($!p5, $hv);
+    my int32 $len = $!p5.p5_hv_iterinit($hv);
 
     my $hash = {};
 
     for 0 .. $len - 1 {
-        my Pointer $next = p5_hv_iternext($!p5, $hv);
-        my Pointer $key = p5_hv_iterkeysv($!p5, $next);
+        my Pointer $next = $!p5.p5_hv_iternext($hv);
+        my Pointer $key = $!p5.p5_hv_iterkeysv($next);
         die 'Hash entry without key!?' unless $key;
-        my Str $p6_key = p5_sv_to_char_star($!p5, $key);
-        my $val = self.p5_to_p6(p5_hv_iterval($!p5, $hv, $next));
+        my Str $p6_key = $!p5.p5_sv_to_char_star($key);
+        my $val = self.p5_to_p6($!p5.p5_hv_iterval($hv, $next));
         $hash{$p6_key} = $val;
     }
 
@@ -611,42 +363,42 @@ method !p5_hash_to_p6_hash(Pointer $sv) {
 }
 
 method !p5_scalar_ref_to_capture(Pointer $sv) {
-    return \(self.p5_to_p6(p5_sv_rv($!p5, $sv)));
+    return \(self.p5_to_p6($!p5.p5_sv_rv($sv)));
 }
 
 method p5_to_p6(Pointer $value, int32 $type is copy = 0) {
     return Any unless defined $value;
-    $type ||= p5_get_type($!p5, $value);
+    $type ||= $!p5.p5_get_type($value);
 
     my enum P5Types <Unknown Object SubRef NV IV PV Array Hash P6Hash Undef ScalarRef>;
     given $type {
         when Object {
-            if p5_is_wrapped_p6_object($!p5, $value) {
-                return $objects.get(p5_unwrap_p6_object($!p5, $value));
+            if $!p5.p5_is_wrapped_p6_object($value) {
+                return $objects.get($!p5.p5_unwrap_p6_object($value));
             }
             else {
-                p5_sv_refcnt_inc($!p5, $value);
+                $!p5.p5_sv_refcnt_inc($value);
                 return Perl5Object.new(perl5 => self, ptr => $value);
             }
         }
         when SubRef {
-            p5_sv_refcnt_inc($!p5, $value);
+            $!p5.p5_sv_refcnt_inc($value);
             return Perl5Callable.new(perl5 => self, ptr => $value);
         }
         when NV {
-            return p5_sv_nv($!p5, $value);
+            return $!p5.p5_sv_nv($value);
         }
         when IV {
-            return p5_sv_iv($!p5, $value);
+            return $!p5.p5_sv_iv($value);
         }
         when PV {
-            if p5_sv_utf8($!p5, $value) {
-                return p5_sv_to_char_star($!p5, $value);
+            if $!p5.p5_sv_utf8($value) {
+                return $!p5.p5_sv_to_char_star($value);
             }
             else {
                 my $string_ptr = CArray[CArray[int8]].new;
                 $string_ptr[0] = CArray[int8];
-                my $len = p5_sv_to_buf($!p5, $value, $string_ptr);
+                my $len = $!p5.p5_sv_to_buf($value, $string_ptr);
                 my $buf = Buf.new;
                 for 0..^$len {
                     $buf[$_] = $string_ptr[0][$_];
@@ -661,7 +413,7 @@ method p5_to_p6(Pointer $value, int32 $type is copy = 0) {
             return self!p5_hash_to_writeback_p6_hash($value);
         }
         when P6Hash {
-            return $objects.get(p5_unwrap_p6_hash($!p5, $value));
+            return $objects.get($!p5.p5_unwrap_p6_hash($value));
         }
         when Undef {
             return Any;
@@ -674,16 +426,16 @@ method p5_to_p6(Pointer $value, int32 $type is copy = 0) {
 }
 
 method handle_p5_exception() is hidden-from-backtrace {
-    if my $error = self.p5_to_p6(p5_err_sv($!p5)) {
+    if my $error = self.p5_to_p6($!p5.p5_err_sv()) {
         die $error;
     }
 }
 
 method run($perl) {
-    my $res = p5_eval_pv($!p5, $perl, 0);
+    my $res = $!p5.p5_eval_pv($perl, 0);
     self.handle_p5_exception();
     my $retval = self.p5_to_p6($res);
-    p5_sv_refcnt_dec($!p5, $res);
+    $!p5.p5_sv_refcnt_dec($res);
     $retval
 }
 
@@ -725,7 +477,7 @@ method !unpack_return_values($av, int32 $count, int32 $type = 0) {
     if defined $av {
         if $count == 1 {
             my $retval = self.p5_to_p6($av, $type);
-            p5_sv_refcnt_dec($!p5, $av);
+            $!p5.p5_sv_refcnt_dec($av);
             $retval
         }
         else {
@@ -741,8 +493,7 @@ method call(Str $function, *@args, *%args) {
     my int32 $retvals;
     my int32 $err;
     my int32 $type;
-    my $av = p5_call_function(
-        $!p5,
+    my $av = $!p5.p5_call_function(
         $function,
         |self.setup_arguments(@args, %args),
         $retvals,
@@ -757,8 +508,7 @@ method call-args(Str $function, Capture \args) {
     my int32 $retvals;
     my int32 $err;
     my int32 $type;
-    my $av = p5_call_function(
-        $!p5,
+    my $av = $!p5.p5_call_function(
         $function,
         |self.setup_arguments(args.list, args.hash),
         $retvals,
@@ -773,8 +523,7 @@ multi method invoke(Str $package, Str $function, *@args, *%args) {
     my int32 $retvals;
     my int32 $err;
     my int32 $type;
-    my $av = p5_call_package_method(
-        $!p5,
+    my $av = $!p5.p5_call_package_method(
         $package,
         $function,
         |self.setup_arguments(@args, %args),
@@ -790,8 +539,7 @@ multi method invoke(Pointer $obj, Str $function) {
     my int32 $retvals;
     my int32 $err;
     my int32 $type;
-    my $av = p5_call_method(
-        $!p5,
+    my $av = $!p5.p5_call_method(
         Str,
         $obj,
         0,
@@ -826,8 +574,7 @@ method invoke-args(Pointer $obj, Str $function, Capture $args) {
     my int32 $retvals;
     my int32 $err;
     my int32 $type;
-    my $av = p5_call_method(
-        $!p5,
+    my $av = $!p5.p5_call_method(
         Str,
         $obj,
         0,
@@ -862,8 +609,7 @@ multi method invoke(Pointer $obj, Str $function, *@args, *%args) {
     my int32 $retvals;
     my int32 $err;
     my int32 $type;
-    my $av = p5_call_method(
-        $!p5,
+    my $av = $!p5.p5_call_method(
         Str,
         $obj,
         0,
@@ -883,8 +629,7 @@ method invoke-parent(Str $package, Pointer $obj, Bool $context, Str $function, @
     my int32 $err;
     my int32 $type;
     my ($j, @svs) := self.setup_arguments(@args, %args);
-    my $av = p5_call_method(
-        $!p5,
+    my $av = $!p5.p5_call_method(
         $package,
         $obj,
         $context ?? 1 !! 0,
@@ -903,13 +648,13 @@ method execute(Pointer $code_ref, *@args) {
     my int32 $retvals;
     my int32 $err;
     my int32 $type;
-    my $av = p5_call_code_ref($!p5, $code_ref, |self.setup_arguments(@args), $retvals, $err, $type);
+    my $av = $!p5.p5_call_code_ref($code_ref, |self.setup_arguments(@args), $retvals, $err, $type);
     self.handle_p5_exception() if $err;
     self!unpack_return_values($av, $retvals, $type);
 }
 
 method global(Str $name) {
-    self.p5_to_p6(p5_get_global($!p5, $name))
+    self.p5_to_p6($!p5.p5_get_global($name))
 }
 
 PROCESS::<%PERL5> := class :: does Associative {
@@ -1201,18 +946,18 @@ method init_callbacks {
     self.call('v6::init', Perl6Callbacks.new(:p5(self)));
 
     if $!external_p5 {
-        p5_inline_perl6_xs_init($!p5);
+        $!p5.p5_inline_perl6_xs_init();
     }
 }
 
 method sv_refcnt_dec($obj) {
     return unless $!p5; # Destructor may already have run. Destructors of individual P5 objects no longer work.
-    p5_sv_refcnt_dec($!p5, $obj);
+    $!p5.p5_sv_refcnt_dec($obj);
 }
 
 method rebless(Perl5Object $obj, Str $package, $p6obj) {
     my $index = $objects.keep($p6obj);
-    p5_rebless_object($!p5, $obj.ptr, $package, $index);
+    $!p5.p5_rebless_object($obj.ptr, $package, $index);
 }
 
 method install_wrapper_method(Str:D $package, Str $name, *@attributes) {
@@ -1352,8 +1097,8 @@ method use(Str $module, *@args) {
 }
 
 submethod DESTROY {
-    p5_destruct_perl($!p5) if $!p5 and not $!external_p5;
-    $!p5 = Perl5Interpreter;
+    $!p5.p5_destruct_perl() if $!p5 and not $!external_p5;
+    $!p5 = Inline::Perl5::Interpreter;
 }
 
 class Perl5Object {
@@ -1468,7 +1213,7 @@ method BUILD(*%args) {
     $!external_p5 = %args<p5>:exists;
     if $!external_p5 {
         $!p5 = %args<p5>;
-        p5_init_callbacks(
+        Inline::Perl5::Interpreter::p5_init_callbacks(
             &call_method,
             &call_callable,
             &free_p6_object,
@@ -1479,7 +1224,7 @@ method BUILD(*%args) {
     else {
         my @args = @*ARGS;
         $!p5 = @args
-            ?? p5_init_perl(
+            ?? Inline::Perl5::Interpreter::p5_init_perl(
                 @args.elems + 4,
                 CArray[Str].new('', '-e', '0', '--', |@args),
                 &call_method,
@@ -1488,7 +1233,7 @@ method BUILD(*%args) {
                 &hash_at_key,
                 &hash_assign_key,
             )
-            !! p5_init_perl(
+            !! Inline::Perl5::Interpreter::p5_init_perl(
                 3,
                 CArray[Str].new('', '-e', '0'),
                 &call_method,
@@ -1638,13 +1383,13 @@ BEGIN {
 }
 
 my Bool $inline_perl6_in_use = False;
-sub init_inline_perl6_new_callback(&inline_perl5_new (Perl5Interpreter --> Pointer)) { ... };
+sub init_inline_perl6_new_callback(&inline_perl5_new (Inline::Perl5::Interpreter --> Pointer)) { ... };
 
 our sub init_inline_perl6_callback(Str $path) {
     $inline_perl6_in_use = True;
     trait_mod:<is>(&init_inline_perl6_new_callback, :native($path));
 
-    init_inline_perl6_new_callback(sub (Perl5Interpreter $p5) {
+    init_inline_perl6_new_callback(sub (Inline::Perl5::Interpreter $p5) {
         my $self = Inline::Perl5.new(:p5($p5));
         return $self.p6_to_p5($self);
     });
