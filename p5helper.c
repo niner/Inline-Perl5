@@ -66,6 +66,7 @@ size_t p5_size_of_nv() {
 void p5_inline_perl6_xs_init(PerlInterpreter *my_perl) {
     char *file = __FILE__;
     newXS("Perl6::Object::call_method", p5_call_p6_method, file);
+    newXS("Perl6::Object::call_extension_method", p5_call_p6_extension_method, file);
     newXS("Perl6::Hash::FETCH", p5_hash_at_key, file);
     newXS("Perl6::Hash::STORE", p5_hash_assign_key, file);
     newXS("Perl6::Callable::call", p5_call_p6_callable, file);
@@ -885,7 +886,7 @@ XS(p5_call_p6_method) {
     char * const name_pv  = SvPV(name, len);
 
     if (!SvROK(obj)) {
-        croak("Got a non-reference for obj?!");
+        croak("Got a non-reference for obj in p5_call_p6_method calling %s?!", name_pv);
     }
     SV * const obj_deref = SvRV(obj);
     MAGIC * const mg = mg_find(obj_deref, '~');
@@ -940,7 +941,7 @@ XS(p5_call_p6_extension_method) {
     SV * obj = ST(3);
 
     if (!SvROK(obj)) {
-        croak("Got a non-reference for obj?!");
+        croak("Got a non-reference for obj in p5_call_p6_extension_method?!");
     }
     MAGIC * mg = find_shadow_magic(p6cb, static_class, obj);
     STRLEN len;
