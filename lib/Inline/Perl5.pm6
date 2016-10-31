@@ -1151,7 +1151,7 @@ method init_callbacks {
             my ($package, $name, @attributes) = @_;
             no strict 'refs';
             *{"${package}::$name"} = my $code = v6::set_subname("${package}::", $name, sub {
-                return Perl6::Object::call_method($name, @_);
+                return Perl6::Object::call_extension_method($p6, $package, $name, @_);
             });
             attributes->import($package, $code, @attributes) if @attributes;
             return;
@@ -1159,21 +1159,6 @@ method init_callbacks {
 
         {
             my @inlined;
-            BEGIN {
-                no strict "refs";
-                *{"CORE::GLOBAL::bless"} = sub {
-                    my ($self, $class) = @_;
-                    $class //= scalar caller;
-                    CORE::bless($self, $class);
-                    foreach my $package (@inlined) {
-                        if ($self->isa($package)) {
-                            v6::shadow_object($package, $class, $self);
-                            last;
-                        }
-                    }
-                    $self
-                };
-            };
             my $package_to_create;
 
             sub import {

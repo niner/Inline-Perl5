@@ -27,6 +27,7 @@ typedef struct {
 } perl6_callbacks;
 
 XS(p5_call_p6_method);
+XS(p5_call_p6_extension_method);
 XS(p5_call_p6_callable);
 XS(p5_hash_at_key);
 XS(p5_hash_assign_key);
@@ -38,6 +39,7 @@ EXTERN_C void xs_init(pTHX) {
     /* DynaLoader is a special case */
     newXS("DynaLoader::boot_DynaLoader", boot_DynaLoader, file);
     newXS("Perl6::Object::call_method", p5_call_p6_method, file);
+    newXS("Perl6::Object::call_extension_method", p5_call_p6_extension_method, file);
     newXS("Perl6::Hash::FETCH", p5_hash_at_key, file);
     newXS("Perl6::Hash::STORE", p5_hash_assign_key, file);
     newXS("Perl6::Callable::call", p5_call_p6_callable, file);
@@ -889,6 +891,64 @@ XS(p5_call_p6_method) {
     MAGIC * const mg = mg_find(obj_deref, '~');
     _perl6_magic* const p6mg = (_perl6_magic*)(mg->mg_ptr);
     SV *err = NULL;
+    SV * const args_rv = newRV_noinc((SV *) args);
+
+    declare_cbs;
+    SV * retval = cbs->call_p6_method(p6mg->index, name_pv, GIMME_V == G_SCALAR, args_rv, &err);
+    return post_callback(ax, sp, items, args_rv, err, retval);
+}
+
+MAGIC *find_shadow_magic(SV *p6cb, SV *static_class, SV *obj) {
+    SV * const obj_deref = SvRV(obj);
+    MAGIC * mg = mg_find(obj_deref, '~');
+    if (mg == NULL || ((_perl6_magic*)(mg->mg_ptr))->key != PERL6_EXTENSION_MAGIC_KEY) {
+        /* need to create the shadow object here */
+
+        AV * method_args = newAV();
+        SV * method_args_rv = newRV_noinc((SV *) method_args);
+        av_extend(method_args, 1);
+        SvREFCNT_inc(obj);
+        av_store(method_args, 0, obj);
+
+        AV * args = newAV();
+        av_extend(args, 3);
+        SvREFCNT_inc(static_class);
+        av_store(args, 0, static_class);
+        av_store(args, 1, newSVpvs("new_shadow_of_p5_object"));
+        av_store(args, 2, method_args_rv);
+
+        MAGIC * const p6cb_mg = mg_find(SvRV(p6cb), '~');
+        _perl6_magic* const p6cb_p6mg = (_perl6_magic*)(p6cb_mg->mg_ptr);
+        SV *err = NULL;
+        SV * const args_rv = newRV_noinc((SV *) args);
+
+        declare_cbs;
+        cbs->call_p6_method(p6cb_p6mg->index, "invoke", 1, args_rv, &err);
+        SvREFCNT_dec(args_rv);
+        handle_p6_error(err);
+
+        mg = mg_find(obj_deref, '~');
+    }
+    return mg;
+}
+
+XS(p5_call_p6_extension_method) {
+    dXSARGS;
+    SV * p6cb = ST(0);
+    SV * static_class = ST(1);
+    SV * name = ST(2);
+    SV * obj = ST(3);
+
+    if (!SvROK(obj)) {
+        croak("Got a non-reference for obj?!");
+    }
+    MAGIC * mg = find_shadow_magic(p6cb, static_class, obj);
+    STRLEN len;
+    char * const name_pv  = SvPV(name, len);
+    _perl6_magic* const p6mg = (_perl6_magic*)(mg->mg_ptr);
+    SV *err = NULL;
+
+    AV *args = create_args_array(ax, items, 4);
     SV * const args_rv = newRV_noinc((SV *) args);
 
     declare_cbs;
