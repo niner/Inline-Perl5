@@ -432,55 +432,69 @@ SV *p5_err_sv(PerlInterpreter *my_perl) {
     return sv_mortalcopy(ERRSV);
 }
 
+void handle_p5_error(I32 *err) {
+    SV *err_tmp = ERRSV;
+    *err = SvTRUE(err_tmp);
+}
+
+void push_arguments(SV **sp, int len, SV *args[]) {
+    int i;
+    for (i = 0; i < len; i++) {
+        if (args[i] != NULL) /* skip Nil which gets turned into NULL */
+            XPUSHs(sv_2mortal(args[i]));
+    }
+    PUTBACK;
+}
+
+SV *pop_return_values(PerlInterpreter *my_perl, SV **sp, I32 count, I32 *type) {
+    SV * retval = NULL;
+    I32 i;
+
+    if (count == 1) {
+        retval = POPs;
+        SvREFCNT_inc(retval);
+        *type = p5_get_type(my_perl, retval);
+    }
+    else {
+        if (count > 1) {
+            retval = (SV *)newAV();
+            av_extend((AV *)retval, count - 1);
+        }
+
+        for (i = count - 1; i >= 0; i--) {
+            SV * const next = POPs;
+            SvREFCNT_inc(next);
+
+            if (av_store((AV *)retval, i, next) == NULL)
+                SvREFCNT_dec(next); /* see perlguts Working with AVs */
+        }
+    }
+    PUTBACK;
+
+    return retval;
+}
+
 SV *p5_call_package_method(PerlInterpreter *my_perl, char *package, char *name, int len, SV *args[], I32 *count, I32 *err, I32 *type) {
     PERL_SET_CONTEXT(my_perl);
     {
         dSP;
-        int i;
         SV * retval = NULL;
         int flags = G_ARRAY | G_EVAL;
-        SV *err_tmp;
 
         ENTER;
         SAVETMPS;
 
         PUSHMARK(SP);
-
         XPUSHs(newSVpv(package, 0));
-        for (i = 0; i < len; i++) {
-            if (args[i] != NULL) /* skip Nil which gets turned into NULL */
-                XPUSHs(sv_2mortal(args[i]));
-        }
-
-        PUTBACK;
+        push_arguments(sp, len, args);
 
         *count = call_method(name, flags);
         SPAGAIN;
 
-        err_tmp = ERRSV;
-        *err = SvTRUE(err_tmp);
+        handle_p5_error(err);
 
-        if (*count == 1) {
-            retval = POPs;
-            SvREFCNT_inc(retval);
-            *type = p5_get_type(my_perl, retval);
-        }
-        else {
-            if (*count > 1) {
-                retval = (SV *)newAV();
-                av_extend((AV *)retval, *count - 1);
-            }
+        retval = pop_return_values(my_perl, sp, *count, type);
 
-            for (i = *count - 1; i >= 0; i--) {
-                SV * const next = POPs;
-                SvREFCNT_inc(next);
-
-                if (av_store((AV *)retval, i, next) == NULL)
-                    SvREFCNT_dec(next); /* see perlguts Working with AVs */
-            }
-        }
-
-        PUTBACK;
         FREETMPS;
         LEAVE;
 
@@ -495,7 +509,6 @@ SV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, I32 context
         int i;
         SV * retval = NULL;
         int flags = (context ? G_SCALAR : G_ARRAY) | G_EVAL;
-        SV *err_tmp;
 
         ENTER;
         SAVETMPS;
@@ -523,27 +536,9 @@ SV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, I32 context
             *count = call_sv(rv, flags);
             SPAGAIN;
 
-            err_tmp = ERRSV;
-            *err = SvTRUE(err_tmp);
-
-            if (*count == 1) {
-                retval = POPs;
-                SvREFCNT_inc(retval);
-                *type = p5_get_type(my_perl, retval);
-            }
-            else {
-                if (*count > 1) {
-                    retval = (SV *)newAV();
-                    av_extend((AV *)retval, *count - 1);
-                }
-                for (i = *count - 1; i >= 0; i--) {
-                    SV * const next = POPs;
-                    SvREFCNT_inc(next);
-
-                    if (av_store((AV *)retval, i, next) == NULL)
-                        SvREFCNT_dec(next); /* see perlguts Working with AVs */
-                }
-            }
+            handle_p5_error(err);
+            retval = pop_return_values(my_perl, sp, *count, type);
+            SPAGAIN;
         }
         else {
             ERRSV = newSVpvf("Could not find method \"%s\" of \"%s\" object", name, HvNAME(pkg));
@@ -561,48 +556,21 @@ SV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[], 
     PERL_SET_CONTEXT(my_perl);
     {
         dSP;
-        int i;
         SV * retval = NULL;
         int flags = G_ARRAY | G_EVAL;
-        SV *err_tmp;
 
         ENTER;
         SAVETMPS;
 
         PUSHMARK(SP);
-
-        for (i = 0; i < len; i++) {
-            if (args[i] != NULL) /* skip Nil which gets turned into NULL */
-                XPUSHs(sv_2mortal(args[i]));
-        }
-
-        PUTBACK;
+        push_arguments(sp, len, args);
 
         *count = call_pv(name, flags);
         SPAGAIN;
 
-        err_tmp = ERRSV;
-        *err = SvTRUE(err_tmp);
+        handle_p5_error(err);
+        retval = pop_return_values(my_perl, sp, *count, type);
 
-        if (*count == 1) {
-            retval = POPs;
-            SvREFCNT_inc(retval);
-            *type = p5_get_type(my_perl, retval);
-        }
-        else if (*count > 1) {
-            retval = (SV *)newAV();
-            av_extend((AV *)retval, *count - 1);
-
-            for (i = *count - 1; i >= 0; i--) {
-                SV * const next = POPs;
-                SvREFCNT_inc(next);
-
-                if (av_store((AV *)retval, i, next) == NULL)
-                    SvREFCNT_dec(next); /* see perlguts Working with AVs */
-            }
-        }
-
-        PUTBACK;
         FREETMPS;
         LEAVE;
 
@@ -614,47 +582,21 @@ SV *p5_call_code_ref(PerlInterpreter *my_perl, SV *code_ref, int len, SV *args[]
     PERL_SET_CONTEXT(my_perl);
     {
         dSP;
-        int i;
         SV * retval = NULL;
         int flags = G_ARRAY | G_EVAL;
-        SV *err_tmp;
 
         ENTER;
         SAVETMPS;
 
         PUSHMARK(SP);
-
-        for (i = 0; i < len; i++) {
-            if (args[i] != NULL) /* skip Nil which gets turned into NULL */
-                XPUSHs(sv_2mortal(args[i]));
-        }
-
-        PUTBACK;
+        push_arguments(sp, len, args);
 
         *count = call_sv(code_ref, flags);
         SPAGAIN;
 
-        err_tmp = ERRSV;
-        *err = SvTRUE(err_tmp);
+        handle_p5_error(err);
+        retval = pop_return_values(my_perl, sp, *count, type);
 
-        if (*count == 1) {
-            retval = POPs;
-            SvREFCNT_inc(retval);
-            *type = p5_get_type(my_perl, retval);
-        } else if (*count > 1) {
-            retval = (SV *)newAV();
-            av_extend((AV *)retval, *count - 1);
-
-            for (i = *count - 1; i >= 0; i--) {
-                SV * const next = POPs;
-                SvREFCNT_inc(next);
-
-                if (av_store((AV *)retval, i, next) == NULL)
-                    SvREFCNT_dec(next); /* see perlguts Working with AVs */
-            }
-        }
-
-        PUTBACK;
         FREETMPS;
         LEAVE;
 
