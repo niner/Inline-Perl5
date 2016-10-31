@@ -1304,8 +1304,10 @@ method require(Str $module, Num $version?) {
         $ns := $ns{$_}.WHO;
     }
     my @existing = $ns{$inner}.WHO.pairs;
-    $ns{$inner} := $class;
-    $class.WHO{$_.key} := $_.value for @existing;
+    unless $ns{$inner}:exists {
+        $ns{$inner} := $class;
+        $class.WHO{$_.key} := $_.value for @existing;
+    }
 
     if $first-time {
         # install subs like Test::More::ok

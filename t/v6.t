@@ -44,6 +44,10 @@ nqp::force_gc;
 
 ok(%*PERL5<$Foo::Bar::TestV6Base::destructor_runs>, "Destructor ran");
 
+use TestV6Directly:from<Perl5>;
+
+ok(TestV6Directly.new.foo);
+
 done-testing;
 
 # vim: ft=perl6
