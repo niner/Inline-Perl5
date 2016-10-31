@@ -881,44 +881,19 @@ IV p5_unwrap_p6_object(PerlInterpreter *my_perl, SV *obj) {
     return ((_perl6_magic*)(mg->mg_ptr))->index;
 }
 
-XS(p5_call_p6_method) {
-    dXSARGS;
-    SV * name = ST(0);
-    SV * obj = ST(1);
-
+AV *create_args_array(const I32 ax, I32 items, I32 num_fixed_args) {
     AV * args = newAV();
-    av_extend(args, items - 2);
+    av_extend(args, items - num_fixed_args);
     int i;
-    for (i = 0; i < items - 2; i++) {
-        SV * const next = SvREFCNT_inc(ST(i + 2));
+    for (i = 0; i < items - num_fixed_args; i++) {
+        SV * const next = SvREFCNT_inc(ST(i + num_fixed_args));
         if (av_store(args, i, next) == NULL)
             SvREFCNT_dec(next); /* see perlguts Working with AVs */
     }
+    return args;
+}
 
-    STRLEN len;
-    char * const name_pv  = SvPV(name, len);
-
-    if (!SvROK(obj)) {
-        croak("Got a non-reference for obj?!");
-    }
-    SV * const obj_deref = SvRV(obj);
-    MAGIC * const mg = mg_find(obj_deref, '~');
-    _perl6_magic* const p6mg = (_perl6_magic*)(mg->mg_ptr);
-    SV *err = NULL;
-    SV * const args_rv = newRV_noinc((SV *) args);
-
-    declare_cbs;
-
-    SV * retval = cbs->call_p6_method(p6mg->index, name_pv, GIMME_V == G_SCALAR, args_rv, &err);
-    SPAGAIN; /* refresh local stack pointer, could have been modified by Perl 5 code called from Perl 6 */
-    SvREFCNT_dec(args_rv);
-    if (err) {
-        sv_2mortal(err);
-        croak_sv(err);
-    }
-    sv_2mortal(retval);
-    sp -= items;
-
+void return_retval(const I32 ax, SV **sp, SV *retval) {
     if (GIMME_V == G_VOID) {
         XSRETURN_EMPTY;
     }
@@ -936,6 +911,47 @@ XS(p5_call_p6_method) {
         XPUSHs(sv_2mortal(av_shift(av)));
         XSRETURN(1);
     }
+}
+
+void handle_p6_error(SV *err) {
+    if (err) {
+        sv_2mortal(err);
+        croak_sv(err);
+    }
+}
+
+void post_callback(const I32 ax, SV **sp, I32 items, SV * const args_rv, SV *err, SV *retval) {
+    /* refresh local stack pointer, could have been modified by Perl 5 code called from Perl 6 */
+    SPAGAIN;
+    SvREFCNT_dec(args_rv);
+    handle_p6_error(err);
+    sv_2mortal(retval);
+    sp -= items;
+    return return_retval(ax, sp, retval);
+}
+
+XS(p5_call_p6_method) {
+    dXSARGS;
+    SV * name = ST(0);
+    SV * obj = ST(1);
+
+    AV *args = create_args_array(ax, items, 2);
+
+    STRLEN len;
+    char * const name_pv  = SvPV(name, len);
+
+    if (!SvROK(obj)) {
+        croak("Got a non-reference for obj?!");
+    }
+    SV * const obj_deref = SvRV(obj);
+    MAGIC * const mg = mg_find(obj_deref, '~');
+    _perl6_magic* const p6mg = (_perl6_magic*)(mg->mg_ptr);
+    SV *err = NULL;
+    SV * const args_rv = newRV_noinc((SV *) args);
+
+    declare_cbs;
+    SV * retval = cbs->call_p6_method(p6mg->index, name_pv, GIMME_V == G_SCALAR, args_rv, &err);
+    return post_callback(ax, sp, items, args_rv, err, retval);
 }
 
 XS(p5_hash_at_key) {
@@ -985,14 +1001,7 @@ XS(p5_call_p6_callable) {
     dXSARGS;
     SV * obj = ST(0);
 
-    AV * args = newAV();
-    av_extend(args, items - 1);
-    int i;
-    for (i = 0; i < items - 1; i++) {
-        SV * const next = SvREFCNT_inc(ST(i + 1));
-        if (av_store(args, i, next) == NULL)
-            SvREFCNT_dec(next); /* see perlguts Working with AVs */
-    }
+    AV *args = create_args_array(ax, items, 1);
 
     if (!SvROK(obj))
         croak("Tried to call a Perl 6 method on a non-object!?");
@@ -1004,32 +1013,7 @@ XS(p5_call_p6_callable) {
 
     declare_cbs;
     SV * retval = cbs->call_p6_callable(p6mg->index, args_rv, &err);
-    SPAGAIN; /* refresh local stack pointer, could have been modified by Perl 5 code called from Perl 6 */
-    SvREFCNT_dec(args_rv);
-    if (err) {
-        sv_2mortal(err);
-        croak_sv(err);
-    }
-    sv_2mortal(retval);
-    sp -= items;
-
-    if (GIMME_V == G_VOID) {
-        XSRETURN_EMPTY;
-    }
-    if (GIMME_V == G_ARRAY) {
-        AV* const av = (AV*)SvRV(retval);
-        I32 const len = av_len(av) + 1;
-        I32 i;
-        for (i = 0; i < len; i++) {
-            XPUSHs(sv_2mortal(av_shift(av)));
-        }
-        XSRETURN(len);
-    }
-    else {
-        AV* const av = (AV*)SvRV(retval);
-        XPUSHs(sv_2mortal(av_shift(av)));
-        XSRETURN(1);
-    }
+    return post_callback(ax, sp, items, args_rv, err, retval);
 }
 
 XS(p5_load_module) {
