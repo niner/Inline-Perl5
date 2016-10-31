@@ -1040,7 +1040,6 @@ method init_callbacks {
             return bless $self, $class;
         }
 
-        my $delete_key = 'DELETE-KEY';
         sub DELETE {
             my ($self, $key) = @_;
             return Perl6::Object::call_method('DELETE-KEY', $self->[0], $key);
@@ -1048,12 +1047,10 @@ method init_callbacks {
         sub CLEAR {
             die 'CLEAR NYI';
         }
-        my $exists_key = 'EXISTS-KEY';
         sub EXISTS {
             my ($self, $key) = @_;
             return Perl6::Object::call_method('EXISTS-KEY', $self->[0], $key);
         }
-        my $pull_one = 'pull-one';
         sub FIRSTKEY {
             my ($self) = @_;
             $self->[1] = [ Perl6::Object::call_method('keys', $self->[0]) ];
