@@ -716,7 +716,7 @@ MGVTBL p5_inline_hash_mg_vtbl = {
     0x0
 };
 
-void p5_rebless_object(PerlInterpreter *my_perl, SV *obj, char *package, IV i, SV *(*call_p6_method)(IV, char * , I32, SV *, SV **), void (*free_p6_object)(IV)) {
+void p5_rebless_object(PerlInterpreter *my_perl, SV *obj, char *package, IV i) {
     SV * const inst = SvRV(obj);
     HV *stash = gv_stashpv(package, GV_ADD);
     if (stash == NULL)
