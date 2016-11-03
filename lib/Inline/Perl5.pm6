@@ -1462,25 +1462,15 @@ method BUILD(*%args) {
     }
     else {
         my @args = @*ARGS;
-        $!p5 = @args
-            ?? p5_init_perl(
-                @args.elems + 4,
-                CArray[Str].new('', '-e', '0', '--', |@args),
-                &call_method,
-                &call_callable,
-                &free_p6_object,
-                &hash_at_key,
-                &hash_assign_key,
-            )
-            !! p5_init_perl(
-                3,
-                CArray[Str].new('', '-e', '0'),
-                &call_method,
-                &call_callable,
-                &free_p6_object,
-                &hash_at_key,
-                &hash_assign_key,
-            );
+        $!p5 = p5_init_perl(
+            @args.elems + 4,
+            CArray[Str].new('', '-e', '0', '--', |@args, Str),
+            &call_method,
+            &call_callable,
+            &free_p6_object,
+            &hash_at_key,
+            &hash_assign_key,
+        );
         X::Inline::Perl5::NoMultiplicity.new.throw unless $!p5.defined;
     }
 
