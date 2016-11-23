@@ -135,6 +135,7 @@ PerlInterpreter *p5_init_perl(
 }
 
 void p5_destruct_perl(PerlInterpreter *my_perl) {
+    PERL_SET_CONTEXT(my_perl);
     PL_perl_destruct_level = 1;
 
     POPSTACK_TO(PL_mainstack);
@@ -204,6 +205,7 @@ int p5_is_array(PerlInterpreter *my_perl, SV* sv) {
 }
 
 int p5_is_hash(PerlInterpreter *my_perl, SV* sv) {
+    PERL_SET_CONTEXT(my_perl);
     MAGIC *mg;
     return (
         (SvROK(sv) && SvTYPE(SvRV(sv)) == SVt_PVHV)
@@ -215,6 +217,7 @@ int p5_is_hash(PerlInterpreter *my_perl, SV* sv) {
 }
 
 IV p5_unwrap_p6_hash(PerlInterpreter *my_perl, SV *obj) {
+    PERL_SET_CONTEXT(my_perl);
     MAGIC * const tie_mg = mg_find(SvRV(obj), PERL_MAGIC_tied);
     SV * const hash = tie_mg->mg_obj;
     SV * const p6hashobj = *(av_fetch((AV *) SvRV(hash), 0, 0));
@@ -257,6 +260,7 @@ STRLEN p5_sv_to_buf(PerlInterpreter *my_perl, SV *sv, char **buf) {
 }
 
 SV *p5_sv_to_ref(PerlInterpreter *my_perl, SV *sv) {
+    PERL_SET_CONTEXT(my_perl);
     return newRV_noinc(sv);
 }
 
@@ -269,18 +273,22 @@ void p5_sv_refcnt_inc(PerlInterpreter *my_perl, SV *sv) {
 }
 
 SV *p5_int_to_sv(PerlInterpreter *my_perl, IV value) {
+    PERL_SET_CONTEXT(my_perl);
     return newSViv(value);
 }
 
 SV *p5_float_to_sv(PerlInterpreter *my_perl, MYNV value) {
+    PERL_SET_CONTEXT(my_perl);
     return newSVnv((NV)value);
 }
 
 SV *p5_str_to_sv(PerlInterpreter *my_perl, STRLEN len, char* value) {
+    PERL_SET_CONTEXT(my_perl);
     return newSVpvn_flags(value, len, SVf_UTF8);
 }
 
 SV *p5_buf_to_sv(PerlInterpreter *my_perl, STRLEN len, char* value) {
+    PERL_SET_CONTEXT(my_perl);
     return newSVpvn_flags(value, len, 0);
 }
 
@@ -338,22 +346,27 @@ int p5_hv_exists(PerlInterpreter *my_perl, HV *hv, STRLEN len, const char *key) 
 }
 
 SV *p5_undef(PerlInterpreter *my_perl) {
+    PERL_SET_CONTEXT(my_perl);
     return &PL_sv_undef;
 }
 
 HV *p5_newHV(PerlInterpreter *my_perl) {
+    PERL_SET_CONTEXT(my_perl);
     return newHV();
 }
 
 AV *p5_newAV(PerlInterpreter *my_perl) {
+    PERL_SET_CONTEXT(my_perl);
     return newAV();
 }
 
 SV *p5_newRV_noinc(PerlInterpreter *my_perl, SV *sv) {
+    PERL_SET_CONTEXT(my_perl);
     return newRV_noinc(sv);
 }
 
 SV *p5_newRV_inc(PerlInterpreter *my_perl, SV *sv) {
+    PERL_SET_CONTEXT(my_perl);
     return newRV_inc(sv);
 }
 
