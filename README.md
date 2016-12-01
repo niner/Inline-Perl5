@@ -53,6 +53,13 @@ Inline::Perl5's use() method maps to Perl 5's use statement:
     $p5.use('Test::More');
 ```
 
+To load a Perl 5 module from a specific folder:
+
+```
+    use lib:from<Perl5> 'lib';
+    use MyModule:from<Perl5>;
+```
+
 ## Load a Perl 5 module and import functions
 
 Just list the functions or groups you want to import
