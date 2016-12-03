@@ -1130,12 +1130,6 @@ method init_callbacks {
             v6::invoke($static_class, 'new_shadow_of_p5_object', $object);
             return $object;
         }
-
-        sub import {
-            die 'v6-inline got renamed to v6::inline to allow passing an import list';
-        }
-
-        package v6::inline;
         use mro;
 
         sub install_function {
@@ -1162,7 +1156,6 @@ method init_callbacks {
             my $package_to_create;
 
             sub import {
-                my ($class, %args) = @_;
                 my $package = $package_to_create = scalar caller;
                 push @inlined, $package;
             }
@@ -1173,6 +1166,11 @@ method init_callbacks {
             };
         }
 
+        package v6::inline;
+
+        sub import {
+            die 'v6::inline got renamed to v6-inline for compatibility with older Perl 5 versions. Sorry for the back and forth about this.';
+        }
 
         $INC{'v6.pm'} = '';
         $INC{'v6/inline.pm'} = '';
@@ -1198,7 +1196,7 @@ method rebless(Perl5Object $obj, Str $package, $p6obj) {
 }
 
 method install_wrapper_method(Str:D $package, Str $name, *@attributes) {
-    self.call('v6::inline::install_p6_method_wrapper', $package, $name, |@attributes);
+    self.call('v6::install_p6_method_wrapper', $package, $name, |@attributes);
 }
 
 role Perl5Package[Inline::Perl5 $p5, Str $module] {

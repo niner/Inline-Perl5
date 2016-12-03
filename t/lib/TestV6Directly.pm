@@ -12,7 +12,7 @@ sub search {
     1
 }
 
-use v6::inline;
+use v6-inline;
 
 method foo() {
     self.search;
