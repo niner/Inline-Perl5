@@ -26,6 +26,10 @@ class Foo {
 my $i = 0;
 until $destroyed {
     $p5.call('test', 'main', Foo.new(bar => 'bar'));
+
+    use nqp;
+    nqp::force_gc;
+
     last if $i++ > 100000;
 }
 
