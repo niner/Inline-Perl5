@@ -27,6 +27,7 @@ typedef struct {
 } perl6_callbacks;
 
 XS(p5_call_p6_method);
+XS(p5_call_p6_extension_method);
 XS(p5_call_p6_callable);
 XS(p5_hash_at_key);
 XS(p5_hash_assign_key);
@@ -38,6 +39,7 @@ EXTERN_C void xs_init(pTHX) {
     /* DynaLoader is a special case */
     newXS("DynaLoader::boot_DynaLoader", boot_DynaLoader, file);
     newXS("Perl6::Object::call_method", p5_call_p6_method, file);
+    newXS("Perl6::Object::call_extension_method", p5_call_p6_extension_method, file);
     newXS("Perl6::Hash::FETCH", p5_hash_at_key, file);
     newXS("Perl6::Hash::STORE", p5_hash_assign_key, file);
     newXS("Perl6::Callable::call", p5_call_p6_callable, file);
@@ -64,6 +66,7 @@ size_t p5_size_of_nv() {
 void p5_inline_perl6_xs_init(PerlInterpreter *my_perl) {
     char *file = __FILE__;
     newXS("Perl6::Object::call_method", p5_call_p6_method, file);
+    newXS("Perl6::Object::call_extension_method", p5_call_p6_extension_method, file);
     newXS("Perl6::Hash::FETCH", p5_hash_at_key, file);
     newXS("Perl6::Hash::STORE", p5_hash_assign_key, file);
     newXS("Perl6::Callable::call", p5_call_p6_callable, file);
@@ -132,6 +135,7 @@ PerlInterpreter *p5_init_perl(
 }
 
 void p5_destruct_perl(PerlInterpreter *my_perl) {
+    PERL_SET_CONTEXT(my_perl);
     PL_perl_destruct_level = 1;
 
     POPSTACK_TO(PL_mainstack);
@@ -201,6 +205,7 @@ int p5_is_array(PerlInterpreter *my_perl, SV* sv) {
 }
 
 int p5_is_hash(PerlInterpreter *my_perl, SV* sv) {
+    PERL_SET_CONTEXT(my_perl);
     MAGIC *mg;
     return (
         (SvROK(sv) && SvTYPE(SvRV(sv)) == SVt_PVHV)
@@ -212,6 +217,7 @@ int p5_is_hash(PerlInterpreter *my_perl, SV* sv) {
 }
 
 IV p5_unwrap_p6_hash(PerlInterpreter *my_perl, SV *obj) {
+    PERL_SET_CONTEXT(my_perl);
     MAGIC * const tie_mg = mg_find(SvRV(obj), PERL_MAGIC_tied);
     SV * const hash = tie_mg->mg_obj;
     SV * const p6hashobj = *(av_fetch((AV *) SvRV(hash), 0, 0));
@@ -254,6 +260,7 @@ STRLEN p5_sv_to_buf(PerlInterpreter *my_perl, SV *sv, char **buf) {
 }
 
 SV *p5_sv_to_ref(PerlInterpreter *my_perl, SV *sv) {
+    PERL_SET_CONTEXT(my_perl);
     return newRV_noinc(sv);
 }
 
@@ -266,18 +273,22 @@ void p5_sv_refcnt_inc(PerlInterpreter *my_perl, SV *sv) {
 }
 
 SV *p5_int_to_sv(PerlInterpreter *my_perl, IV value) {
+    PERL_SET_CONTEXT(my_perl);
     return newSViv(value);
 }
 
 SV *p5_float_to_sv(PerlInterpreter *my_perl, MYNV value) {
+    PERL_SET_CONTEXT(my_perl);
     return newSVnv((NV)value);
 }
 
 SV *p5_str_to_sv(PerlInterpreter *my_perl, STRLEN len, char* value) {
+    PERL_SET_CONTEXT(my_perl);
     return newSVpvn_flags(value, len, SVf_UTF8);
 }
 
 SV *p5_buf_to_sv(PerlInterpreter *my_perl, STRLEN len, char* value) {
+    PERL_SET_CONTEXT(my_perl);
     return newSVpvn_flags(value, len, 0);
 }
 
@@ -335,22 +346,27 @@ int p5_hv_exists(PerlInterpreter *my_perl, HV *hv, STRLEN len, const char *key) 
 }
 
 SV *p5_undef(PerlInterpreter *my_perl) {
+    PERL_SET_CONTEXT(my_perl);
     return &PL_sv_undef;
 }
 
 HV *p5_newHV(PerlInterpreter *my_perl) {
+    PERL_SET_CONTEXT(my_perl);
     return newHV();
 }
 
 AV *p5_newAV(PerlInterpreter *my_perl) {
+    PERL_SET_CONTEXT(my_perl);
     return newAV();
 }
 
 SV *p5_newRV_noinc(PerlInterpreter *my_perl, SV *sv) {
+    PERL_SET_CONTEXT(my_perl);
     return newRV_noinc(sv);
 }
 
 SV *p5_newRV_inc(PerlInterpreter *my_perl, SV *sv) {
+    PERL_SET_CONTEXT(my_perl);
     return newRV_inc(sv);
 }
 
@@ -432,55 +448,69 @@ SV *p5_err_sv(PerlInterpreter *my_perl) {
     return sv_mortalcopy(ERRSV);
 }
 
+void handle_p5_error(I32 *err) {
+    SV *err_tmp = ERRSV;
+    *err = SvTRUE(err_tmp);
+}
+
+void push_arguments(SV **sp, int len, SV *args[]) {
+    int i;
+    for (i = 0; i < len; i++) {
+        if (args[i] != NULL) /* skip Nil which gets turned into NULL */
+            XPUSHs(sv_2mortal(args[i]));
+    }
+    PUTBACK;
+}
+
+SV *pop_return_values(PerlInterpreter *my_perl, SV **sp, I32 count, I32 *type) {
+    SV * retval = NULL;
+    I32 i;
+
+    if (count == 1) {
+        retval = POPs;
+        SvREFCNT_inc(retval);
+        *type = p5_get_type(my_perl, retval);
+    }
+    else {
+        if (count > 1) {
+            retval = (SV *)newAV();
+            av_extend((AV *)retval, count - 1);
+        }
+
+        for (i = count - 1; i >= 0; i--) {
+            SV * const next = POPs;
+            SvREFCNT_inc(next);
+
+            if (av_store((AV *)retval, i, next) == NULL)
+                SvREFCNT_dec(next); /* see perlguts Working with AVs */
+        }
+    }
+    PUTBACK;
+
+    return retval;
+}
+
 SV *p5_call_package_method(PerlInterpreter *my_perl, char *package, char *name, int len, SV *args[], I32 *count, I32 *err, I32 *type) {
     PERL_SET_CONTEXT(my_perl);
     {
         dSP;
-        int i;
         SV * retval = NULL;
         int flags = G_ARRAY | G_EVAL;
-        SV *err_tmp;
 
         ENTER;
         SAVETMPS;
 
         PUSHMARK(SP);
-
         XPUSHs(newSVpv(package, 0));
-        for (i = 0; i < len; i++) {
-            if (args[i] != NULL) /* skip Nil which gets turned into NULL */
-                XPUSHs(sv_2mortal(args[i]));
-        }
-
-        PUTBACK;
+        push_arguments(sp, len, args);
 
         *count = call_method(name, flags);
         SPAGAIN;
 
-        err_tmp = ERRSV;
-        *err = SvTRUE(err_tmp);
+        handle_p5_error(err);
 
-        if (*count == 1) {
-            retval = POPs;
-            SvREFCNT_inc(retval);
-            *type = p5_get_type(my_perl, retval);
-        }
-        else {
-            if (*count > 1) {
-                retval = (SV *)newAV();
-                av_extend((AV *)retval, *count - 1);
-            }
+        retval = pop_return_values(my_perl, sp, *count, type);
 
-            for (i = *count - 1; i >= 0; i--) {
-                SV * const next = POPs;
-                SvREFCNT_inc(next);
-
-                if (av_store((AV *)retval, i, next) == NULL)
-                    SvREFCNT_dec(next); /* see perlguts Working with AVs */
-            }
-        }
-
-        PUTBACK;
         FREETMPS;
         LEAVE;
 
@@ -495,7 +525,6 @@ SV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, I32 context
         int i;
         SV * retval = NULL;
         int flags = (context ? G_SCALAR : G_ARRAY) | G_EVAL;
-        SV *err_tmp;
 
         ENTER;
         SAVETMPS;
@@ -523,27 +552,9 @@ SV *p5_call_method(PerlInterpreter *my_perl, char *package, SV *obj, I32 context
             *count = call_sv(rv, flags);
             SPAGAIN;
 
-            err_tmp = ERRSV;
-            *err = SvTRUE(err_tmp);
-
-            if (*count == 1) {
-                retval = POPs;
-                SvREFCNT_inc(retval);
-                *type = p5_get_type(my_perl, retval);
-            }
-            else {
-                if (*count > 1) {
-                    retval = (SV *)newAV();
-                    av_extend((AV *)retval, *count - 1);
-                }
-                for (i = *count - 1; i >= 0; i--) {
-                    SV * const next = POPs;
-                    SvREFCNT_inc(next);
-
-                    if (av_store((AV *)retval, i, next) == NULL)
-                        SvREFCNT_dec(next); /* see perlguts Working with AVs */
-                }
-            }
+            handle_p5_error(err);
+            retval = pop_return_values(my_perl, sp, *count, type);
+            SPAGAIN;
         }
         else {
             ERRSV = newSVpvf("Could not find method \"%s\" of \"%s\" object", name, HvNAME(pkg));
@@ -561,48 +572,21 @@ SV *p5_call_function(PerlInterpreter *my_perl, char *name, int len, SV *args[], 
     PERL_SET_CONTEXT(my_perl);
     {
         dSP;
-        int i;
         SV * retval = NULL;
         int flags = G_ARRAY | G_EVAL;
-        SV *err_tmp;
 
         ENTER;
         SAVETMPS;
 
         PUSHMARK(SP);
-
-        for (i = 0; i < len; i++) {
-            if (args[i] != NULL) /* skip Nil which gets turned into NULL */
-                XPUSHs(sv_2mortal(args[i]));
-        }
-
-        PUTBACK;
+        push_arguments(sp, len, args);
 
         *count = call_pv(name, flags);
         SPAGAIN;
 
-        err_tmp = ERRSV;
-        *err = SvTRUE(err_tmp);
+        handle_p5_error(err);
+        retval = pop_return_values(my_perl, sp, *count, type);
 
-        if (*count == 1) {
-            retval = POPs;
-            SvREFCNT_inc(retval);
-            *type = p5_get_type(my_perl, retval);
-        }
-        else if (*count > 1) {
-            retval = (SV *)newAV();
-            av_extend((AV *)retval, *count - 1);
-
-            for (i = *count - 1; i >= 0; i--) {
-                SV * const next = POPs;
-                SvREFCNT_inc(next);
-
-                if (av_store((AV *)retval, i, next) == NULL)
-                    SvREFCNT_dec(next); /* see perlguts Working with AVs */
-            }
-        }
-
-        PUTBACK;
         FREETMPS;
         LEAVE;
 
@@ -614,47 +598,21 @@ SV *p5_call_code_ref(PerlInterpreter *my_perl, SV *code_ref, int len, SV *args[]
     PERL_SET_CONTEXT(my_perl);
     {
         dSP;
-        int i;
         SV * retval = NULL;
         int flags = G_ARRAY | G_EVAL;
-        SV *err_tmp;
 
         ENTER;
         SAVETMPS;
 
         PUSHMARK(SP);
-
-        for (i = 0; i < len; i++) {
-            if (args[i] != NULL) /* skip Nil which gets turned into NULL */
-                XPUSHs(sv_2mortal(args[i]));
-        }
-
-        PUTBACK;
+        push_arguments(sp, len, args);
 
         *count = call_sv(code_ref, flags);
         SPAGAIN;
 
-        err_tmp = ERRSV;
-        *err = SvTRUE(err_tmp);
+        handle_p5_error(err);
+        retval = pop_return_values(my_perl, sp, *count, type);
 
-        if (*count == 1) {
-            retval = POPs;
-            SvREFCNT_inc(retval);
-            *type = p5_get_type(my_perl, retval);
-        } else if (*count > 1) {
-            retval = (SV *)newAV();
-            av_extend((AV *)retval, *count - 1);
-
-            for (i = *count - 1; i >= 0; i--) {
-                SV * const next = POPs;
-                SvREFCNT_inc(next);
-
-                if (av_store((AV *)retval, i, next) == NULL)
-                    SvREFCNT_dec(next); /* see perlguts Working with AVs */
-            }
-        }
-
-        PUTBACK;
         FREETMPS;
         LEAVE;
 
@@ -716,7 +674,7 @@ MGVTBL p5_inline_hash_mg_vtbl = {
     0x0
 };
 
-void p5_rebless_object(PerlInterpreter *my_perl, SV *obj, char *package, IV i, SV *(*call_p6_method)(IV, char * , I32, SV *, SV **), void (*free_p6_object)(IV)) {
+void p5_rebless_object(PerlInterpreter *my_perl, SV *obj, char *package, IV i) {
     SV * const inst = SvRV(obj);
     HV *stash = gv_stashpv(package, GV_ADD);
     if (stash == NULL)
@@ -881,44 +839,19 @@ IV p5_unwrap_p6_object(PerlInterpreter *my_perl, SV *obj) {
     return ((_perl6_magic*)(mg->mg_ptr))->index;
 }
 
-XS(p5_call_p6_method) {
-    dXSARGS;
-    SV * name = ST(0);
-    SV * obj = ST(1);
-
+AV *create_args_array(const I32 ax, I32 items, I32 num_fixed_args) {
     AV * args = newAV();
-    av_extend(args, items - 2);
+    av_extend(args, items - num_fixed_args);
     int i;
-    for (i = 0; i < items - 2; i++) {
-        SV * const next = SvREFCNT_inc(ST(i + 2));
+    for (i = 0; i < items - num_fixed_args; i++) {
+        SV * const next = SvREFCNT_inc(ST(i + num_fixed_args));
         if (av_store(args, i, next) == NULL)
             SvREFCNT_dec(next); /* see perlguts Working with AVs */
     }
+    return args;
+}
 
-    STRLEN len;
-    char * const name_pv  = SvPV(name, len);
-
-    if (!SvROK(obj)) {
-        croak("Got a non-reference for obj?!");
-    }
-    SV * const obj_deref = SvRV(obj);
-    MAGIC * const mg = mg_find(obj_deref, '~');
-    _perl6_magic* const p6mg = (_perl6_magic*)(mg->mg_ptr);
-    SV *err = NULL;
-    SV * const args_rv = newRV_noinc((SV *) args);
-
-    declare_cbs;
-
-    SV * retval = cbs->call_p6_method(p6mg->index, name_pv, GIMME_V == G_SCALAR, args_rv, &err);
-    SPAGAIN; /* refresh local stack pointer, could have been modified by Perl 5 code called from Perl 6 */
-    SvREFCNT_dec(args_rv);
-    if (err) {
-        sv_2mortal(err);
-        croak_sv(err);
-    }
-    sv_2mortal(retval);
-    sp -= items;
-
+void return_retval(const I32 ax, SV **sp, SV *retval) {
     if (GIMME_V == G_VOID) {
         XSRETURN_EMPTY;
     }
@@ -936,6 +869,105 @@ XS(p5_call_p6_method) {
         XPUSHs(sv_2mortal(av_shift(av)));
         XSRETURN(1);
     }
+}
+
+void handle_p6_error(SV *err) {
+    if (err) {
+        sv_2mortal(err);
+        croak_sv(err);
+    }
+}
+
+void post_callback(const I32 ax, SV **sp, I32 items, SV * const args_rv, SV *err, SV *retval) {
+    /* refresh local stack pointer, could have been modified by Perl 5 code called from Perl 6 */
+    SPAGAIN;
+    SvREFCNT_dec(args_rv);
+    handle_p6_error(err);
+    sv_2mortal(retval);
+    sp -= items;
+    return return_retval(ax, sp, retval);
+}
+
+XS(p5_call_p6_method) {
+    dXSARGS;
+    SV * name = ST(0);
+    SV * obj = ST(1);
+
+    AV *args = create_args_array(ax, items, 2);
+
+    STRLEN len;
+    char * const name_pv  = SvPV(name, len);
+
+    if (!SvROK(obj)) {
+        croak("Got a non-reference for obj in p5_call_p6_method calling %s?!", name_pv);
+    }
+    SV * const obj_deref = SvRV(obj);
+    MAGIC * const mg = mg_find(obj_deref, '~');
+    _perl6_magic* const p6mg = (_perl6_magic*)(mg->mg_ptr);
+    SV *err = NULL;
+    SV * const args_rv = newRV_noinc((SV *) args);
+
+    declare_cbs;
+    SV * retval = cbs->call_p6_method(p6mg->index, name_pv, GIMME_V == G_SCALAR, args_rv, &err);
+    return post_callback(ax, sp, items, args_rv, err, retval);
+}
+
+MAGIC *find_shadow_magic(SV *p6cb, SV *static_class, SV *obj) {
+    SV * const obj_deref = SvRV(obj);
+    MAGIC * mg = mg_find(obj_deref, '~');
+    if (mg == NULL || ((_perl6_magic*)(mg->mg_ptr))->key != PERL6_EXTENSION_MAGIC_KEY) {
+        /* need to create the shadow object here */
+
+        AV * method_args = newAV();
+        SV * method_args_rv = newRV_noinc((SV *) method_args);
+        av_extend(method_args, 1);
+        SvREFCNT_inc(obj);
+        av_store(method_args, 0, obj);
+
+        AV * args = newAV();
+        av_extend(args, 3);
+        SvREFCNT_inc(static_class);
+        av_store(args, 0, static_class);
+        av_store(args, 1, newSVpvs("new_shadow_of_p5_object"));
+        av_store(args, 2, method_args_rv);
+
+        MAGIC * const p6cb_mg = mg_find(SvRV(p6cb), '~');
+        _perl6_magic* const p6cb_p6mg = (_perl6_magic*)(p6cb_mg->mg_ptr);
+        SV *err = NULL;
+        SV * const args_rv = newRV_noinc((SV *) args);
+
+        declare_cbs;
+        cbs->call_p6_method(p6cb_p6mg->index, "invoke", 1, args_rv, &err);
+        SvREFCNT_dec(args_rv);
+        handle_p6_error(err);
+
+        mg = mg_find(obj_deref, '~');
+    }
+    return mg;
+}
+
+XS(p5_call_p6_extension_method) {
+    dXSARGS;
+    SV * p6cb = ST(0);
+    SV * static_class = ST(1);
+    SV * name = ST(2);
+    SV * obj = ST(3);
+
+    if (!SvROK(obj)) {
+        croak("Got a non-reference for obj in p5_call_p6_extension_method?!");
+    }
+    MAGIC * mg = find_shadow_magic(p6cb, static_class, obj);
+    STRLEN len;
+    char * const name_pv  = SvPV(name, len);
+    _perl6_magic* const p6mg = (_perl6_magic*)(mg->mg_ptr);
+    SV *err = NULL;
+
+    AV *args = create_args_array(ax, items, 4);
+    SV * const args_rv = newRV_noinc((SV *) args);
+
+    declare_cbs;
+    SV * retval = cbs->call_p6_method(p6mg->index, name_pv, GIMME_V == G_SCALAR, args_rv, &err);
+    return post_callback(ax, sp, items, args_rv, err, retval);
 }
 
 XS(p5_hash_at_key) {
@@ -985,14 +1017,7 @@ XS(p5_call_p6_callable) {
     dXSARGS;
     SV * obj = ST(0);
 
-    AV * args = newAV();
-    av_extend(args, items - 1);
-    int i;
-    for (i = 0; i < items - 1; i++) {
-        SV * const next = SvREFCNT_inc(ST(i + 1));
-        if (av_store(args, i, next) == NULL)
-            SvREFCNT_dec(next); /* see perlguts Working with AVs */
-    }
+    AV *args = create_args_array(ax, items, 1);
 
     if (!SvROK(obj))
         croak("Tried to call a Perl 6 method on a non-object!?");
@@ -1004,32 +1029,7 @@ XS(p5_call_p6_callable) {
 
     declare_cbs;
     SV * retval = cbs->call_p6_callable(p6mg->index, args_rv, &err);
-    SPAGAIN; /* refresh local stack pointer, could have been modified by Perl 5 code called from Perl 6 */
-    SvREFCNT_dec(args_rv);
-    if (err) {
-        sv_2mortal(err);
-        croak_sv(err);
-    }
-    sv_2mortal(retval);
-    sp -= items;
-
-    if (GIMME_V == G_VOID) {
-        XSRETURN_EMPTY;
-    }
-    if (GIMME_V == G_ARRAY) {
-        AV* const av = (AV*)SvRV(retval);
-        I32 const len = av_len(av) + 1;
-        I32 i;
-        for (i = 0; i < len; i++) {
-            XPUSHs(sv_2mortal(av_shift(av)));
-        }
-        XSRETURN(len);
-    }
-    else {
-        AV* const av = (AV*)SvRV(retval);
-        XPUSHs(sv_2mortal(av_shift(av)));
-        XSRETURN(1);
-    }
+    return post_callback(ax, sp, items, args_rv, err, retval);
 }
 
 XS(p5_load_module) {

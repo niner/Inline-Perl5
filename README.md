@@ -53,6 +53,13 @@ Inline::Perl5's use() method maps to Perl 5's use statement:
     $p5.use('Test::More');
 ```
 
+To load a Perl 5 module from a specific folder:
+
+```
+    use lib:from<Perl5> 'lib';
+    use MyModule:from<Perl5>;
+```
+
 ## Load a Perl 5 module and import functions
 
 Just list the functions or groups you want to import
@@ -304,14 +311,14 @@ can be caught like any other Perl 5 exceptions:
 
 ## Mix Perl 5 and Perl 6 code in the same file
 
-Inline::Perl5 creates a virtual module called "v6::inline". By saying
-"use v6::inline;" in a Perl 5 module, you can declare that the rest of the file
+Inline::Perl5 creates a virtual module called "v6-inline". By saying
+"use v6-inline;" in a Perl 5 module, you can declare that the rest of the file
 is written in Perl 6:
 
 ```
     package Some::Perl5::Module;
 
-    use v6::inline;
+    use v6-inline;
 
     has $.name;
 

@@ -139,7 +139,7 @@ sub check_attrs {
     return attributes::get(\&hasattrs);
 }
 
-use v6::inline;
+use v6-inline;
 
 has $.name;
 

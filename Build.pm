@@ -1,9 +1,7 @@
 use v6;
-use Panda::Builder;
-use Shell::Command;
 use LibraryMake;
 
-class Build is Panda::Builder {
+class Build {
     method build($dir) {
         shell('perl -e "use v5.18;"')
             or die "\nPerl 5 version requirement not met\n";
@@ -22,6 +20,12 @@ class Build is Panda::Builder {
         chdir($dir);
         shell(%vars<MAKE>);
         chdir($goback);
+    }
+
+    # only needed for older versions of panda
+    method isa($what) {
+        return True if $what.^name eq 'Panda::Builder';
+        callsame;
     }
 }
 

@@ -785,7 +785,6 @@ method init_callbacks {
             return bless $self, $class;
         }
 
-        my $delete_key = 'DELETE-KEY';
         sub DELETE {
             my ($self, $key) = @_;
             return Perl6::Object::call_method('DELETE-KEY', $self->[0], $key);
@@ -793,12 +792,10 @@ method init_callbacks {
         sub CLEAR {
             die 'CLEAR NYI';
         }
-        my $exists_key = 'EXISTS-KEY';
         sub EXISTS {
             my ($self, $key) = @_;
             return Perl6::Object::call_method('EXISTS-KEY', $self->[0], $key);
         }
-        my $pull_one = 'pull-one';
         sub FIRSTKEY {
             my ($self) = @_;
             $self->[1] = [ Perl6::Object::call_method('keys', $self->[0]) ];
@@ -878,12 +875,6 @@ method init_callbacks {
             v6::invoke($static_class, 'new_shadow_of_p5_object', $object);
             return $object;
         }
-
-        sub import {
-            die 'v6-inline got renamed to v6::inline to allow passing an import list';
-        }
-
-        package v6::inline;
         use mro;
 
         sub install_function {
@@ -899,7 +890,7 @@ method init_callbacks {
             my ($package, $name, @attributes) = @_;
             no strict 'refs';
             *{"${package}::$name"} = my $code = v6::set_subname("${package}::", $name, sub {
-                return Perl6::Object::call_method($name, @_);
+                return Perl6::Object::call_extension_method($p6, $package, $name, @_);
             });
             attributes->import($package, $code, @attributes) if @attributes;
             return;
@@ -907,25 +898,9 @@ method init_callbacks {
 
         {
             my @inlined;
-            BEGIN {
-                no strict "refs";
-                *{"CORE::GLOBAL::bless"} = sub {
-                    my ($self, $class) = @_;
-                    $class //= scalar caller;
-                    CORE::bless($self, $class);
-                    foreach my $package (@inlined) {
-                        if ($self->isa($package)) {
-                            v6::shadow_object($package, $class, $self);
-                            last;
-                        }
-                    }
-                    $self
-                };
-            };
             my $package_to_create;
 
             sub import {
-                my ($class, %args) = @_;
                 my $package = $package_to_create = scalar caller;
                 push @inlined, $package;
             }
@@ -936,6 +911,11 @@ method init_callbacks {
             };
         }
 
+        package v6::inline;
+
+        sub import {
+            die 'v6::inline got renamed to v6-inline for compatibility with older Perl 5 versions. Sorry for the back and forth about this.';
+        }
 
         $INC{'v6.pm'} = '';
         $INC{'v6/inline.pm'} = '';
@@ -961,7 +941,7 @@ method rebless(Perl5Object $obj, Str $package, $p6obj) {
 }
 
 method install_wrapper_method(Str:D $package, Str $name, *@attributes) {
-    self.call('v6::inline::install_p6_method_wrapper', $package, $name, |@attributes);
+    self.call('v6::install_p6_method_wrapper', $package, $name, |@attributes);
 }
 
 role Perl5Package[Inline::Perl5 $p5, Str $module] {
@@ -1067,8 +1047,10 @@ method require(Str $module, Num $version?) {
         $ns := $ns{$_}.WHO;
     }
     my @existing = $ns{$inner}.WHO.pairs;
-    $ns{$inner} := $class;
-    $class.WHO{$_.key} := $_.value for @existing;
+    unless $ns{$inner}:exists {
+        $ns{$inner} := $class;
+        $class.WHO{$_.key} := $_.value for @existing;
+    }
 
     if $first-time {
         # install subs like Test::More::ok
@@ -1223,25 +1205,15 @@ method BUILD(*%args) {
     }
     else {
         my @args = @*ARGS;
-        $!p5 = @args
-            ?? Inline::Perl5::Interpreter::p5_init_perl(
-                @args.elems + 4,
-                CArray[Str].new('', '-e', '0', '--', |@args),
-                &call_method,
-                &call_callable,
-                &free_p6_object,
-                &hash_at_key,
-                &hash_assign_key,
-            )
-            !! Inline::Perl5::Interpreter::p5_init_perl(
-                3,
-                CArray[Str].new('', '-e', '0'),
-                &call_method,
-                &call_callable,
-                &free_p6_object,
-                &hash_at_key,
-                &hash_assign_key,
-            );
+        $!p5 = Inline::Perl5::Interpreter::p5_init_perl(
+            @args.elems + 4,
+            CArray[Str].new('', '-e', '0', '--', |@args, Str),
+            &call_method,
+            &call_callable,
+            &free_p6_object,
+            &hash_at_key,
+            &hash_assign_key,
+        );
         X::Inline::Perl5::NoMultiplicity.new.throw unless $!p5.defined;
     }
 
