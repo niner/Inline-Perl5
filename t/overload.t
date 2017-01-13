@@ -28,11 +28,11 @@ $p5.run: q:heredoc/PERL5/;
 
 my $foo = $p5.invoke('Foo', 'new', 'a string!');
 is("$foo", 'a string!');
-unlike("$foo", /Perl5Object\<\d+\>/);
+unlike("$foo", /"Inline::Perl5::Object"\<\d+\>/);
 
 my $bar = $p5.invoke('Bar', 'new', 'a string!');
 isnt("$bar", 'a string!');
-like("$bar", /Perl5Object\<\-?\d+\>/);
+like("$bar", /"Inline::Perl5::Object"\<\-?\d+\>/);
 
 done-testing;
 
