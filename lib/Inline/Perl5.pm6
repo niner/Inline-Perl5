@@ -1256,7 +1256,7 @@ method import (Str $module, *@args) {
 }
 
 my %loaded_modules;
-method require(Str $module, Num $version?) {
+method require(Str $module, Num $version?, Bool :$handle) {
     # wrap the load_module call so exceptions can be translated to Perl 6
     if $version {
         self.call('v6::load_module', $module, $version);
@@ -1266,6 +1266,11 @@ method require(Str $module, Num $version?) {
     }
 
     return unless self eq $default_perl5; # Only create Perl 6 packages for the primary interpreter to avoid confusion
+
+    if try ::($module) ~~ Perl5Extension {
+        # Wrapper package already created. Nothing left for us to do.
+        return CompUnit::Handle.from-unit(Stash.new);
+    }
 
     my $class;
     my $first-time = True;
@@ -1296,7 +1301,8 @@ method require(Str $module, Num $version?) {
     # register the new class by its name
     my @parts = $module.split('::');
     my $inner = @parts.pop;
-    my $ns := ::GLOBAL.WHO;
+    my $stash := $handle ?? Stash.new !! ::GLOBAL.WHO;
+    my $ns := $stash;
     for @parts {
         $ns{$_} := Metamodel::PackageHOW.new_type(name => $_) unless $ns{$_}:exists;
         $ns := $ns{$_}.WHO;
@@ -1310,22 +1316,57 @@ method require(Str $module, Num $version?) {
     if $first-time {
         # install subs like Test::More::ok
         for @$symbols -> $name {
-            ::($module).WHO{"&$name"} := sub (*@args) {
+            $class.WHO{"&$name"} := sub (*@args) {
                 self.call("{$module}::$name", @args.list);
             }
         }
     }
 
-    ::($module).WHO<EXPORT> := Metamodel::PackageHOW.new();
-    ::($module).WHO<&EXPORT> := sub EXPORT(*@args) {
-        $*W.do_pragma(Any, 'precompilation', False, []);
-        return Map.new(self.import($module, @args.list).map({
-            my $name = $_;
-            '&' ~ $name => sub (|args) {
-                self.call-args("main::$name", args); # main:: because the sub got exported to main
-            }
-        }));
-    };
+    my &export := sub EXPORT(*@args) {
+            $*W.do_pragma(Any, 'precompilation', False, []);
+            my @symbols = self.import($module, @args.list).map({
+                my $name = $_;
+                '&' ~ $name => sub (|args) {
+                    self.call-args("main::$name", args); # main:: because the sub got exported to main
+                }
+            });
+            # Hack needed for rakudo versions post-lexical_module_load but before support for
+            # getting a CompUnit::Handle from require was implemented.
+            @symbols.unshift: $module => $class unless $handle;
+            return Map.new(@symbols);
+        };
+
+    unless $handle {
+        ::($module).WHO<EXPORT> := Metamodel::PackageHOW.new();
+        ::($module).WHO<&EXPORT> := &export;
+    }
+    my $compunit-handle = class :: is CompUnit::Handle {
+        has &!EXPORT;
+        use nqp;
+        submethod fill(Stash $unit, &EXPORT) {
+            nqp::p6bindattrinvres(
+                nqp::p6bindattrinvres(
+                  nqp::create($?CLASS),
+                  CompUnit::Handle,
+                  '$!unit',
+                  nqp::decont($unit),
+                ),
+                $?CLASS,
+                '&!EXPORT',
+                &EXPORT,
+            )
+        }
+        method export-package() returns Stash {
+            Stash.new
+        }
+        method export-sub() returns Callable {
+            &!EXPORT
+        }
+    }.fill(
+        $stash,
+        &export,
+    );
+    return $compunit-handle;
 }
 
 method use(Str $module, *@args) {
