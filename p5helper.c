@@ -424,6 +424,20 @@ SV *p5_get_global(PerlInterpreter *my_perl, const char* name) {
     return NULL;
 }
 
+void p5_set_global(PerlInterpreter *my_perl, const char* name, SV *value) {
+    if (strlen(name) < 2)
+        return;
+
+    if (name[0] == '$')
+        SvSetSV(get_sv(&name[1], 0), value);
+
+    else if (name[0] == '@')
+        croak("Setting global array variable NYI");
+
+    else if (name[0] == '%')
+        croak("Setting global hash variable NYI");
+}
+
 SV *p5_eval_pv(PerlInterpreter *my_perl, const char* p, I32 croak_on_error) {
     PERL_SET_CONTEXT(my_perl);
     {

@@ -19,6 +19,13 @@ EVAL '$Foo::Bar::a = 1', :lang<Perl5>;
 is $p5.global('$Foo::Bar::a'), 1;
 is %*PERL5<$Foo::Bar::a>, 1;
 
+use Data::Dumper:from<Perl5>;
+EVAL '$Data::Dumper::Maxdepth = 1', :lang<Perl5>;
+is $Data::Dumper::Maxdepth, 1;
+$Data::Dumper::Maxdepth = 2;
+is $Data::Dumper::Maxdepth, 2;
+is EVAL('$Data::Dumper::Maxdepth', :lang<Perl5>), 2;
+
 done-testing;
 
 # vim: ft=perl6
