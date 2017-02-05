@@ -1521,7 +1521,6 @@ method BUILD(*%args) {
     }
 
     if ($*W) {
-        use QAST:from<NQP>;
         my $block := { self.init_data(CALLER::<$=finish>) if CALLER::<$=finish> };
         $*W.add_object($block);
         my $op := $*W.add_phaser(Mu, 'INIT', $block, class :: { method cuid { (^2**128).pick }});
