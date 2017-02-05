@@ -1081,6 +1081,12 @@ method init_callbacks {
             ($p6) = @_;
         }
 
+        sub init_data {
+            my ($data) = @_;
+            no strict;
+            open *{main::DATA}, '<', \$data;
+        }
+
         sub uninit {
             undef $p6;
         }
@@ -1451,6 +1457,10 @@ class X::Inline::Perl5::NoMultiplicity is Exception {
     }
 }
 
+method init_data($data) {
+    self.call('v6::init_data', $data);
+}
+
 method BUILD(*%args) {
     my &call_method = sub (Int $index, Str $name, Int $context, Pointer $args, Pointer $err) returns Pointer {
         my $p6obj = $objects.get($index);
@@ -1508,6 +1518,13 @@ method BUILD(*%args) {
                 $_.resume;
             }
         }
+    }
+
+    if ($*W) {
+        use QAST:from<NQP>;
+        my $block := { self.init_data(CALLER::<$=finish>) if CALLER::<$=finish> };
+        $*W.add_object($block);
+        my $op := $*W.add_phaser(Mu, 'INIT', $block, class :: { method cuid { (^2**128).pick }});
     }
 
     $!external_p5 = %args<p5>:exists;
