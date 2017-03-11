@@ -19,7 +19,7 @@ class Foo {
 for (
     '',
     'abcö',
-    Buf.new('äbc'.encode('latin-1')),
+    'äbc'.encode('latin-1'),
     24,
     2.4.Num,
 #    [1, 2], #TODO - will return as Perl5Array

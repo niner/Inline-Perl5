@@ -650,11 +650,8 @@ method p5_to_p6(Pointer $value, int32 $type is copy = 0) {
                 my $string_ptr = CArray[CArray[int8]].new;
                 $string_ptr[0] = CArray[int8];
                 my $len = p5_sv_to_buf($!p5, $value, $string_ptr);
-                my $buf = Buf.new;
-                for 0..^$len {
-                    $buf[$_] = $string_ptr[0][$_];
-                }
-                return $buf;
+                my $string := $string_ptr[0];
+                return blob8.new(do for ^$len { $string.AT-POS($_) });
             }
         }
         when Array {
