@@ -1269,15 +1269,12 @@ method import (Str $module, *@args) {
     return ($after ∖ $before).keys;
 }
 
-my %loaded_modules;
 method require(Str $module, Num $version?, Bool :$handle) {
     # wrap the load_module call so exceptions can be translated to Perl 6
-    if $version {
-        self.call('v6::load_module', $module, $version);
-    }
-    else {
-        self.call('v6::load_module', $module);
-    }
+    my @packages = $version
+        ?? self.call('v6::load_module', $module, $version)
+        !! self.call('v6::load_module', $module);
+    @packages = $module; #TODO replace this by changed to p5_load_module
 
     return unless self eq $default_perl5; # Only create Perl 6 packages for the primary interpreter to avoid confusion
 
@@ -1286,6 +1283,65 @@ method require(Str $module, Num $version?, Bool :$handle) {
         return CompUnit::Handle.from-unit(Stash.new);
     }
 
+    my $stash := $handle ?? Stash.new !! ::GLOBAL.WHO;
+
+    my $class;
+    for @packages -> $package {
+        my $created := self!create_wrapper_class($package, $stash);
+        $class := $created if $package eq $module;
+    }
+
+    my &export := sub EXPORT(*@args) {
+            $*W.do_pragma(Any, 'precompilation', False, []);
+            my @symbols = self.import($module, @args.list).map({
+                my $name = $_;
+                '&' ~ $name => sub (|args) {
+                    self.call-args("main::$name", args); # main:: because the sub got exported to main
+                }
+            });
+            # Hack needed for rakudo versions post-lexical_module_load but before support for
+            # getting a CompUnit::Handle from require was implemented.
+            @symbols.unshift: $module => $class unless $handle;
+            return Map.new(@symbols);
+        };
+
+    unless $handle {
+        ::($module).WHO<EXPORT> := Metamodel::PackageHOW.new();
+        ::($module).WHO<&EXPORT> := &export;
+    }
+
+    my $compunit-handle = class :: is CompUnit::Handle {
+        has &!EXPORT;
+        use nqp;
+        submethod fill(Stash $unit, &EXPORT) {
+            nqp::p6bindattrinvres(
+                nqp::p6bindattrinvres(
+                  nqp::create($?CLASS),
+                  CompUnit::Handle,
+                  '$!unit',
+                  nqp::decont($unit),
+                ),
+                $?CLASS,
+                '&!EXPORT',
+                &EXPORT,
+            )
+        }
+        method export-package() returns Stash {
+            Stash.new
+        }
+        method export-sub() returns Callable {
+            &!EXPORT
+        }
+    }.fill(
+        $stash,
+        &export,
+    );
+
+    return $compunit-handle;
+}
+
+my %loaded_modules;
+method !create_wrapper_class(Str $module, Stash $stash) {
     my $class;
     my $first-time = True;
     my $symbols = self.subs_in_module($module);
@@ -1316,7 +1372,6 @@ method require(Str $module, Num $version?, Bool :$handle) {
     # register the new class by its name
     my @parts = $module.split('::');
     my $inner = @parts.pop;
-    my $stash := $handle ?? Stash.new !! ::GLOBAL.WHO;
     my $ns := $stash;
     for @parts {
         $ns{$_} := Metamodel::PackageHOW.new_type(name => $_) unless $ns{$_}:exists;
@@ -1347,51 +1402,7 @@ method require(Str $module, Num $version?, Bool :$handle) {
         }
     }
 
-    my &export := sub EXPORT(*@args) {
-            $*W.do_pragma(Any, 'precompilation', False, []);
-            my @symbols = self.import($module, @args.list).map({
-                my $name = $_;
-                '&' ~ $name => sub (|args) {
-                    self.call-args("main::$name", args); # main:: because the sub got exported to main
-                }
-            });
-            # Hack needed for rakudo versions post-lexical_module_load but before support for
-            # getting a CompUnit::Handle from require was implemented.
-            @symbols.unshift: $module => $class unless $handle;
-            return Map.new(@symbols);
-        };
-
-    unless $handle {
-        ::($module).WHO<EXPORT> := Metamodel::PackageHOW.new();
-        ::($module).WHO<&EXPORT> := &export;
-    }
-    my $compunit-handle = class :: is CompUnit::Handle {
-        has &!EXPORT;
-        use nqp;
-        submethod fill(Stash $unit, &EXPORT) {
-            nqp::p6bindattrinvres(
-                nqp::p6bindattrinvres(
-                  nqp::create($?CLASS),
-                  CompUnit::Handle,
-                  '$!unit',
-                  nqp::decont($unit),
-                ),
-                $?CLASS,
-                '&!EXPORT',
-                &EXPORT,
-            )
-        }
-        method export-package() returns Stash {
-            Stash.new
-        }
-        method export-sub() returns Callable {
-            &!EXPORT
-        }
-    }.fill(
-        $stash,
-        &export,
-    );
-    return $compunit-handle;
+    return $class;
 }
 
 method use(Str $module, *@args) {
