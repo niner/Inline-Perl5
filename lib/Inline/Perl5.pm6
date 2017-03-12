@@ -1090,7 +1090,46 @@ method init_callbacks {
 
         # wrapper for the load_module perlapi call to allow catching exceptions
         sub load_module {
+            # lifted from Devel::InnerPackage to avoid the dependency
+            my $loaded = sub {
+                my ($name) = @_;
+
+                no strict 'refs';
+
+                return 1 if defined ${"${name}::VERSION"};
+                return 1 if @{"${name}::ISA"};
+
+                foreach ( keys %{"${name}::"} ) {
+                    next if substr($_, -2, 2) eq '::';
+                    return 1 if defined &{"${name}::$_"};
+                }
+
+                my $filename = join( '/', split /(?:'|::)/, $name ) . '.pm';
+                return 1 if defined $INC{$filename};
+
+                '';
+            };
+            my $list_packages;
+            $list_packages = sub {
+                my $pack = shift; $pack .= "::" unless $pack =~ m!::$!;
+
+                no strict 'refs';
+
+                my @packs;
+                my @stuff = grep !/^(main|)::$/, keys %{$pack};
+                for my $cand (grep /::$/, @stuff) {
+                    $cand =~ s!::$!!;
+                    my @children = $list_packages->($pack.$cand);
+
+                    push @packs, "$pack$cand" unless $cand =~ /^::/ ||
+                        !$loaded->($pack.$cand); # or @children;
+                    push @packs, @children;
+                }
+                return grep {$_ !~ /::(::ISA::CACHE|SUPER)/} @packs;
+            };
+
             v6::load_module_impl(@_);
+            return map { substr $_, 2 } $list_packages->('::');
         }
 
         sub run {
@@ -1274,7 +1313,6 @@ method require(Str $module, Num $version?, Bool :$handle) {
     my @packages = $version
         ?? self.call('v6::load_module', $module, $version)
         !! self.call('v6::load_module', $module);
-    @packages = $module; #TODO replace this by changed to p5_load_module
 
     return unless self eq $default_perl5; # Only create Perl 6 packages for the primary interpreter to avoid confusion
 
@@ -1286,7 +1324,8 @@ method require(Str $module, Num $version?, Bool :$handle) {
     my $stash := $handle ?? Stash.new !! ::GLOBAL.WHO;
 
     my $class;
-    for @packages -> $package {
+    for @packages.grep(*.defined) -> $package {
+        next if try ::($package) ~~ Perl5Extension;
         my $created := self!create_wrapper_class($package, $stash);
         $class := $created if $package eq $module;
     }
