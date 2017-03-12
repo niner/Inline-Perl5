@@ -63,6 +63,8 @@ size_t p5_size_of_nv() {
     return MYNVSIZE;
 }
 
+static int inited = 0;
+
 void p5_inline_perl6_xs_init(PerlInterpreter *my_perl) {
     char *file = __FILE__;
     newXS("Perl6::Object::call_method", p5_call_p6_method, file);
@@ -72,6 +74,7 @@ void p5_inline_perl6_xs_init(PerlInterpreter *my_perl) {
     newXS("Perl6::Callable::call", p5_call_p6_callable, file);
     newXS("v6::load_module_impl", p5_load_module, file);
     newXS("v6::set_subname", p5_set_subname, file);
+    inited = 1;
 }
 
 void p5_init_callbacks(
@@ -90,7 +93,6 @@ void p5_init_callbacks(
     hv_stores(PL_modglobal, "Inline::Perl5 callbacks", newSViv((IV)cbs));
 }
 
-static int inited = 0;
 static int interpreters = 0;
 static int terminate = 0;
 
