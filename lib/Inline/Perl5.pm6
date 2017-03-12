@@ -1091,24 +1091,6 @@ method init_callbacks {
         # wrapper for the load_module perlapi call to allow catching exceptions
         sub load_module {
             # lifted from Devel::InnerPackage to avoid the dependency
-            my $loaded = sub {
-                my ($name) = @_;
-
-                no strict 'refs';
-
-                return 1 if defined ${"${name}::VERSION"};
-                return 1 if @{"${name}::ISA"};
-
-                foreach ( keys %{"${name}::"} ) {
-                    next if substr($_, -2, 2) eq '::';
-                    return 1 if defined &{"${name}::$_"};
-                }
-
-                my $filename = join( '/', split /(?:'|::)/, $name ) . '.pm';
-                return 1 if defined $INC{$filename};
-
-                '';
-            };
             my $list_packages;
             $list_packages = sub {
                 my $pack = shift; $pack .= "::" unless $pack =~ m!::$!;
@@ -1121,8 +1103,15 @@ method init_callbacks {
                     $cand =~ s!::$!!;
                     my @children = $list_packages->($pack.$cand);
 
-                    push @packs, "$pack$cand" unless $cand =~ /^::/ ||
-                        !$loaded->($pack.$cand); # or @children;
+                    push @packs, "$pack$cand"
+                        if $cand !~ /^::/
+                        && (
+                            defined ${"${pack}${cand}::VERSION"}
+                            || @{"${pack}${cand}::ISA"}
+                            || grep { defined &{"${pack}${cand}::$_"} }
+                                grep { substr($_, -2, 2) ne '::' }
+                                keys %{"${pack}${cand}::"}
+                        ); # or @children;
                     push @packs, @children;
                 }
                 return grep {$_ !~ /::(::ISA::CACHE|SUPER)/} @packs;
