@@ -22,6 +22,14 @@ $p5.run(q:heredoc/PERL5/);
         my ($name) = @_;
         return Perl6::Object->can($name);
     }
+    package Bar {
+        sub new {
+            return bless {}, 'Bar';
+        }
+        sub test {
+            return 1;
+        }
+    };
 PERL5
 
 class Foo {
@@ -36,6 +44,15 @@ ok(not $p5.call('test_can_negative', $foo));
 is($p5.call('call_foo_via_can', $foo), 'foo');
 ok(not $p5.call('can_on_perl6_object_package', 'can'));
 ok(not $p5.call('can_on_perl6_object_package', 'non_existing'));
+
+# .can on a Perl5Object
+my $bar = $p5.invoke('Bar', 'new');
+ok($bar.can('test'));
+ok($bar.can('sink'));
+ok($bar.can('Str'));
+ok($bar.can('Str')($bar));
+is($bar.can('test')(), 1);
+is($bar.can('not_existing'), Any);
 
 done-testing;
 
