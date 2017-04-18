@@ -17,7 +17,8 @@ has Bool $!scalar_context = False;
 
 my $default_perl5;
 
-my constant $p5helper = %?RESOURCES<libraries/p5helper>.Str;
+my constant $p5helper_resource = %?RESOURCES<libraries/p5helper>;
+my constant $p5helper = $p5helper_resource.isa(IO::Path) ?? $p5helper_resource.Str !! $p5helper_resource;
 
 my constant @pass_through_methods = |Any.^methods>>.name.grep(/^\w+$/), |<note print put say split>;
 
