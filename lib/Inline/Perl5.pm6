@@ -25,7 +25,9 @@ my constant @pass_through_methods = |Any.^methods>>.name.grep(/^\w+$/), |<note p
 # But it raises an error in the END { ... } call
 use NativeCall;
 my constant $p5helper = %?RESOURCES<libraries/p5helper>.Str;
+my constant $p5helper_resource = %?RESOURCES<libraries/p5helper>;
 sub p5_terminate() is native($p5helper) { ... }
+
 
 multi method p6_to_p5(Int:D $value) returns Pointer {
     $!p5.p5_int_to_sv($value);
@@ -235,11 +237,8 @@ method p5_to_p6(Pointer $value, int32 $type is copy = 0) {
                 my $string_ptr = CArray[CArray[int8]].new;
                 $string_ptr[0] = CArray[int8];
                 my $len = $!p5.p5_sv_to_buf($value, $string_ptr);
-                my $buf = Buf.new;
-                for 0..^$len {
-                    $buf[$_] = $string_ptr[0][$_];
-                }
-                return $buf;
+                my $string := $string_ptr[0];
+                return blob8.new(do for ^$len { $string.AT-POS($_) });
             }
         }
         when Array {
@@ -493,6 +492,10 @@ method global(Str $name) {
     self.p5_to_p6($!p5.p5_get_global($name))
 }
 
+method set_global(Str $name, $value) {
+    $!p5.p5_set_global($name, self.p6_to_p5($value));
+}
+
 PROCESS::<%PERL5> := class :: does Associative {
     multi method AT-KEY($name) {
         Inline::Perl5.default_perl5.global($name)
@@ -655,13 +658,47 @@ method init_callbacks {
             ($p6) = @_;
         }
 
+        sub init_data {
+            my ($data) = @_;
+            no strict;
+            open *{main::DATA}, '<', \$data;
+        }
+
         sub uninit {
             undef $p6;
         }
 
         # wrapper for the load_module perlapi call to allow catching exceptions
         sub load_module {
+            # lifted from Devel::InnerPackage to avoid the dependency
+            my $list_packages;
+            $list_packages = sub {
+                my $pack = shift; $pack .= "::" unless $pack =~ m!::$!;
+
+                no strict 'refs';
+
+                my @packs;
+                my @stuff = grep !/^(main|)::$/, keys %{$pack};
+                for my $cand (grep /::$/, @stuff) {
+                    $cand =~ s!::$!!;
+                    my @children = $list_packages->($pack.$cand);
+
+                    push @packs, "$pack$cand"
+                        if $cand !~ /^::/
+                        && (
+                            defined ${"${pack}${cand}::VERSION"}
+                            || @{"${pack}${cand}::ISA"}
+                            || grep { defined &{"${pack}${cand}::$_"} }
+                                grep { substr($_, -2, 2) ne '::' }
+                                keys %{"${pack}${cand}::"}
+                        ); # or @children;
+                    push @packs, @children;
+                }
+                return grep {$_ !~ /::(::ISA::CACHE|SUPER)/} @packs;
+            };
+
             v6::load_module_impl(@_);
+            return map { substr $_, 2 } $list_packages->('::');
         }
 
         sub run {
@@ -829,6 +866,10 @@ method subs_in_module(Str $module) {
     return self.run('[ grep { *{"' ~ $module ~ '::$_"}{CODE} } keys %' ~ $module ~ ':: ]');
 }
 
+method variables_in_module(Str $module) {
+    return self.run('[ grep { *{"' ~ $module ~ '::$_"}{SCALAR} } keys %' ~ $module ~ ':: ]');
+}
+
 method import (Str $module, *@args) {
     my $before = set self.subs_in_module('main').list;
     self.invoke($module, 'import', @args.list);
@@ -836,21 +877,83 @@ method import (Str $module, *@args) {
     return ($after ∖ $before).keys;
 }
 
-my %loaded_modules;
-method require(Str $module, Num $version?) {
+method require(Str $module, Num $version?, Bool :$handle) {
     # wrap the load_module call so exceptions can be translated to Perl 6
-    if $version {
-        self.call('v6::load_module', $module, $version);
-    }
-    else {
-        self.call('v6::load_module', $module);
-    }
+    my @packages = $version
+        ?? self.call('v6::load_module', $module, $version)
+        !! self.call('v6::load_module', $module);
 
     return unless self eq $default_perl5; # Only create Perl 6 packages for the primary interpreter to avoid confusion
 
+    if try ::($module) ~~ Perl5Extension {
+        # Wrapper package already created. Nothing left for us to do.
+        return CompUnit::Handle.from-unit(Stash.new);
+    }
+
+    my $stash := $handle ?? Stash.new !! ::GLOBAL.WHO;
+
+    my $class;
+    for @packages.grep(*.defined) -> $package {
+        next if try ::($package) ~~ Perl5Extension;
+        my $created := self!create_wrapper_class($package, $stash);
+        $class := $created if $package eq $module;
+    }
+
+    my &export := sub EXPORT(*@args) {
+            $*W.do_pragma(Any, 'precompilation', False, []);
+            my @symbols = self.import($module, @args.list).map({
+                my $name = $_;
+                '&' ~ $name => sub (|args) {
+                    self.call-args("main::$name", args); # main:: because the sub got exported to main
+                }
+            });
+            # Hack needed for rakudo versions post-lexical_module_load but before support for
+            # getting a CompUnit::Handle from require was implemented.
+            @symbols.unshift: $module => $class unless $handle;
+            return Map.new(@symbols);
+        };
+
+    unless $handle {
+        ::($module).WHO<EXPORT> := Metamodel::PackageHOW.new();
+        ::($module).WHO<&EXPORT> := &export;
+    }
+
+    my $compunit-handle = class :: is CompUnit::Handle {
+        has &!EXPORT;
+        use nqp;
+        submethod fill(Stash $unit, &EXPORT) {
+            nqp::p6bindattrinvres(
+                nqp::p6bindattrinvres(
+                  nqp::create($?CLASS),
+                  CompUnit::Handle,
+                  '$!unit',
+                  nqp::decont($unit),
+                ),
+                $?CLASS,
+                '&!EXPORT',
+                &EXPORT,
+            )
+        }
+        method export-package() returns Stash {
+            Stash.new
+        }
+        method export-sub() returns Callable {
+            &!EXPORT
+        }
+    }.fill(
+        $stash,
+        &export,
+    );
+
+    return $compunit-handle;
+}
+
+my %loaded_modules;
+method !create_wrapper_class(Str $module, Stash $stash) {
     my $class;
     my $first-time = True;
     my $symbols = self.subs_in_module($module);
+    my $variables = self.variables_in_module($module);
     if %loaded_modules{$module}:exists {
         $class := %loaded_modules{$module};
         $first-time = False;
@@ -877,7 +980,7 @@ method require(Str $module, Num $version?) {
     # register the new class by its name
     my @parts = $module.split('::');
     my $inner = @parts.pop;
-    my $ns := ::GLOBAL.WHO;
+    my $ns := $stash;
     for @parts {
         $ns{$_} := Metamodel::PackageHOW.new_type(name => $_) unless $ns{$_}:exists;
         $ns := $ns{$_}.WHO;
@@ -891,22 +994,23 @@ method require(Str $module, Num $version?) {
     if $first-time {
         # install subs like Test::More::ok
         for @$symbols -> $name {
-            ::($module).WHO{"&$name"} := sub (*@args) {
+            $class.WHO{"&$name"} := sub (*@args) {
                 self.call("{$module}::$name", @args.list);
             }
         }
+        for @$variables -> $name {
+            $class.WHO{'$' ~ $name} := Proxy.new(
+                FETCH => {
+                    Inline::Perl5.default_perl5.global('$' ~ $module ~ '::' ~ $name);
+                },
+                STORE => -> $, $val {
+                    Inline::Perl5.default_perl5.set_global('$' ~ $module ~ '::' ~ $name, $val);
+                },
+            );
+        }
     }
 
-    ::($module).WHO<EXPORT> := Metamodel::PackageHOW.new();
-    ::($module).WHO<&EXPORT> := sub EXPORT(*@args) {
-        $*W.do_pragma(Any, 'precompilation', False, []);
-        return Map.new(self.import($module, @args.list).map({
-            my $name = $_;
-            '&' ~ $name => sub (|args) {
-                self.call-args("main::$name", args); # main:: because the sub got exported to main
-            }
-        }));
-    };
+    return $class;
 }
 
 method use(Str $module, *@args) {
@@ -937,6 +1041,10 @@ class X::Inline::Perl5::NoMultiplicity is Exception {
     method message() {
         "You need to compile perl with -DMULTIPLICITY for running multiple interpreters."
     }
+}
+
+method init_data($data) {
+    self.call('v6::init_data', $data);
 }
 
 method BUILD(*%args) {
@@ -996,6 +1104,12 @@ method BUILD(*%args) {
                 $_.resume;
             }
         }
+    }
+
+    if ($*W) {
+        my $block := { self.init_data(CALLER::<$=finish>) if CALLER::<$=finish> };
+        $*W.add_object($block);
+        my $op := $*W.add_phaser(Mu, 'INIT', $block, class :: { method cuid { (^2**128).pick }});
     }
 
     $!external_p5 = %args<p5>:exists;

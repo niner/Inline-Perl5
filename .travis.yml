@@ -3,7 +3,7 @@ branches:
     - gh-pages
 sudo: false
 language: perl6
-perl6: 2016.09
+perl6: 2016.12
 before_install:
   - curl -L http://install.perlbrew.pl | bash
   - echo 'source ~/perl5/perlbrew/etc/bashrc' >> ~/.bash_profile

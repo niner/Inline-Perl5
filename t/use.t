@@ -10,10 +10,13 @@ BEGIN {
     $p5.call('Test::More::ok', 1, 'use loaded the module');
 }
 
+use Test::More:from<Perl5>;
+
 BEGIN {
     Test::More::ok(1, 'package functions work');
-    $p5.use('Data::Dumper');
 }
+
+use Data::Dumper:from<Perl5>;
 
 my $dumper = Data::Dumper.new([1, 2].item);
 Test::More::is($dumper.Dump.Str, "\$VAR1 = 1;\n \$VAR2 = 2;\n", 'constructor works');

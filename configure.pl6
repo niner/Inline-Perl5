@@ -41,7 +41,7 @@ sub install() {
         ).first(*.can-install)
         or die "Cannot find a repository to install to";
     say "Installing into $repo";
-    my $dist = Distribution::Path.new($*CWD, :file('META.info'.IO));
+    my $dist = Distribution::Path.new($*CWD);
 
     # workaround for missing proper handling of libraries in Distribution::Path
     my $p5helper = p5helper;
