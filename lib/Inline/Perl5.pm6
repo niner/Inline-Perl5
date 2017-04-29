@@ -3,15 +3,15 @@ unit class Inline::Perl5;
 use MONKEY-SEE-NO-EVAL;
 use Inline::Language::ObjectKeeper;
 use Inline::Perl5::Interpreter;
-use Inline::Perl5::Hash;
 use Inline::Perl5::Array;
+use Inline::Perl5::Attributes;
+use Inline::Perl5::Caller;
+use Inline::Perl5::Extension;
+use Inline::Perl5::Hash;
 use Inline::Perl5::Object;
+use Inline::Perl5::Package;
+use Inline::Perl5::Parent;
 use Inline::Perl5::Callable;
-
-role Perl5Package { ... };
-role Perl5Parent { ... };
-role Perl5Extension { ... };
-role Perl5Attributes { ... };
 
 has Inline::Perl5::Interpreter $!p5;
 has Bool $!external_p5 = False;
@@ -62,19 +62,19 @@ multi method p6_to_p5(Inline::Perl5::Object $value) returns Pointer {
     $!p5.p5_sv_refcnt_inc($value.ptr);
     $value.ptr;
 }
-multi method p6_to_p5(Perl5Package $value) returns Pointer {
+multi method p6_to_p5(Inline::Perl5::Package $value) returns Pointer {
     self.p6_to_p5($value.unwrap-perl5-object());
 }
-multi method p6_to_p5(Perl5Parent $value) returns Pointer {
+multi method p6_to_p5(Inline::Perl5::Parent $value) returns Pointer {
     self.p6_to_p5($value.unwrap-perl5-object());
 }
-multi method p6_to_p5(Perl5Extension $value) returns Pointer {
+multi method p6_to_p5(Inline::Perl5::Extension $value) returns Pointer {
     self.p6_to_p5($value.unwrap-perl5-object());
 }
 
 my $objects = Inline::Language::ObjectKeeper.new; #FIXME not thread safe
 
-multi method p6_to_p5(Perl5Extension $value, Pointer $target) returns Pointer {
+multi method p6_to_p5(Inline::Perl5::Extension $value, Pointer $target) returns Pointer {
     my $index = $objects.keep($value);
 
     $!p5.p5_wrap_p6_object(
@@ -506,7 +506,7 @@ class Perl6Callbacks {
     has $.p5;
     method create_extension($package, $code) {
         my $p5 = $.p5;
-        EVAL "class GLOBAL::$package does Perl5Extension['$package', \$p5] \{\n$code\n\}";
+        EVAL "class GLOBAL::$package does Inline::Perl5::Extension['$package', \$p5] \{\n$code\n\}";
         return;
     }
     method run($code) {
@@ -817,51 +817,6 @@ method install_wrapper_method(Str:D $package, Str $name, *@attributes) {
     self.call('v6::install_p6_method_wrapper', $package, $name, |@attributes);
 }
 
-role Perl5Package[Inline::Perl5 $p5, Str $module] {
-    has $!parent;
-
-    method new(*@args, *%args) {
-        if (self.^name ne $module) { # subclass
-            %args<parent> = $p5.invoke($module, 'new', |@args, |%args.kv);
-            my $self = self.bless();
-            $self.BUILDALL(@args, %args);
-            return $self;
-        }
-        else {
-            return $p5.invoke($module, 'new', |@args.list, |%args.hash);
-        }
-    }
-
-    submethod BUILD(:$parent) {
-        $!parent = $parent;
-        $p5.rebless($parent, 'Perl6::Object', self) if $parent;
-    }
-
-    method unwrap-perl5-object() {
-        $!parent;
-    }
-
-    multi method FALLBACK($name, *@args, *%kwargs) {
-        return self.defined
-            ?? $p5.invoke-parent($module, $!parent.ptr, False, $name, [flat $!parent, |@args], %kwargs)
-            !! $p5.invoke($module, $name, |@args.list, |%kwargs);
-    }
-
-    for @pass_through_methods -> $name {
-        next if $?CLASS.^declares_method($name);
-        my $method = method (|args) {
-            return self.defined
-                ?? $p5.invoke-parent($module, $!parent.ptr, False, $name, [flat $!parent, args.list], args.hash.item)
-                !! $p5.invoke($module, $name, args.list, args.hash);
-        };
-        $method.set_name($name);
-        $?CLASS.^add_method(
-            $name,
-            $method,
-        );
-    }
-}
-
 method subs_in_module(Str $module) {
     return self.run('[ grep { *{"' ~ $module ~ '::$_"}{CODE} } keys %' ~ $module ~ ':: ]');
 }
@@ -885,7 +840,7 @@ method require(Str $module, Num $version?, Bool :$handle) {
 
     return unless self eq $default_perl5; # Only create Perl 6 packages for the primary interpreter to avoid confusion
 
-    if try ::($module) ~~ Perl5Extension {
+    if try ::($module) ~~ Inline::Perl5::Extension {
         # Wrapper package already created. Nothing left for us to do.
         return CompUnit::Handle.from-unit(Stash.new);
     }
@@ -894,7 +849,7 @@ method require(Str $module, Num $version?, Bool :$handle) {
 
     my $class;
     for @packages.grep(*.defined) -> $package {
-        next if try ::($package) ~~ Perl5Extension;
+        next if try ::($package) ~~ Inline::Perl5::Extension;
         my $created := self!create_wrapper_class($package, $stash);
         $class := $created if $package eq $module;
     }
@@ -962,7 +917,7 @@ method !create_wrapper_class(Str $module, Stash $stash) {
         my $p5 := self;
 
         %loaded_modules{$module} := $class := Metamodel::ClassHOW.new_type(name => $module);
-        $class.^add_role(Perl5Package[$p5, $module]);
+        $class.^add_role(Inline::Perl5::Package[$p5, $module]);
 
         # install methods
         for @$symbols -> $name {
@@ -1034,9 +989,6 @@ method retrieve_scalar_context() {
     return $scalar_context;
 }
 
-role Perl5Caller {
-}
-
 class X::Inline::Perl5::NoMultiplicity is Exception {
     method message() {
         "You need to compile perl with -DMULTIPLICITY for running multiple interpreters."
@@ -1065,7 +1017,7 @@ method BUILD(*%args) {
         }
         self.p6_to_p5(@ = $p6obj."$name"(|self.p5_array_to_p6_array($args)));
     }
-    &call_method does Perl5Caller;
+    &call_method does Inline::Perl5::Caller;
 
     my &call_callable = sub (Int $index, Pointer $args, Pointer $err) returns Pointer {
         my $callable = $objects.get($index);
@@ -1142,113 +1094,9 @@ method BUILD(*%args) {
     $default_perl5 //= self;
 }
 
-role Perl5Parent[Str:D $package, Inline::Perl5:D $perl5] {
-    has $!parent;
-
-    method new(:$parent?, *@args, *%args) {
-        self.CREATE.initialize-perl5-object($parent, @args, %args).BUILDALL(@args, %args);
-    }
-
-    method initialize-perl5-object($parent, @args, %args) {
-        $!parent = $parent // $perl5.invoke($package, 'new', |@args, |%args.kv);
-        $perl5.rebless($!parent, "Perl6::Object::$package", self);
-        return self;
-    }
-
-    method unwrap-perl5-object() {
-        $!parent;
-    }
-
-    method sink() { self }
-
-    method can($name) {
-        my @candidates = self.^can($name);
-        return @candidates[0] if @candidates;
-        return defined(self)
-            ?? $perl5.invoke-parent($package, $!parent.ptr, True, 'can', [$!parent, $name], Map)
-            !! $perl5.invoke($package, 'can', $name);
-    }
-
-    ::?CLASS.HOW.add_fallback(::?CLASS, -> $, $ { True },
-        method ($name) {
-            -> \self, |args {
-                my $scalar = (
-                    callframe(1).code ~~ Perl5Caller
-                    and $perl5.retrieve_scalar_context
-                );
-                my $parent = self.unwrap-perl5-object;
-                $perl5.invoke-parent($package, $parent.ptr, $scalar, $name, [flat $parent, args.list], args.hash);
-            }
-        }
-    );
-}
-
-role Perl5Extension[Str:D $package, Inline::Perl5:D $perl5] {
-    has $!target;
-
-    method new_shadow_of_p5_object($target) {
-        self.CREATE.initialize-perl5-object($target); #.BUILDALL(my @, my %);
-        Nil
-    }
-
-    method new(*@args, *%args) {
-        $perl5.invoke($package, 'new', |@args, |%args.kv)
-    }
-
-    method initialize-perl5-object($target) {
-        $!target = $target;
-        $perl5.p6_to_p5(self, $!target.ptr);
-        $perl5.sv_refcnt_dec($!target.ptr); # Was increased by p5_to_p6 but we must not keep $!target alive
-        return self;
-    }
-
-    method unwrap-perl5-object() {
-        $!target;
-    }
-
-    submethod DESTROY {
-        # Prevent Inline::Perl5::Object.DESTROY from decreasing the refcnt, as we did that
-        # already in initialize-perl5-object
-        $!target.ptr = Pointer;
-    }
-
-    method sink() { self }
-
-    method can($name) {
-        my @candidates = self.^can($name);
-        return @candidates[0] if @candidates;
-        return defined(self)
-            ?? $perl5.invoke-parent($package, $!target.ptr, True, 'can', $!target, $name)
-            !! $perl5.invoke($package, 'can', $name);
-    }
-
-    for ::?CLASS.^attributes.grep(*.has_accessor) -> $attribute {
-        $perl5.install_wrapper_method($package, $attribute.name.substr(2));
-    }
-
-    for ::?CLASS.^methods -> &method {
-        &method.does(Perl5Attributes)
-            ?? $perl5.install_wrapper_method($package, &method.name, |&method.attributes)
-            !! $perl5.install_wrapper_method($package, &method.name);
-    }
-
-    ::?CLASS.HOW.add_fallback(::?CLASS, -> $, $ { True },
-        method ($name) {
-            -> \self, |args {
-                my $scalar = (
-                    callframe(1).code ~~ Perl5Caller
-                    and $perl5.retrieve_scalar_context
-                );
-                my $target = self.unwrap-perl5-object;
-                $perl5.invoke-parent($package, $target.ptr, $scalar, $name, [flat $target, args.list], args.hash);
-            }
-        }
-    );
-}
-
-role Perl5Attributes {
-    has @.attributes;
-}
+# for backwards compatibility with documented interfaces
+OUR::<Perl5Attributes> := Inline::Perl5::Attributes;
+OUR::<Perl5Parent>     := Inline::Perl5::Parent;
 
 BEGIN {
     Inline::Perl5::Object.^add_fallback(-> $, $ { True },
