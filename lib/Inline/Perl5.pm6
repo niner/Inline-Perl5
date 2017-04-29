@@ -19,8 +19,6 @@ has Bool $!scalar_context = False;
 
 my $default_perl5;
 
-my constant @pass_through_methods = |Any.^methods>>.name.grep(/^\w+$/), |<note print put say split>;
-
 # I'd like to call this from Inline::Perl5::Interpreter
 # But it raises an error in the END { ... } call
 use NativeCall;
@@ -1097,30 +1095,6 @@ method BUILD(*%args) {
 # for backwards compatibility with documented interfaces
 OUR::<Perl5Attributes> := Inline::Perl5::Attributes;
 OUR::<Perl5Parent>     := Inline::Perl5::Parent;
-
-BEGIN {
-    Inline::Perl5::Object.^add_fallback(-> $, $ { True },
-        method ($name) {
-            -> \self, |args {
-                args
-                    ?? $.perl5.invoke-args($.ptr, $name, args)
-                    !! $.perl5.invoke($.ptr, $name);
-            }
-        }
-    );
-    for @pass_through_methods -> $name {
-        next if Inline::Perl5::Object.^declares_method($name);
-        Inline::Perl5::Object.^add_method(
-            $name,
-            method (|args) {
-                args
-                    ?? $.perl5.invoke-args($.ptr, $name, args)
-                    !! $.perl5.invoke($.ptr, $name);
-            }
-        );
-    }
-    Inline::Perl5::Object.^compose;
-}
 
 my Bool $inline_perl6_in_use = False;
 sub init_inline_perl6_new_callback(&inline_perl5_new (Inline::Perl5::Interpreter --> Pointer)) { ... };
