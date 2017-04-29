@@ -543,256 +543,7 @@ class Perl6Callbacks {
 }
 
 method init_callbacks {
-    self.run(q:to/PERL5/);
-        use strict;
-        use warnings;
-
-        package Perl6::Object;
-
-        use overload '""' => sub {
-            my ($self) = @_;
-
-            return $self->Str;
-        };
-
-        our $AUTOLOAD;
-        sub AUTOLOAD {
-            my ($self) = @_;
-            my $name = $AUTOLOAD =~ s/.*:://r;
-            Perl6::Object::call_method($name, @_);
-        }
-
-        sub can {
-            my ($self) = shift;
-
-            return if not ref $self and $self eq 'Perl6::Object';
-            return ref $self
-                ? Perl6::Object::call_method('can', $self, @_)
-                : v6::invoke($self =~ s/\APerl6::Object:://r, 'can', @_);
-        }
-
-        sub DESTROY {
-        }
-
-        package Perl6::Callable;
-
-        sub new {
-            my $sub;
-            $sub = sub { Perl6::Callable::call($sub, @_) };
-            return $sub;
-        }
-
-        package Perl6::Handle;
-
-        sub new {
-            my ($class, $handle) = @_;
-            my $out = \do { local *FH };
-            tie *$out, $class, $handle;
-            return $out;
-        }
-
-        sub TIEHANDLE {
-            my ($class, $p6obj) = @_;
-            my $self = \$p6obj;
-            return bless $self, $class;
-        }
-
-        sub PRINT {
-            my ($self, @list) = @_;
-            return $$self->print(@list);
-        }
-
-        sub READLINE {
-            my ($self) = @_;
-            return $$self->get;
-        }
-
-        package Perl6::Hash;
-
-        sub new {
-            my ($class, $hash) = @_;
-            my %tied;
-            tie %tied, $class, $hash;
-            return \%tied;
-        }
-
-        sub TIEHASH {
-            my ($class, $p6hash) = @_;
-            my $self = [ $p6hash ];
-            return bless $self, $class;
-        }
-
-        sub DELETE {
-            my ($self, $key) = @_;
-            return Perl6::Object::call_method('DELETE-KEY', $self->[0], $key);
-        }
-        sub CLEAR {
-            die 'CLEAR NYI';
-        }
-        sub EXISTS {
-            my ($self, $key) = @_;
-            return Perl6::Object::call_method('EXISTS-KEY', $self->[0], $key);
-        }
-        sub FIRSTKEY {
-            my ($self) = @_;
-            $self->[1] = [ Perl6::Object::call_method('keys', $self->[0]) ];
-            $self->[2] = 0;
-            return $self->NEXTKEY;
-        }
-        sub NEXTKEY {
-            my ($self) = @_;
-            return $self->[2] <= @{ $self->[1] } ? $self->[1][ $self->[2]++ ] : undef;
-        }
-        sub SCALAR {
-            my ($self) = @_;
-            return Perl6::Object::call_method('elems', $self->[0]);
-        }
-
-        package v6;
-
-        my $p6;
-
-        sub init {
-            ($p6) = @_;
-        }
-
-        sub init_data {
-            my ($data) = @_;
-            no strict;
-            open *{main::DATA}, '<', \$data;
-        }
-
-        sub uninit {
-            undef $p6;
-        }
-
-        # wrapper for the load_module perlapi call to allow catching exceptions
-        sub load_module {
-            # lifted from Devel::InnerPackage to avoid the dependency
-            my $list_packages;
-            $list_packages = sub {
-                my $pack = shift; $pack .= "::" unless $pack =~ m!::$!;
-
-                no strict 'refs';
-
-                my @packs;
-                my @stuff = grep !/^(main|)::$/, keys %{$pack};
-                for my $cand (grep /::$/, @stuff) {
-                    $cand =~ s!::$!!;
-                    my @children = $list_packages->($pack.$cand);
-
-                    push @packs, "$pack$cand"
-                        if $cand !~ /^::/
-                        && (
-                            defined ${"${pack}${cand}::VERSION"}
-                            || @{"${pack}${cand}::ISA"}
-                            || grep { defined &{"${pack}${cand}::$_"} }
-                                grep { substr($_, -2, 2) ne '::' }
-                                keys %{"${pack}${cand}::"}
-                        ); # or @children;
-                    push @packs, @children;
-                }
-                return grep {$_ !~ /::(::ISA::CACHE|SUPER)/} @packs;
-            };
-
-            v6::load_module_impl(@_);
-            return map { substr $_, 2 } $list_packages->('::');
-        }
-
-        sub run {
-            my ($code) = @_;
-            return $p6->run($code);
-        }
-
-        sub call {
-            my ($name, @args) = @_;
-            return $p6->call($name, \@args);
-        }
-
-        sub invoke {
-            my ($class, $name, @args) = @_;
-            return $p6->invoke($class, $name, \@args);
-        }
-
-        sub named(@) {
-            die "Only named arguments allowed after v6::named" if @_ % 2 != 0;
-            my @args;
-            while (@_) {
-                push @args, $p6->create_pair(shift @_, shift @_);
-            }
-            return @args;
-        }
-
-        sub extend {
-            my ($static_class, $self, $args, $dynamic_class) = @_;
-
-            $args //= [];
-            undef $dynamic_class
-                if $dynamic_class and (
-                    $dynamic_class eq $static_class
-                    or $dynamic_class eq "Perl6::Object::${static_class}"
-                );
-            my $p6 = v6::invoke($static_class, 'new', @$args, v6::named parent => $self);
-            {
-                no strict 'refs';
-                @{"Perl6::Object::${static_class}::ISA"} = ("Perl6::Object", $dynamic_class // (), $static_class);
-            }
-            return $self;
-        }
-
-        sub shadow_object {
-            my ($static_class, $dynamic_class, $object) = @_;
-
-            v6::invoke($static_class, 'new_shadow_of_p5_object', $object);
-            return $object;
-        }
-        use mro;
-
-        sub install_function {
-            my ($package, $name, $code) = @_;
-
-            no strict 'refs';
-            *{"${package}::$name"} = v6::set_subname("${package}::", $name, $code);
-            return;
-        }
-
-        use attributes ();
-        sub install_p6_method_wrapper {
-            my ($package, $name, @attributes) = @_;
-            no strict 'refs';
-            *{"${package}::$name"} = my $code = v6::set_subname("${package}::", $name, sub {
-                return Perl6::Object::call_extension_method($p6, $package, $name, @_);
-            });
-            attributes->import($package, $code, @attributes) if @attributes;
-            return;
-        }
-
-        {
-            my @inlined;
-            my $package_to_create;
-
-            sub import {
-                my $package = $package_to_create = scalar caller;
-                push @inlined, $package;
-            }
-
-            use Filter::Simple sub {
-                $p6->create_extension($package_to_create, $_);
-                $_ = '1;';
-            };
-        }
-
-        package v6::inline;
-
-        sub import {
-            die 'v6::inline got renamed to v6-inline for compatibility with older Perl 5 versions. Sorry for the back and forth about this.';
-        }
-
-        $INC{'v6.pm'} = '';
-        $INC{'v6/inline.pm'} = '';
-
-        1;
-        PERL5
+    self.run($=finish);
 
     self.call('v6::init', Perl6Callbacks.new(:p5(self)));
 
@@ -1119,3 +870,256 @@ END {
 
     p5_terminate unless $inline_perl6_in_use;
 }
+
+# Perl 5 part of the bridge used by init_callbacks:
+
+=finish
+
+use strict;
+use warnings;
+
+package Perl6::Object;
+
+use overload '""' => sub {
+    my ($self) = @_;
+
+    return $self->Str;
+};
+
+our $AUTOLOAD;
+sub AUTOLOAD {
+    my ($self) = @_;
+    my $name = $AUTOLOAD =~ s/.*:://r;
+    Perl6::Object::call_method($name, @_);
+}
+
+sub can {
+    my ($self) = shift;
+
+    return if not ref $self and $self eq 'Perl6::Object';
+    return ref $self
+        ? Perl6::Object::call_method('can', $self, @_)
+        : v6::invoke($self =~ s/\APerl6::Object:://r, 'can', @_);
+}
+
+sub DESTROY {
+}
+
+package Perl6::Callable;
+
+sub new {
+    my $sub;
+    $sub = sub { Perl6::Callable::call($sub, @_) };
+    return $sub;
+}
+
+package Perl6::Handle;
+
+sub new {
+    my ($class, $handle) = @_;
+    my $out = \do { local *FH };
+    tie *$out, $class, $handle;
+    return $out;
+}
+
+sub TIEHANDLE {
+    my ($class, $p6obj) = @_;
+    my $self = \$p6obj;
+    return bless $self, $class;
+}
+
+sub PRINT {
+    my ($self, @list) = @_;
+    return $$self->print(@list);
+}
+
+sub READLINE {
+    my ($self) = @_;
+    return $$self->get;
+}
+
+package Perl6::Hash;
+
+sub new {
+    my ($class, $hash) = @_;
+    my %tied;
+    tie %tied, $class, $hash;
+    return \%tied;
+}
+
+sub TIEHASH {
+    my ($class, $p6hash) = @_;
+    my $self = [ $p6hash ];
+    return bless $self, $class;
+}
+
+sub DELETE {
+    my ($self, $key) = @_;
+    return Perl6::Object::call_method('DELETE-KEY', $self->[0], $key);
+}
+sub CLEAR {
+    die 'CLEAR NYI';
+}
+sub EXISTS {
+    my ($self, $key) = @_;
+    return Perl6::Object::call_method('EXISTS-KEY', $self->[0], $key);
+}
+sub FIRSTKEY {
+    my ($self) = @_;
+    $self->[1] = [ Perl6::Object::call_method('keys', $self->[0]) ];
+    $self->[2] = 0;
+    return $self->NEXTKEY;
+}
+sub NEXTKEY {
+    my ($self) = @_;
+    return $self->[2] <= @{ $self->[1] } ? $self->[1][ $self->[2]++ ] : undef;
+}
+sub SCALAR {
+    my ($self) = @_;
+    return Perl6::Object::call_method('elems', $self->[0]);
+}
+
+package v6;
+
+my $p6;
+
+sub init {
+    ($p6) = @_;
+}
+
+sub init_data {
+    my ($data) = @_;
+    no strict;
+    open *{main::DATA}, '<', \$data;
+}
+
+sub uninit {
+    undef $p6;
+}
+
+# wrapper for the load_module perlapi call to allow catching exceptions
+sub load_module {
+    # lifted from Devel::InnerPackage to avoid the dependency
+    my $list_packages;
+    $list_packages = sub {
+        my $pack = shift; $pack .= "::" unless $pack =~ m!::$!;
+
+        no strict 'refs';
+
+        my @packs;
+        my @stuff = grep !/^(main|)::$/, keys %{$pack};
+        for my $cand (grep /::$/, @stuff) {
+            $cand =~ s!::$!!;
+            my @children = $list_packages->($pack.$cand);
+
+            push @packs, "$pack$cand"
+                if $cand !~ /^::/
+                && (
+                    defined ${"${pack}${cand}::VERSION"}
+                    || @{"${pack}${cand}::ISA"}
+                    || grep { defined &{"${pack}${cand}::$_"} }
+                        grep { substr($_, -2, 2) ne '::' }
+                        keys %{"${pack}${cand}::"}
+                ); # or @children;
+            push @packs, @children;
+        }
+        return grep {$_ !~ /::(::ISA::CACHE|SUPER)/} @packs;
+    };
+
+    v6::load_module_impl(@_);
+    return map { substr $_, 2 } $list_packages->('::');
+}
+
+sub run {
+    my ($code) = @_;
+    return $p6->run($code);
+}
+
+sub call {
+    my ($name, @args) = @_;
+    return $p6->call($name, \@args);
+}
+
+sub invoke {
+    my ($class, $name, @args) = @_;
+    return $p6->invoke($class, $name, \@args);
+}
+
+sub named(@) {
+    die "Only named arguments allowed after v6::named" if @_ % 2 != 0;
+    my @args;
+    while (@_) {
+        push @args, $p6->create_pair(shift @_, shift @_);
+    }
+    return @args;
+}
+
+sub extend {
+    my ($static_class, $self, $args, $dynamic_class) = @_;
+
+    $args //= [];
+    undef $dynamic_class
+        if $dynamic_class and (
+            $dynamic_class eq $static_class
+            or $dynamic_class eq "Perl6::Object::${static_class}"
+        );
+    my $p6 = v6::invoke($static_class, 'new', @$args, v6::named parent => $self);
+    {
+        no strict 'refs';
+        @{"Perl6::Object::${static_class}::ISA"} = ("Perl6::Object", $dynamic_class // (), $static_class);
+    }
+    return $self;
+}
+
+sub shadow_object {
+    my ($static_class, $dynamic_class, $object) = @_;
+
+    v6::invoke($static_class, 'new_shadow_of_p5_object', $object);
+    return $object;
+}
+use mro;
+
+sub install_function {
+    my ($package, $name, $code) = @_;
+
+    no strict 'refs';
+    *{"${package}::$name"} = v6::set_subname("${package}::", $name, $code);
+    return;
+}
+
+use attributes ();
+sub install_p6_method_wrapper {
+    my ($package, $name, @attributes) = @_;
+    no strict 'refs';
+    *{"${package}::$name"} = my $code = v6::set_subname("${package}::", $name, sub {
+        return Perl6::Object::call_extension_method($p6, $package, $name, @_);
+    });
+    attributes->import($package, $code, @attributes) if @attributes;
+    return;
+}
+
+{
+    my @inlined;
+    my $package_to_create;
+
+    sub import {
+        my $package = $package_to_create = scalar caller;
+        push @inlined, $package;
+    }
+
+    use Filter::Simple sub {
+        $p6->create_extension($package_to_create, $_);
+        $_ = '1;';
+    };
+}
+
+package v6::inline;
+
+sub import {
+    die 'v6::inline got renamed to v6-inline for compatibility with older Perl 5 versions. Sorry for the back and forth about this.';
+}
+
+$INC{'v6.pm'} = '';
+$INC{'v6/inline.pm'} = '';
+
+1;
