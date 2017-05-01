@@ -8,7 +8,18 @@
     "depends"       : [ "LibraryMake" ],
     "test-depends"  : [ "File::Temp" ],
     "provides"      : {
-        "Inline::Perl5" : "lib/Inline/Perl5.pm6"
+        "Inline::Perl5":                  "lib/Inline/Perl5.pm6",
+        "Inline::Perl5::Array":           "lib/Inline/Perl5/Array.pm6",
+        "Inline::Perl5::Attributes":      "lib/Inline/Perl5/Attributes.pm6",
+        "Inline::Perl5::Callable":        "lib/Inline/Perl5/Callable.pm6",
+        "Inline::Perl5::Caller":          "lib/Inline/Perl5/Caller.pm6",
+        "Inline::Perl5::Extension":       "lib/Inline/Perl5/Extension.pm6",
+        "Inline::Perl5::Hash":            "lib/Inline/Perl5/Hash.pm6",
+        "Inline::Perl5::Interpreter":     "lib/Inline/Perl5/Interpreter.pm6",
+        "Inline::Perl5::Object":          "lib/Inline/Perl5/Object.pm6",
+        "Inline::Perl5::Package":         "lib/Inline/Perl5/Package.pm6",
+        "Inline::Perl5::Parent":          "lib/Inline/Perl5/Parent.pm6",
+	"Inline::Language::ObjectKeeper": "lib/Inline/Language/ObjectKeeper.pm6"
     },
     "resources"      : [
         "libraries/p5helper"
