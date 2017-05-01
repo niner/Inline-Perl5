@@ -14,7 +14,7 @@
         "libraries/p5helper"
     ],
     "repo-type"     : "git",
-    "source-url"    : "git://github.com/niner/Inline-Perl5.git",
+    "source-url"    : "http://www.cpan.org/authors/id/N/NI/NINE/Perl6/Inline-Perl5-0.26.tar.gz",
     "license"       : "Artistic-2.0",
     "support"       : {
         "irc" : "irc://irc.freenode.org/#perl6"
