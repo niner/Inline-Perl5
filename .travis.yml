@@ -2,7 +2,6 @@ language: perl6
 
 perl6:
   - latest
-  - 2016.12
 
 os:
   - linux
