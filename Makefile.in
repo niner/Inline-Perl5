@@ -4,7 +4,11 @@ PERL6 = %perl6%
 
 all: %p5helper%
 clean:
-	rm "%p5helper%"
+	rm -f "%p5helper%"
+	find . -name .precomp -exec rm -rf "{}" \;
+	rm -rf lib/.precomp t/lib/.precomp
+manifest:
+	find . -name .git -prune -o -name .gitignore -prune -o -name .prove -prune -o -name .travis.yml -prune -o -name Makefile -prune -o -name bugs -prune -o -type f -print | sort | cut -c 3- > MANIFEST
 %p5helper%: p5helper.c
 	$(CC) -Wall p5helper.c %perlopts% -shared -o "%p5helper%" -fPIC -g
 test: all
