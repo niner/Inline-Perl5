@@ -73,7 +73,6 @@ t/p6_object_destructor.t
 t/p6_to_p5.t
 t/perl5package.t
 t/perl5parent.t
-t/precomp.t.disabled
 t/shadow.t
 t/stringify.t
 t/use_nested.t
