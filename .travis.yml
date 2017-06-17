@@ -19,7 +19,5 @@ before_install:
 
 install:
   - source ~/perl5/perlbrew/etc/bashrc
-  - rakudobrew build zef
-  - zef --debug --depsonly install .
   - perl6 configure.pl6
   - make
