@@ -36,8 +36,12 @@ multi method p6_to_p5(Num:D $value) returns Pointer {
 multi method p6_to_p5(Rat:D $value) returns Pointer {
     $!p5.p5_float_to_sv($value.Num);
 }
+my constant $encoding-registry = try ::("Encoding::Registry");
+my constant $utf8-encoder = $encoding-registry.^can('find')
+    ?? $encoding-registry.find('utf8').encoder(:!replacement, :!translate-nl) # on 6.d
+    !! class { method encode-chars($str) { $str.encode } }.new; # fallback for 6.c
 multi method p6_to_p5(Str:D $value) returns Pointer {
-    my $buf = $value.encode('UTF-8');
+    my $buf = $utf8-encoder.encode-chars($value);
     $!p5.p5_str_to_sv($buf.elems, $buf);
 }
 multi method p6_to_p5(IntStr:D $value) returns Pointer {
