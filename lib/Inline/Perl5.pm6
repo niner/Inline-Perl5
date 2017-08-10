@@ -208,7 +208,7 @@ method p5_to_p6(Pointer $value, int32 $type is copy = 0) {
 
     my enum P5Types <Unknown Object SubRef NV IV PV Array Hash P6Hash Undef ScalarRef>;
     given $type {
-        when Object {
+        when $_ == Object {
             if $!p5.p5_is_wrapped_p6_object($value) {
                 return $objects.get($!p5.p5_unwrap_p6_object($value));
             }
@@ -217,17 +217,13 @@ method p5_to_p6(Pointer $value, int32 $type is copy = 0) {
                 return Inline::Perl5::Object.new(perl5 => self, ptr => $value);
             }
         }
-        when SubRef {
-            $!p5.p5_sv_refcnt_inc($value);
-            return Inline::Perl5::Callable.new(perl5 => self, ptr => $value);
-        }
-        when NV {
+        when $_ == NV {
             return $!p5.p5_sv_nv($value);
         }
-        when IV {
+        when $_ == IV {
             return $!p5.p5_sv_iv($value);
         }
-        when PV {
+        when $_ == PV {
             if $!p5.p5_sv_utf8($value) {
                 return $!p5.p5_sv_to_char_star($value);
             }
@@ -239,19 +235,23 @@ method p5_to_p6(Pointer $value, int32 $type is copy = 0) {
                 return blob8.new(do for ^$len { $string.AT-POS($_) });
             }
         }
-        when Array {
+        when $_ == Array {
             return self!p5_array_to_writeback_p6_array($value);
         }
-        when Hash {
+        when $_ == Hash {
             return self!p5_hash_to_writeback_p6_hash($value);
         }
-        when P6Hash {
+        when $_ == P6Hash {
             return $objects.get($!p5.p5_unwrap_p6_hash($value));
         }
-        when Undef {
+        when $_ == Undef {
             return Any;
         }
-        when ScalarRef {
+        when $_ == SubRef {
+            $!p5.p5_sv_refcnt_inc($value);
+            return Inline::Perl5::Callable.new(perl5 => self, ptr => $value);
+        }
+        when $_ == ScalarRef {
             return self!p5_scalar_ref_to_capture($value);
         }
     }
