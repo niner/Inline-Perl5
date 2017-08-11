@@ -5,6 +5,12 @@ class Inline::Perl5::Hash does Iterable does Associative {
     has $!ip5; # Inline::Perl5 type removed to avoid circle
     has Inline::Perl5::Interpreter $!p5;
     has Pointer $.hv;
+
+    my constant $encoding-registry = try ::("Encoding::Registry");
+    my constant $utf8-encoder = $encoding-registry.^can('find')
+        ?? $encoding-registry.find('utf8').encoder(:!replacement, :!translate-nl) # on 6.d
+        !! class { method encode-chars($str) { $str.encode } }.new; # fallback for 6.c
+
     method new(:$ip5, :$p5, :$hv) {
         my \hash = self.CREATE;
         hash.BUILD(:$ip5, :$p5, :$hv);
@@ -21,11 +27,11 @@ class Inline::Perl5::Hash does Iterable does Associative {
         assignval
     }
     method AT-KEY(Inline::Perl5::Hash:D: Str() \key) is raw {
-        my $buf = key.encode('UTF-8');
+        my $buf = $utf8-encoder.encode-chars(key);
         $!ip5.p5_to_p6($!p5.p5_hv_fetch($!hv, $buf.elems, $buf))
     }
     method EXISTS-KEY(Inline::Perl5::Hash:D: Str() \key) {
-        my $buf = key.encode('UTF-8');
+        my $buf = $utf8-encoder.encode-chars(key);
         $!p5.p5_hv_exists($!hv, $buf.elems, $buf)
     }
     method Hash() {
