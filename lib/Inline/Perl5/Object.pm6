@@ -23,18 +23,25 @@ class Inline::Perl5::Object {
         $!perl5.sv_refcnt_dec($!ptr) if $!ptr;
         $!ptr = Pointer;
     }
+
+    method FALLBACK($name, *@args, *%kwargs) {
+        my $role := Metamodel::ParametricRoleHOW.new_type;
+        $role.^add_method($name, method (|args) {
+            args
+                ?? $!perl5.invoke-args($!ptr, $name, args)
+                !! $!perl5.invoke($!ptr, $name);
+        });
+        $role.^set_body_block(-> |args {});
+        $role.^compose;
+        self does $role;
+
+        @args.elems || %kwargs.elems
+            ?? $!perl5.invoke-args($!ptr, $name, Capture.new(:list(@args), :hash(%kwargs)))
+            !! $!perl5.invoke($!ptr, $name);
+    }
 }
 
 BEGIN {
-    Inline::Perl5::Object.^add_fallback(-> $, $ { True },
-        method ($name) {
-            -> \self, |args {
-                args
-                    ?? $.perl5.invoke-args($.ptr, $name, args)
-                    !! $.perl5.invoke($.ptr, $name);
-            }
-        }
-    );
     for @pass_through_methods -> $name {
         next if Inline::Perl5::Object.^declares_method($name);
         Inline::Perl5::Object.^add_method(
