@@ -211,54 +211,54 @@ method p5_to_p6(Pointer $value, int32 $type is copy = 0) {
     $type ||= $!p5.p5_get_type($value);
 
     my enum P5Types <Unknown Object SubRef NV IV PV Array Hash P6Hash Undef ScalarRef>;
-    given $type {
-        when $_ == Object {
-            if $!p5.p5_is_wrapped_p6_object($value) {
-                return $objects.get($!p5.p5_unwrap_p6_object($value));
-            }
-            else {
-                $!p5.p5_sv_refcnt_inc($value);
-                return Inline::Perl5::Object.new(perl5 => self, ptr => $value);
-            }
+
+    if $type == IV {
+        return $!p5.p5_sv_iv($value);
+    }
+    if $type == PV {
+        if $!p5.p5_sv_utf8($value) {
+            return $!p5.p5_sv_to_char_star($value);
         }
-        when $_ == NV {
-            return $!p5.p5_sv_nv($value);
-        }
-        when $_ == IV {
-            return $!p5.p5_sv_iv($value);
-        }
-        when $_ == PV {
-            if $!p5.p5_sv_utf8($value) {
-                return $!p5.p5_sv_to_char_star($value);
-            }
-            else {
-                my $string_ptr = CArray[CArray[int8]].new;
-                $string_ptr[0] = CArray[int8];
-                my $len = $!p5.p5_sv_to_buf($value, $string_ptr);
-                my $string := $string_ptr[0];
-                return blob8.new(do for ^$len { $string.AT-POS($_) });
-            }
-        }
-        when $_ == Array {
-            return self!p5_array_to_writeback_p6_array($value);
-        }
-        when $_ == Hash {
-            return self!p5_hash_to_writeback_p6_hash($value);
-        }
-        when $_ == P6Hash {
-            return $objects.get($!p5.p5_unwrap_p6_hash($value));
-        }
-        when $_ == Undef {
-            return Any;
-        }
-        when $_ == SubRef {
-            $!p5.p5_sv_refcnt_inc($value);
-            return Inline::Perl5::Callable.new(perl5 => self, ptr => $value);
-        }
-        when $_ == ScalarRef {
-            return self!p5_scalar_ref_to_capture($value);
+        else {
+            my $string_ptr = CArray[CArray[int8]].new;
+            $string_ptr[0] = CArray[int8];
+            my $len = $!p5.p5_sv_to_buf($value, $string_ptr);
+            my $string := $string_ptr[0];
+            return blob8.new(do for ^$len { $string.AT-POS($_) });
         }
     }
+    if $type == Object {
+        if $!p5.p5_is_wrapped_p6_object($value) {
+            return $objects.get($!p5.p5_unwrap_p6_object($value));
+        }
+        else {
+            $!p5.p5_sv_refcnt_inc($value);
+            return Inline::Perl5::Object.new(perl5 => self, ptr => $value);
+        }
+    }
+    if $type == NV {
+        return $!p5.p5_sv_nv($value);
+    }
+    if $type == Array {
+        return self!p5_array_to_writeback_p6_array($value);
+    }
+    if $type == Hash {
+        return self!p5_hash_to_writeback_p6_hash($value);
+    }
+    if $type == P6Hash {
+        return $objects.get($!p5.p5_unwrap_p6_hash($value));
+    }
+    if $type == Undef {
+        return Any;
+    }
+    if $type == SubRef {
+        $!p5.p5_sv_refcnt_inc($value);
+        return Inline::Perl5::Callable.new(perl5 => self, ptr => $value);
+    }
+    if $type == ScalarRef {
+        return self!p5_scalar_ref_to_capture($value);
+    }
+
     die "Unsupported type $value in p5_to_p6";
 }
 
