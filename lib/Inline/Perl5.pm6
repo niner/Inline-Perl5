@@ -396,7 +396,7 @@ method invoke-args(Pointer $obj, Str $function, Capture $args) {
     my Int $j = 0;
     @svs[$j++] = $obj;
     for $args.list {
-        if $_.isa(Pair) {
+        if $_.WHAT =:= Pair {
             @svs[$j++] = self.p6_to_p5($_.key);
             @svs[$j++] = self.p6_to_p5($_.value);
         }
