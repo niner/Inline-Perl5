@@ -1,13 +1,8 @@
 Build.pm
 configure.pl6
-examples/Dancr/dancr.pl
-examples/Dancr/schema.sql
-examples/Dancr/tiny.pl6
-examples/Dancr/views/layouts/main.tt
-examples/Dancr/views/login.tt
-examples/Dancr/views/show_entries.tt
-examples/threads/threads.pl
-examples/YTDL/lib/YTDL/App.pm
+examples/dancer2.pl
+examples/DancerTest.pm
+examples/tree.pl6
 lib/Inline/Language/ObjectKeeper.pm6
 lib/Inline/Perl5/Array.pm6
 lib/Inline/Perl5/Attributes.pm6
@@ -36,7 +31,6 @@ t/call.t
 t/can.t
 t/data_in_module.t
 t/data.t
-t/env.t
 t/eval_p6_in_p5.t
 t/eval_return_values.t
 t/eval.t
