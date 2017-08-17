@@ -280,7 +280,7 @@ multi method setup_arguments(@args) {
     my @svs := CArray[Pointer].new();
     my Int $i = 0;
     for @args {
-        if $_.isa(Pair) {
+        if $_.WHAT =:= Pair {
             @svs[$i++] = self.p6_to_p5($_.key);
             @svs[$i++] = self.p6_to_p5($_.value);
         }
@@ -295,7 +295,7 @@ multi method setup_arguments(@args, %args) {
     my @svs := CArray[Pointer].new();
     my Int $j = 0;
     for @args {
-        if $_.isa(Pair) {
+        if $_.WHAT =:= Pair {
             @svs[$j++] = self.p6_to_p5($_.key);
             @svs[$j++] = self.p6_to_p5($_.value);
         }
@@ -431,7 +431,7 @@ multi method invoke(Pointer $obj, Str $function, *@args, *%args) {
     my Int $j = 0;
     @svs[$j++] = $obj;
     for @args {
-        if $_.isa(Pair) {
+        if $_.WHAT =:= Pair {
             @svs[$j++] = self.p6_to_p5($_.key);
             @svs[$j++] = self.p6_to_p5($_.value);
         }
@@ -530,7 +530,7 @@ class Perl6Callbacks {
         }
     }
     method invoke(Str $package, Str $name, @args) {
-        my %named = classify * ~~ Pair, @args;
+        my %named = classify {$_.WHAT =:= Pair}, @args;
         %named<False> //= [];
         %named<True> //= [];
         return ::($package)."$name"(|%named<False>, |%(%named<True>));
