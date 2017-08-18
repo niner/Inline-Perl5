@@ -310,7 +310,7 @@ multi method setup_arguments(@args, %args) {
     return $j, @svs;
 }
 
-method !unpack_return_values($av, int32 $count, int32 $type = 0) {
+method !unpack_return_values($av, int32 $count, int32 $type) {
     if defined $av {
         if $count == 1 {
             my $retval = self.p5_to_p6($av, $type);
