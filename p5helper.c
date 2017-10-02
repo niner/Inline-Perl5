@@ -328,9 +328,37 @@ void p5_av_store(PerlInterpreter *my_perl, AV *av, I32 key, SV *val) {
     return;
 }
 
+SV *p5_av_pop(PerlInterpreter *my_perl, AV *av) {
+    PERL_SET_CONTEXT(my_perl);
+    return av_pop(av);
+}
+
 void p5_av_push(PerlInterpreter *my_perl, AV *av, SV *sv) {
     PERL_SET_CONTEXT(my_perl);
     av_push(av, sv);
+}
+
+SV *p5_av_shift(PerlInterpreter *my_perl, AV *av) {
+    PERL_SET_CONTEXT(my_perl);
+    return av_shift(av);
+}
+
+void p5_av_unshift(PerlInterpreter *my_perl, AV *av, SV *sv) {
+    PERL_SET_CONTEXT(my_perl);
+    av_unshift(av, 1);
+    SvREFCNT_inc(sv);
+    if (av_store(av, 0, sv) == NULL)
+        SvREFCNT_dec(sv);
+}
+
+void p5_av_delete(PerlInterpreter *my_perl, AV *av, I32 key) {
+    PERL_SET_CONTEXT(my_perl);
+    av_delete(av, key, G_DISCARD);
+}
+
+void p5_av_clear(PerlInterpreter *my_perl, AV *av) {
+    PERL_SET_CONTEXT(my_perl);
+    av_clear(av);
 }
 
 I32 p5_hv_iterinit(PerlInterpreter *my_perl, HV *hv) {

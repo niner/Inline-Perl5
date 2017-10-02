@@ -3,7 +3,7 @@ use v6.c;
 use Test;
 use MONKEY-SEE-NO-EVAL;
 
-plan 16;
+plan 31;
 
 my &array-creator = EVAL q:to<PERL5>, :lang<Perl5>;
     sub {
@@ -37,5 +37,36 @@ my $array = array-creator(sub (@array) {
 });
 
 is($array, [1, 2, 3, 4]);
+is $array.pop, 4;
+is($array, [1, 2, 3]);
+$array.push: 4;
+is($array, [1, 2, 3, 4]);
+is $array.shift, 1;
+is($array, [2, 3, 4]);
+$array.unshift: 1;
+is($array, [1, 2, 3, 4]);
+
+is($array.splice(2), [3, 4]);
+is $array, [1, 2];
+
+$array.push: 3;
+$array.push: 4;
+is($array.splice(2, 1), [3]);
+is $array, [1, 2, 4];
+
+$array.splice(2, 0, [3]);
+is($array.splice, [1, 2, 3, 4]);
+is $array, [];
+
+$array.splice: 0, 0, [1, 2, 3, 4];
+is $array, [1, 2, 3, 4];
+
+$array.splice: 1, 2, [7];
+is $array, [1, 7, 4];
+
+$array.splice: 1, 1, [2, 3, 5, 6];
+is $array, [1, 2, 3, 5, 6, 4];
+
+$array.splice: 3, 0, $array.splice: 4, 1;
 
 # vim: ft=perl6

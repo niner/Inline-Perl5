@@ -115,7 +115,22 @@ class Inline::Perl5::Interpreter is repr('CPointer') {
     method p5_av_store(Pointer, int32, Pointer) is native($p5helper)
         { ... }
 
+    method p5_av_pop(Pointer) is native($p5helper)
+        returns Pointer { ... }
+
     method p5_av_push(Pointer, Pointer) is native($p5helper)
+        { ... }
+
+    method p5_av_shift(Pointer) is native($p5helper)
+        returns Pointer { ... }
+
+    method p5_av_unshift(Pointer, Pointer) is native($p5helper)
+        { ... }
+
+    method p5_av_delete(Pointer, int32) is native($p5helper)
+        { ... }
+
+    method p5_av_clear(Pointer) is native($p5helper)
         { ... }
 
     method p5_hv_iterinit(Pointer) is native($p5helper)
