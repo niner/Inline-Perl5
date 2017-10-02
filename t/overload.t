@@ -8,10 +8,16 @@ my $p5 = Inline::Perl5.new;
 
 $p5.run: q:heredoc/PERL5/;
     package Foo;
-    use overload '""' => sub {
+    use overload
+        '""' => sub {
             my ($self) = @_;
 
             return $$self;
+        },
+        "0+" => sub {
+            my ($self) = @_;
+
+            return 42;
         };
 
     sub new {
@@ -29,10 +35,12 @@ $p5.run: q:heredoc/PERL5/;
 my $foo = $p5.invoke('Foo', 'new', 'a string!');
 is("$foo", 'a string!');
 unlike("$foo", /"Inline::Perl5::Object"\<\d+\>/);
+is(+$foo, 42);
 
 my $bar = $p5.invoke('Bar', 'new', 'a string!');
 isnt("$bar", 'a string!');
 like("$bar", /"Inline::Perl5::Object"\<\-?\d+\>/);
+isnt((try +$bar) // 0, 42);
 
 done-testing;
 

@@ -19,6 +19,11 @@ class Inline::Perl5::Object {
         return $stringify ?? $stringify(self) !! callsame;
     }
 
+    method Numeric() {
+        my $numify = $!perl5.call('overload::Method', self, '0+');
+        return $numify ?? $numify(self) !! callsame;
+    }
+
     submethod DESTROY {
         $!perl5.sv_refcnt_dec($!ptr) if $!ptr;
         $!ptr = Pointer;
