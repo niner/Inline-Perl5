@@ -912,7 +912,7 @@ int p5_is_wrapped_p6_object(PerlInterpreter *my_perl, SV *obj) {
         SV * const obj_deref = SvRV(obj);
         /* check for magic! */
         MAGIC * const mg = mg_find(obj_deref, '~');
-        return (mg && ((_perl6_magic*)(mg->mg_ptr))->key == PERL6_MAGIC_KEY);
+        return (mg && mg->mg_ptr && ((_perl6_magic*)(mg->mg_ptr))->key == PERL6_MAGIC_KEY);
     }
 }
 
