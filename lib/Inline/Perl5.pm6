@@ -377,7 +377,6 @@ multi method invoke(Pointer $obj, Str $function) {
     my int32 $err;
     my int32 $type;
     my $av = $!p5.p5_call_method(
-        Str,
         $obj,
         0,
         $function,
@@ -412,7 +411,6 @@ method invoke-args(Pointer $obj, Str $function, Capture $args) {
     my int32 $err;
     my int32 $type;
     my $av = $!p5.p5_call_method(
-        Str,
         $obj,
         0,
         $function,
@@ -447,7 +445,6 @@ multi method invoke(Pointer $obj, Str $function, *@args, *%args) {
     my int32 $err;
     my int32 $type;
     my $av = $!p5.p5_call_method(
-        Str,
         $obj,
         0,
         $function,
@@ -466,7 +463,7 @@ method invoke-parent(Str $package, Pointer $obj, Bool $context, Str $function, @
     my int32 $err;
     my int32 $type;
     my ($j, @svs) := self.setup_arguments(@args, %args);
-    my $av = $!p5.p5_call_method(
+    my $av = $!p5.p5_call_parent_method(
         $package,
         $obj,
         $context ?? 1 !! 0,

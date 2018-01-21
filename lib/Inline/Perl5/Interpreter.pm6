@@ -175,7 +175,10 @@ class Inline::Perl5::Interpreter is repr('CPointer') {
     method p5_call_function(Str, int32, CArray[Pointer], int32 is rw, int32 is rw, int32 is rw) is native($p5helper)
         returns Pointer { ... }
 
-    method p5_call_method(Str, Pointer, int32, Str, int32, Pointer, int32 is rw, int32 is rw, int32 is rw) is native($p5helper)
+    method p5_call_method(Pointer, int32, Str, int32, Pointer, int32 is rw, int32 is rw, int32 is rw) is native($p5helper)
+        returns Pointer { ... }
+
+    method p5_call_parent_method(Str, Pointer, int32, Str, int32, Pointer, int32 is rw, int32 is rw, int32 is rw) is native($p5helper)
         returns Pointer { ... }
 
     method p5_call_package_method(Str, Str, int32, CArray[Pointer], int32 is rw, int32 is rw, int32 is rw) is native($p5helper)
