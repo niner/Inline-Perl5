@@ -1,8 +1,13 @@
 Build.pm
 configure.pl6
-examples/dancer2.pl
-examples/DancerTest.pm
-examples/tree.pl6
+examples/Dancr/dancr.pl
+examples/Dancr/schema.sql
+examples/Dancr/tiny.pl6
+examples/Dancr/views/layouts/main.tt
+examples/Dancr/views/login.tt
+examples/Dancr/views/show_entries.tt
+examples/threads/threads.pl
+examples/YTDL/lib/YTDL/App.pm
 lib/Inline/Language/ObjectKeeper.pm6
 lib/Inline/Perl5/Array.pm6
 lib/Inline/Perl5/Attributes.pm6
@@ -69,6 +74,7 @@ t/perl5package.t
 t/perl5parent.t
 t/shadow.t
 t/stringify.t
+t/tie.t
 t/use_nested.t
 t/use.t
 t/v6.t
