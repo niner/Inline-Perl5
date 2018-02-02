@@ -1,4 +1,4 @@
-my constant @pass_through_methods = |Any.^methods>>.name.grep(/^\w+$/), |<note print put say split>;
+my constant @pass_through_methods = eager |Any.^methods>>.name.grep(/^\w+$/), |<note print put say split>;
 role Inline::Perl5::Package[$p5, Str $module] {
     has $!parent;
 
