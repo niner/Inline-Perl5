@@ -206,16 +206,18 @@ method !p5_scalar_ref_to_capture(Pointer $sv) {
     return \(self.p5_to_p6($!p5.p5_sv_rv($sv)));
 }
 
-multi method p5_to_p6(Pointer \value) {
-    return Any unless defined value;
+multi method p5_to_p6(Pointer:U \value --> Any) {
+}
 
+multi method p5_to_p6(Pointer:D \value) {
     my int32 $type = $!p5.p5_get_type(value);
     self.p5_to_p6(value, $type)
 }
 
-multi method p5_to_p6(Pointer \value, \type) {
-    return Any unless defined value;
+multi method p5_to_p6(Pointer:U \value, \type --> Any) {
+}
 
+multi method p5_to_p6(Pointer:D \value, \type) {
     my enum P5Types <Unknown Object SubRef NV IV PV Array Hash P6Hash Undef ScalarRef>;
 
     if type == IV {
