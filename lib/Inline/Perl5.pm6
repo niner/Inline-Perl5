@@ -416,6 +416,34 @@ multi method invoke(Pointer $obj, Str $function) {
     self!unpack_return_values($av, $retvals, $type);
 }
 
+method invoke-arg(Pointer $obj, Str $function, $arg) {
+    my @svs := CArray[Pointer].new();
+    my Int $j = 0;
+    @svs[0] = $obj;
+    if $arg.WHAT =:= Pair {
+        @svs[1] = self.p6_to_p5($arg.key);
+        @svs[2] = self.p6_to_p5($arg.value);
+    }
+    else {
+        @svs[1] = self.p6_to_p5($arg);
+    }
+    my int32 $retvals;
+    my int32 $err;
+    my int32 $type;
+    my $av = $!p5.p5_call_method(
+        $obj,
+        0,
+        $function,
+        2,
+        nativecast(Pointer, @svs),
+        $retvals,
+        $err,
+        $type,
+    );
+    self.handle_p5_exception() if $err;
+    self!unpack_return_values($av, $retvals, $type);
+}
+
 method invoke-args(Pointer $obj, Str $function, Capture $args) {
     my @svs := CArray[Pointer].new();
     my Int $j = 0;
