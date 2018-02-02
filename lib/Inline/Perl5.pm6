@@ -319,19 +319,17 @@ multi method setup_arguments(@args, %args) {
     return $j, @svs;
 }
 
-method !unpack_return_values(\av, int32 \count, int32 \type) {
-    if defined av {
-        if count == 1 {
-            my $retval = self.p5_to_p6(av, type);
-            $!p5.p5_sv_refcnt_dec(av);
-            $retval
-        }
-        else {
-            Inline::Perl5::Array.new(ip5 => self, p5 => $!p5, :av(av))
-        }
+multi method unpack_return_values(Pointer:U \av, int32 \count, int32 \type --> Nil) {
+}
+
+multi method unpack_return_values(Pointer:D \av, int32 \count, int32 \type) {
+    if count == 1 {
+        my $retval = self.p5_to_p6(av, type);
+        $!p5.p5_sv_refcnt_dec(av);
+        $retval
     }
     else {
-        Nil
+        Inline::Perl5::Array.new(ip5 => self, p5 => $!p5, :av(av))
     }
 }
 
@@ -347,7 +345,7 @@ method call(Str $function, *@args, *%args) {
         $type,
     );
     self.handle_p5_exception() if $err;
-    self!unpack_return_values($av, $retvals, $type);
+    self.unpack_return_values($av, $retvals, $type);
 }
 
 method call-args(Str $function, Capture \args) {
@@ -362,7 +360,7 @@ method call-args(Str $function, Capture \args) {
         $type,
     );
     self.handle_p5_exception() if $err;
-    self!unpack_return_values($av, $retvals, $type);
+    self.unpack_return_values($av, $retvals, $type);
 }
 
 method call-simple-args(Str $function, *@args) {
@@ -381,7 +379,7 @@ method call-simple-args(Str $function, *@args) {
         $type,
     );
     self.handle_p5_exception() if $err;
-    self!unpack_return_values($av, $retvals, $type);
+    self.unpack_return_values($av, $retvals, $type);
 }
 
 multi method invoke(Str $package, Str $function, *@args, *%args) {
@@ -397,7 +395,7 @@ multi method invoke(Str $package, Str $function, *@args, *%args) {
         $type,
     );
     self.handle_p5_exception() if $err;
-    self!unpack_return_values($av, $retvals, $type);
+    self.unpack_return_values($av, $retvals, $type);
 }
 
 multi method invoke(Pointer $obj, Str $function) {
@@ -415,7 +413,7 @@ multi method invoke(Pointer $obj, Str $function) {
         $type,
     );
     self.handle_p5_exception() if $err;
-    self!unpack_return_values($av, $retvals, $type);
+    self.unpack_return_values($av, $retvals, $type);
 }
 
 method look-up-method(Pointer $obj, Str $name) {
@@ -441,7 +439,7 @@ multi method invoke(Pointer $obj, Pointer $function) {
         $type,
     );
     self.handle_p5_exception() if $err;
-    self!unpack_return_values($av, $retvals, $type);
+    self.unpack_return_values($av, $retvals, $type);
 }
 
 method invoke-gv-arg(Pointer $obj, Pointer $function, $arg) {
@@ -469,7 +467,7 @@ method invoke-gv-arg(Pointer $obj, Pointer $function, $arg) {
         $type,
     );
     self.handle_p5_exception() if $err;
-    self!unpack_return_values($av, $retvals, $type);
+    self.unpack_return_values($av, $retvals, $type);
 }
 
 method invoke-args(Pointer $obj, Str $function, Capture $args) {
@@ -503,7 +501,7 @@ method invoke-args(Pointer $obj, Str $function, Capture $args) {
         $type,
     );
     self.handle_p5_exception() if $err;
-    self!unpack_return_values($av, $retvals, $type);
+    self.unpack_return_values($av, $retvals, $type);
 }
 
 method invoke-gv-args(Pointer $obj, Pointer $function, Capture $args) {
@@ -537,7 +535,7 @@ method invoke-gv-args(Pointer $obj, Pointer $function, Capture $args) {
         $type,
     );
     self.handle_p5_exception() if $err;
-    self!unpack_return_values($av, $retvals, $type);
+    self.unpack_return_values($av, $retvals, $type);
 }
 
 multi method invoke(Pointer $obj, Str $function, *@args, *%args) {
@@ -571,7 +569,7 @@ multi method invoke(Pointer $obj, Str $function, *@args, *%args) {
         $type,
     );
     self.handle_p5_exception() if $err;
-    self!unpack_return_values($av, $retvals, $type);
+    self.unpack_return_values($av, $retvals, $type);
 }
 
 method invoke-parent(Str $package, Pointer $obj, Bool $context, Str $function, @args, %args) {
@@ -591,7 +589,7 @@ method invoke-parent(Str $package, Pointer $obj, Bool $context, Str $function, @
         $type,
     );
     self.handle_p5_exception() if $err;
-    self!unpack_return_values($av, $retvals, $type);
+    self.unpack_return_values($av, $retvals, $type);
 }
 
 method execute(Pointer $code_ref, *@args) {
@@ -600,7 +598,7 @@ method execute(Pointer $code_ref, *@args) {
     my int32 $type;
     my $av = $!p5.p5_call_code_ref($code_ref, |self.setup_arguments(@args), $retvals, $err, $type);
     self.handle_p5_exception() if $err;
-    self!unpack_return_values($av, $retvals, $type);
+    self.unpack_return_values($av, $retvals, $type);
 }
 
 method global(Str $name) {
