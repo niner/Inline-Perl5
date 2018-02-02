@@ -31,22 +31,24 @@ class Inline::Perl5::Object {
 
     method FALLBACK($name, *@args, *%kwargs) {
         my $role := Metamodel::ParametricRoleHOW.new_type;
+        my $gv := $!perl5.look-up-method($!ptr, $name)
+            or die qq/Could not find method "$name" of "{$!perl5.stash-name($!ptr)}" object/;
         $role.^add_multi_method($name, method () {
-            $!perl5.invoke($!ptr, $name)
+            $!perl5.invoke($!ptr, $gv)
         });
         $role.^add_multi_method($name, method (\arg) {
-            $!perl5.invoke-arg($!ptr, $name, arg)
+            $!perl5.invoke-gv-arg($!ptr, $gv, arg)
         });
         $role.^add_multi_method($name, method (|args) {
-            $!perl5.invoke-args($!ptr, $name, args)
+            $!perl5.invoke-gv-args($!ptr, $gv, args)
         });
         $role.^set_body_block(-> |args {});
         $role.^compose;
         self does $role;
 
         @args.elems || %kwargs.elems
-            ?? $!perl5.invoke-args($!ptr, $name, Capture.new(:list(@args), :hash(%kwargs)))
-            !! $!perl5.invoke($!ptr, $name);
+            ?? $!perl5.invoke-gv-args($!ptr, $gv, Capture.new(:list(@args), :hash(%kwargs)))
+            !! $!perl5.invoke($!ptr, $gv);
     }
 }
 

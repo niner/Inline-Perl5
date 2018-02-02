@@ -416,7 +416,33 @@ multi method invoke(Pointer $obj, Str $function) {
     self!unpack_return_values($av, $retvals, $type);
 }
 
-method invoke-arg(Pointer $obj, Str $function, $arg) {
+method look-up-method(Pointer $obj, Str $name) {
+    $!p5.p5_look_up_method($obj, $name)
+}
+
+method stash-name(Pointer $obj) {
+    $!p5.p5_stash_name($obj)
+}
+
+multi method invoke(Pointer $obj, Pointer $function) {
+    my int32 $retvals;
+    my int32 $err;
+    my int32 $type;
+    my $av = $!p5.p5_call_gv(
+        $obj,
+        0,
+        $function,
+        1,
+        $obj,
+        $retvals,
+        $err,
+        $type,
+    );
+    self.handle_p5_exception() if $err;
+    self!unpack_return_values($av, $retvals, $type);
+}
+
+method invoke-gv-arg(Pointer $obj, Pointer $function, $arg) {
     my @svs := CArray[Pointer].new();
     my Int $j = 0;
     @svs[0] = $obj;
@@ -430,7 +456,7 @@ method invoke-arg(Pointer $obj, Str $function, $arg) {
     my int32 $retvals;
     my int32 $err;
     my int32 $type;
-    my $av = $!p5.p5_call_method(
+    my $av = $!p5.p5_call_gv(
         $obj,
         0,
         $function,
@@ -465,6 +491,40 @@ method invoke-args(Pointer $obj, Str $function, Capture $args) {
     my int32 $err;
     my int32 $type;
     my $av = $!p5.p5_call_method(
+        $obj,
+        0,
+        $function,
+        $j,
+        nativecast(Pointer, @svs),
+        $retvals,
+        $err,
+        $type,
+    );
+    self.handle_p5_exception() if $err;
+    self!unpack_return_values($av, $retvals, $type);
+}
+
+method invoke-gv-args(Pointer $obj, Pointer $function, Capture $args) {
+    my @svs := CArray[Pointer].new();
+    my Int $j = 0;
+    @svs[$j++] = $obj;
+    for $args.list {
+        if $_.WHAT =:= Pair {
+            @svs[$j++] = self.p6_to_p5($_.key);
+            @svs[$j++] = self.p6_to_p5($_.value);
+        }
+        else {
+            @svs[$j++] = self.p6_to_p5($_);
+        }
+    }
+    for $args.hash {
+        @svs[$j++] = self.p6_to_p5($_.key);
+        @svs[$j++] = self.p6_to_p5($_.value);
+    }
+    my int32 $retvals;
+    my int32 $err;
+    my int32 $type;
+    my $av = $!p5.p5_call_gv(
         $obj,
         0,
         $function,

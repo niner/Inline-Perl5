@@ -593,6 +593,62 @@ SV *p5_call_package_method(PerlInterpreter *my_perl, char *package, char *name, 
     }
 }
 
+GV *p5_look_up_method(PerlInterpreter *my_perl, SV *obj, char *name) {
+    HV * const pkg = SvSTASH((SV*)SvRV(obj));
+    GV * const gv = Perl_gv_fetchmethod_autoload(aTHX_ pkg, name, TRUE);
+    if (gv && isGV(gv))
+        return gv;
+    return NULL;
+}
+
+char *p5_stash_name(PerlInterpreter *my_perl, SV *obj) {
+    HV * const pkg = SvSTASH((SV*)SvRV(obj));
+    return HvNAME(pkg);
+}
+
+SV *p5_call_gv(PerlInterpreter *my_perl, SV *obj, I32 context, GV *gv, int len, SV *args[], I32 *count, I32 *err, I32 *type) {
+    PERL_SET_CONTEXT(my_perl);
+    {
+        dSP;
+        int i;
+        SV * retval = NULL;
+        int flags = (context ? G_SCALAR : G_ARRAY) | G_EVAL;
+
+        ENTER;
+        SAVETMPS;
+
+        PUSHMARK(SP);
+
+        if (len > 1) {
+            XPUSHs(args[0]);
+            for (i = 1; i < len; i++) {
+                if (args[i] != NULL) /* skip Nil which gets turned into NULL */
+                    XPUSHs(sv_2mortal(args[i]));
+            }
+        }
+        else if (len > 0)
+            if (args != NULL) /* skip Nil which gets turned into NULL */
+                XPUSHs((SV*)args);
+
+        PUTBACK;
+
+        SV * const rv = sv_2mortal(newRV((SV*)GvCV(gv)));
+
+        *count = call_sv(rv, flags);
+        SPAGAIN;
+
+        handle_p5_error(err);
+        retval = pop_return_values(my_perl, sp, *count, type);
+        SPAGAIN;
+
+        PUTBACK;
+        FREETMPS;
+        LEAVE;
+
+        return retval;
+    }
+}
+
 SV *p5_call_method(PerlInterpreter *my_perl, SV *obj, I32 context, char *name, int len, SV *args[], I32 *count, I32 *err, I32 *type) {
     PERL_SET_CONTEXT(my_perl);
     {
