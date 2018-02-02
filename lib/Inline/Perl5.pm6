@@ -363,6 +363,25 @@ method call-args(Str $function, Capture \args) {
     self!unpack_return_values($av, $retvals, $type);
 }
 
+method call-simple-args(Str $function, *@args) {
+    my int32 $retvals;
+    my int32 $err;
+    my int32 $type;
+    my Int $j = 0;
+    my @svs := CArray[Pointer].new();
+    @svs.ASSIGN-POS($j++, self.p6_to_p5($_)) for @args;
+    my $av = $!p5.p5_call_function(
+        $function,
+        $j,
+        @svs,
+        $retvals,
+        $err,
+        $type,
+    );
+    self.handle_p5_exception() if $err;
+    self!unpack_return_values($av, $retvals, $type);
+}
+
 multi method invoke(Str $package, Str $function, *@args, *%args) {
     my int32 $retvals;
     my int32 $err;
@@ -553,7 +572,7 @@ class Perl6Callbacks {
 method init_callbacks {
     self.run($=finish);
 
-    self.call('v6::init', Perl6Callbacks.new(:p5(self)));
+    self.call-simple-args('v6::init', Perl6Callbacks.new(:p5(self)));
 
     if $!external_p5 {
         $!p5.p5_inline_perl6_xs_init();
@@ -571,7 +590,7 @@ method rebless(Inline::Perl5::Object $obj, Str $package, $p6obj) {
 }
 
 method install_wrapper_method(Str:D $package, Str $name, *@attributes) {
-    self.call('v6::install_p6_method_wrapper', $package, $name, |@attributes);
+    self.call-simple-args('v6::install_p6_method_wrapper', $package, $name, |@attributes);
 }
 
 method subs_in_module(Str $module) {
@@ -592,8 +611,8 @@ method import (Str $module, *@args) {
 method require(Str $module, Num $version?, Bool :$handle) {
     # wrap the load_module call so exceptions can be translated to Perl 6
     my @packages = $version
-        ?? self.call('v6::load_module', $module, $version)
-        !! self.call('v6::load_module', $module);
+        ?? self.call-simple-args('v6::load_module', $module, $version)
+        !! self.call-simple-args('v6::load_module', $module);
 
     return unless self eq $default_perl5; # Only create Perl 6 packages for the primary interpreter to avoid confusion
 
@@ -753,7 +772,7 @@ class X::Inline::Perl5::NoMultiplicity is Exception {
 }
 
 method init_data($data) {
-    self.call('v6::init_data', $data);
+    self.call-simple-args('v6::init_data', $data);
 }
 
 method BUILD(*%args) {
