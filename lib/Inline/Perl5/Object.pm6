@@ -34,10 +34,14 @@ class Inline::Perl5::Object {
         my $gv := $!perl5.look-up-method($!ptr, $name)
             or die qq/Could not find method "$name" of "{$!perl5.stash-name($!ptr)}" object/;
         $role.^add_multi_method($name, method () {
-            $!perl5.invoke($!ptr, $gv)
+            %_
+                ?? $!perl5.invoke-gv-args($!ptr, $gv, Capture.new(:hash(%_)))
+                !! $!perl5.invoke($!ptr, $gv)
         });
         $role.^add_multi_method($name, method (\arg) {
-            $!perl5.invoke-gv-arg($!ptr, $gv, arg)
+            %_
+                ?? $!perl5.invoke-gv-args($!ptr, $gv, Capture.new(:list([arg]), :hash(%_)))
+                !! $!perl5.invoke-gv-arg($!ptr, $gv, arg)
         });
         $role.^add_multi_method($name, method (|args) {
             $!perl5.invoke-gv-args($!ptr, $gv, args)

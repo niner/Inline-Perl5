@@ -33,10 +33,13 @@ $p5.run: q:heredoc/PERL5/;
 
 my $foo = $p5.invoke('Foo', 'new');
 
-is($foo.push, 'pushed');
-my @a = $foo.nothing;
-is($foo.count_args($foo.nothing), 1);
-is($foo.count_args($foo.empty_hash), 2);
+for ^2 {
+    is($foo.push, 'pushed');
+    my @a = $foo.nothing;
+    is($foo.count_args($foo.nothing), 1);
+    is($foo.count_args($foo.empty_hash), 2);
+    is($foo.count_args(:a(1), :b(2)), 5);
+}
 
 done-testing;
 
