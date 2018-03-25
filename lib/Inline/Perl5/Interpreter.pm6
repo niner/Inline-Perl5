@@ -1,7 +1,7 @@
 class Inline::Perl5::Interpreter is repr('CPointer') {
     use NativeCall;
 
-    my constant $p5helper = %?RESOURCES<libraries/p5helper>.Str;
+    my constant $p5helper = %?RESOURCES<libraries/p5helper>;
 
     our sub p5_size_of_iv() is native($p5helper)
         returns size_t { ... }
