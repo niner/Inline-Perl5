@@ -278,6 +278,29 @@ object as named parameter to your classes constructor when creating objects.
     say Bar.new(perl5 => $p5).test;
 ```
 
+## Pass a scalar reference to Perl 5 code
+
+Simply pass a [`Capture`](https://docs.perl6.org/type/Capture) object containing
+the object you want to pass as a reference:
+
+```perl6
+    $p5obj.takes-a-scalar-ref-to-str: \("the string");
+```
+
+`HASH` and `ARRAY` references are made automatically if the Perl 6 objects
+are L<containerized|https://perl6advent.wordpress.com/2017/12/02/>:
+
+```perl6
+    $p5obj.takes-an-array:      [<a b c>];
+    $p5obj.takes-an-array-ref: $[<a b c>];
+```
+
+`CODE` objects are passed by reference automatically:
+
+```perl6
+    $p5obj.takes-a-coderef: *.so;
+```
+
 ## Catch exceptions thrown by Perl 5 code
 
 Perl 5's exceptions (die) are translated to X::AdHoc exceptions in Perl 6 and
