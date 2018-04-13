@@ -4,7 +4,9 @@ use warnings;
 
 sub return_data {
     my $handle = do { no strict 'refs'; \*{"main::DATA"} };
-    return scalar <$handle>;
+    my $line = <$handle>;
+    chomp $line;
+    return $line;
 }
 
 1;
