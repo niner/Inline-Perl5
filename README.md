@@ -301,6 +301,12 @@ are L<containerized|https://perl6advent.wordpress.com/2017/12/02/>:
     $p5obj.takes-a-coderef: *.so;
 ```
 
+`Regex` objects are passed by reference automatically:
+
+```perl6
+    $p5obj.takes-a-regex: /foo/;
+```
+
 ## Catch exceptions thrown by Perl 5 code
 
 Perl 5's exceptions (die) are translated to X::AdHoc exceptions in Perl 6 and

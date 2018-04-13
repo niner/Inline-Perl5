@@ -154,6 +154,29 @@ multi method p6_to_p5(IO::Handle:D $value) returns Pointer {
         Any,
     );
 }
+multi method p6_to_p5(Regex:D $value) {
+    my $index = $objects.keep($value);
+    my @svs := CArray[Pointer].new();
+    @svs[0] = $!p5.p5_wrap_p6_object(
+        $index,
+        Pointer,
+    );
+
+    my int32 $retvals;
+    my int32 $err;
+    my int32 $type;
+    my $av = $!p5.p5_call_package_method(
+        'v6',
+        'wrap_regex',
+        1,
+        @svs,
+        $retvals,
+        $err,
+        $type,
+    );
+    self.handle_p5_exception() if $err;
+    self.p6_to_p5(self.unpack_return_values($av, $retvals, $type))
+}
 
 method p5_sv_reftype(Pointer $sv) {
     return $!p5.p5_sv_reftype($sv);
@@ -1226,6 +1249,14 @@ sub install_p6_method_wrapper {
         $p6->create_extension($package_to_create, $_);
         $_ = '1;';
     };
+}
+
+sub wrap_regex {
+    my ($self, $regex) = @_;
+    my $sub = sub {
+        return $regex->ACCEPTS($_[0]);
+    };
+    return qr/\A(?(?{ $sub->($_) }).*|)\z/;
 }
 
 package v6::inline;

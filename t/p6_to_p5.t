@@ -4,7 +4,7 @@ use v6;
 use Test;
 use Inline::Perl5;
 
-plan 20;
+plan 22;
 
 BEGIN my $p5 = Inline::Perl5.new();
 $p5.run(q:heredoc/PERL5/);
@@ -111,6 +111,15 @@ class Bar does Inline::Perl5::Perl5Parent['Foo', $p5] {
 }
 
 is(Bar.new.test_named(a => 1, b => 2), 3, 'named args on parent object method');
+
+$p5.run(q/
+    sub test_re {
+        my ($string, $re) = @_;
+        return $string =~ $re;
+    }
+/);
+is($p5.call('test_re', 'foo', /o/), 1);
+is($p5.call('test_re', 'foo', /a/), Nil);
 
 $p5.DESTROY;
 
