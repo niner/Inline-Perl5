@@ -716,7 +716,7 @@ method import (Str $module, *@args) {
     my $before = set self.subs_in_module('main').list;
     self.invoke($module, 'import', @args.list);
     my $after = set self.subs_in_module('main').list;
-    return ($after ∖ $before).keys;
+    return ($after ∖ ($before ∖ set @args)).keys;
 }
 
 method require(Str $module, Num $version?, Bool :$handle) {

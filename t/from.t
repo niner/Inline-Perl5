@@ -3,10 +3,14 @@
 use v6;
 use Test;
 use Inline::Perl5;
+use lib <t/lib>;
 BEGIN EVAL 'use lib qw(t/lib);', :lang<Perl5>;
 
 use P5Import:from<Perl5> <tests 2>;
 use Errno:from<Perl5>;
+use Encode:from<Perl5> <encode>;
+
+use UseExport; # also loads Encode
 
 eval-dies-ok "use P5ModuleVersion:from<Perl5>:ver<2.1>;";
 
@@ -21,6 +25,8 @@ for 1, 2 {
     $i++;
 }
 is($i, 0, '"next" did not get overwritten by import');
+
+is encode('utf8', 'foo'), 'foo';
 
 done-testing;
 
