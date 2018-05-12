@@ -47,7 +47,7 @@ class Inline::Perl5::Array does Iterable does Positional {
         self.Array.kv
     }
     method elems() {
-        $!p5.p5_av_top_index($!av) + 1
+        my int32 $elems = $!p5.p5_av_top_index($!av) + 1
     }
     method Numeric() {
         self.elems
