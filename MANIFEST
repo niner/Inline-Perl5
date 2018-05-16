@@ -64,6 +64,7 @@ t/lib/TestPerl5Package/Sub.pm
 t/lib/TestV6Directly.pm
 t/lib/TestV6.pm
 t/lib/TestV6Sub.pm
+t/lib/UseExport.pm
 t/modify_array.t
 t/modify_hash.t
 t/overload.t
