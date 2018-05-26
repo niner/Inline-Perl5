@@ -13,6 +13,7 @@
         "Inline::Perl5::Attributes":      "lib/Inline/Perl5/Attributes.pm6",
         "Inline::Perl5::Callable":        "lib/Inline/Perl5/Callable.pm6",
         "Inline::Perl5::Caller":          "lib/Inline/Perl5/Caller.pm6",
+        "Inline::Perl5::ClassHOW":        "lib/Inline/Perl5/ClassHOW.pm6",
         "Inline::Perl5::Extension":       "lib/Inline/Perl5/Extension.pm6",
         "Inline::Perl5::Hash":            "lib/Inline/Perl5/Hash.pm6",
         "Inline::Perl5::Interpreter":     "lib/Inline/Perl5/Interpreter.pm6",
