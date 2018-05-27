@@ -18,6 +18,7 @@ has Bool $!external_p5 = False;
 has Bool $!scalar_context = False;
 
 my $default_perl5;
+my %loaded_modules;
 
 # I'd like to call this from Inline::Perl5::Interpreter
 # But it raises an error in the END { ... } call
@@ -264,7 +265,15 @@ multi method p5_to_p6(Pointer:D \value, \type) {
         }
         else {
             $!p5.p5_sv_refcnt_inc(value);
-            Inline::Perl5::Object.new(perl5 => self, ptr => value);
+            my $obj := Inline::Perl5::Object.new(perl5 => self, ptr => value);
+            if %loaded_modules{self.stash-name(value)}:exists {
+                my $class := %loaded_modules{self.stash-name(value)};
+                use nqp;
+                nqp::p6bindattrinvres($class.CREATE, $class, '$!parent', $obj)
+            }
+            else {
+                $obj
+            }
         }
     }
     elsif type == NV {
@@ -790,7 +799,6 @@ method require(Str $module, Num $version?, Bool :$handle) {
     return $compunit-handle;
 }
 
-my %loaded_modules;
 method !create_wrapper_class(Str $module, Stash $stash) {
     my $class;
     my $first-time = True;

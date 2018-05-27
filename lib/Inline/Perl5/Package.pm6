@@ -4,8 +4,8 @@ role Inline::Perl5::Package[$p5, Str $module] {
 
     method new(*@args, *%args) {
         if (self.^name ne $module) { # subclass
-            %args<parent> = $p5.invoke($module, 'new', |@args, |%args.kv);
-            my $self = self.bless();
+            %args<parent> = $p5.invoke($module, 'new', |@args, |%args.kv).unwrap-perl5-object;
+            my $self = self.CREATE;
             $self.BUILDALL(@args, %args);
             return $self;
         }
