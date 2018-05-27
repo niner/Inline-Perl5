@@ -1,12 +1,18 @@
 use Inline::Perl5::Attributes;
 use Inline::Perl5::Caller;
+use Inline::Perl5::Object;
 use NativeCall;
 
 role Inline::Perl5::Extension[Str:D $package, $perl5] {
     has $!target;
 
-    method new_shadow_of_p5_object($target) {
+    multi method new_shadow_of_p5_object(Inline::Perl5::Object $target) {
         self.CREATE.initialize-perl5-object($target); #.BUILDALL(my @, my %);
+        Nil
+    }
+
+    multi method new_shadow_of_p5_object($target) {
+        self.CREATE.initialize-perl5-object($target.unwrap-perl5-object); #.BUILDALL(my @, my %);
         Nil
     }
 
