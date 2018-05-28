@@ -6,6 +6,7 @@ use Inline::Perl5::Interpreter;
 use Inline::Perl5::Array;
 use Inline::Perl5::Attributes;
 use Inline::Perl5::Caller;
+use Inline::Perl5::ClassHOW;
 use Inline::Perl5::Extension;
 use Inline::Perl5::Hash;
 use Inline::Perl5::Object;
@@ -100,6 +101,11 @@ sub free_p6_object(Int $index) {
 }
 
 multi method p6_to_p5(Any:D $value) {
+    if $value.^mro.grep: {$_.HOW ~~ Inline::Perl5::ClassHOW} {
+        my $sv = $value.wrapped-perl5-object;
+        $!p5.p5_sv_refcnt_inc($sv);
+        return $sv
+    }
     my $index = $objects.keep($value);
 
     $!p5.p5_wrap_p6_object(
@@ -265,14 +271,13 @@ multi method p5_to_p6(Pointer:D \value, \type) {
         }
         else {
             $!p5.p5_sv_refcnt_inc(value);
-            my $obj := Inline::Perl5::Object.new(perl5 => self, ptr => value);
             if %loaded_modules{self.stash-name(value)}:exists {
                 my $class := %loaded_modules{self.stash-name(value)};
                 use nqp;
-                nqp::p6bindattrinvres($class.CREATE, $class, '$!parent', $obj)
+                nqp::p6bindattrinvres($class.CREATE, $class, '$!wrapped-perl5-object', value)
             }
             else {
-                $obj
+                Inline::Perl5::Object.new(perl5 => self, ptr => value)
             }
         }
     }
@@ -704,7 +709,12 @@ method sv_refcnt_dec($obj) {
     $!p5.p5_sv_refcnt_dec($obj);
 }
 
-method rebless(Inline::Perl5::Object $obj, Str $package, $p6obj) {
+multi method rebless(Pointer $obj, Str $package, $p6obj) {
+    my $index = $objects.keep($p6obj);
+    $!p5.p5_rebless_object($obj, $package, $index);
+}
+
+multi method rebless(Inline::Perl5::Object $obj, Str $package, $p6obj) {
     my $index = $objects.keep($p6obj);
     $!p5.p5_rebless_object($obj.ptr, $package, $index);
 }
@@ -811,14 +821,17 @@ method !create_wrapper_class(Str $module, Stash $stash) {
     else {
         my $p5 := self;
 
-        %loaded_modules{$module} := $class := Metamodel::ClassHOW.new_type(name => $module);
-        $class.^add_role(Inline::Perl5::Package[$p5, $module]);
+        %loaded_modules{$module} := $class :=
+            Inline::Perl5::ClassHOW.new_type(name => $module, :p5(self));
 
         # install methods
         for @$symbols -> $name {
-            next if $name eq 'new';
+            #next if $name eq 'new';
+            my $p5 = self;
             my $method = my method (*@args, *%kwargs) {
-                self.FALLBACK($name, |@args, |%kwargs);
+                self.defined
+                    ?? $p5.invoke-parent($module, self.wrapped-perl5-object, False, $name, [flat self, |@args], %kwargs)
+                    !! $p5.invoke($module, $name, |@args.list, |%kwargs)
             }
             $method.set_name($name);
             $class.^add_method($name, $method);
