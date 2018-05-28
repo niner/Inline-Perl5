@@ -97,11 +97,13 @@ class Inline::Perl5::ClassHOW
 
     method find_method($type, $name) is raw {
         return if $name eq 'cstr';
-        say "finding method $name";
         my $meth := Any.^find_method($name);
-        $meth or $meth := self.add_method($type, $name, my method (*@a, *%h) {
-            say "$name @a.gist() %h.gist()";
-            Nil
+        my $p5 = $!p5;
+        my $module = $!name;
+        $meth or $meth := self.add_method($type, $name, my method (*@args, *%kwargs) {
+            self.defined
+                ?? $p5.invoke-parent($module, self.wrapped-perl5-object, False, $name, [flat self, |@args], %kwargs)
+                !! $p5.invoke($module, $name, |@args.list, |%kwargs)
         });
         $meth
     }
