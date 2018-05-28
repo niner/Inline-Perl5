@@ -68,4 +68,6 @@ sub split {
     return 'split';
 }
 
+__PACKAGE__->meta->make_immutable;
+
 1;
