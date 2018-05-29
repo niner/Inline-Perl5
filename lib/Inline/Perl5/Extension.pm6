@@ -1,5 +1,6 @@
 use Inline::Perl5::Attributes;
 use Inline::Perl5::Caller;
+use Inline::Perl5::ClassHOW;
 use Inline::Perl5::Object;
 use NativeCall;
 
@@ -12,7 +13,11 @@ role Inline::Perl5::Extension[Str:D $package, $perl5] {
     }
 
     multi method new_shadow_of_p5_object($target) {
-        self.CREATE.initialize-perl5-object($target.unwrap-perl5-object); #.BUILDALL(my @, my %);
+        self.CREATE.initialize-perl5-object(
+            $target.^mro.grep({$_.HOW ~~ Inline::Perl5::ClassHOW})
+                ?? Inline::Perl5::Object.new(:ptr($target.wrapped-perl5-object), :$perl5)
+                !! $target.unwrap-perl5-object
+            ); #.BUILDALL(my @, my %);
         Nil
     }
 
