@@ -17,7 +17,6 @@ lib/Inline/Perl5/Extension.pm6
 lib/Inline/Perl5/Hash.pm6
 lib/Inline/Perl5/Interpreter.pm6
 lib/Inline/Perl5/Object.pm6
-lib/Inline/Perl5/Package.pm6
 lib/Inline/Perl5/Parent.pm6
 lib/Inline/Perl5.pm6
 LICENSE
