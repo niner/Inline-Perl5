@@ -822,15 +822,7 @@ method !create_wrapper_class(Str $module, Stash $stash) {
 
         # install methods
         for @$symbols -> $name {
-            #next if $name eq 'new';
-            my $p5 = self;
-            my $method = my method (*@args, *%kwargs) {
-                self.defined
-                    ?? $p5.invoke-parent($module, self.wrapped-perl5-object, False, $name, [flat self, |@args], %kwargs)
-                    !! $p5.invoke($module, $name, |@args.list, |%kwargs)
-            }
-            $method.set_name($name);
-            $class.^add_method($name, $method);
+            $class.^add_wrapper_method($name);
         }
 
         $class.^compose;
