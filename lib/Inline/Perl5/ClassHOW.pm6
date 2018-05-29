@@ -38,7 +38,7 @@ class Inline::Perl5::ClassHOW
         }
         my $p5 = $!p5;
         my $module = $!name;
-        %!cache<new> = my method new(\SELF: *@args, *%args) {
+        %!cache<new> := my method new(\SELF: *@args, *%args) {
             if (SELF.^name ne $module) { # subclass
                 my $self = Metamodel::Primitives.rebless(
                     $p5.invoke($module, 'new', |@args, |%args.kv),
@@ -97,15 +97,19 @@ class Inline::Perl5::ClassHOW
 
     method find_method($type, $name) is raw {
         return if $name eq 'cstr';
-        my $meth := Any.^find_method($name);
+        Any.^find_method($name) // self.add_wrapper_method($type, $name);
+    }
+
+    method add_wrapper_method($type, $name) is raw {
         my $p5 = $!p5;
         my $module = $!name;
-        $meth or $meth := self.add_method($type, $name, my method (*@args, *%kwargs) {
+        my $method := my method (*@args, *%kwargs) {
             self.defined
                 ?? $p5.invoke-parent($module, self.wrapped-perl5-object, False, $name, [flat self, |@args], %kwargs)
                 !! $p5.invoke($module, $name, |@args.list, |%kwargs)
-        });
-        $meth
+        };
+        $method.set_name($name);
+        self.add_method($type, $name, $method)
     }
 
     method BUILDPLAN($type) {
