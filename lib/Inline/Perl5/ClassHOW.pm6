@@ -1,13 +1,15 @@
 use NativeCall;
 class Inline::Perl5::ClassHOW
-    does Metamodel::BaseType
-    does Metamodel::Naming
-    does Metamodel::Stashing
-    does Metamodel::REPRComposeProtocol
     does Metamodel::AttributeContainer
+    does Metamodel::BaseType
+    does Metamodel::MultiMethodContainer
+    does Metamodel::Naming
+    does Metamodel::REPRComposeProtocol
+    does Metamodel::Stashing
 {
     has %!cache;
     has $!p5;
+    has $!composed;
 
     my $archetypes := Metamodel::Archetypes.new(
         :nominal(1), :inheritable(1), :augmentable(1) );
@@ -60,6 +62,8 @@ class Inline::Perl5::ClassHOW
             :package($type),
             :has_accessor(1),
         ));
+
+        $!composed = True;
         self.compose_attributes($type);
         self.compose_repr($type);
 
@@ -68,7 +72,8 @@ class Inline::Perl5::ClassHOW
 
     method add_method($type, $name, \meth) is raw {
         %!cache{$name} := meth;
-        Metamodel::Primitives.install_method_cache($type, %!cache, :!authoritative);
+        Metamodel::Primitives.install_method_cache($type, %!cache, :!authoritative)
+            if $!composed;
         meth
     }
 
@@ -103,13 +108,48 @@ class Inline::Perl5::ClassHOW
     method add_wrapper_method($type, $name) is raw {
         my $p5 = $!p5;
         my $module = $!name;
+
+        my $gv := $!p5.look-up-method(self.name($type), $name)
+            or die qq/Could not find method "$name" of "{self.name($type)}" object/;
+
+        my $generic-proto := my proto method AUTOGEN(::T $: |) { * }
+        my $proto := $generic-proto.instantiate_generic(%('T' => $type));
+        $proto.set_name($name);
+
         my $method := my method (*@args, *%kwargs) {
             self.defined
                 ?? $p5.invoke-parent($module, self.wrapped-perl5-object, False, $name, [flat self, |@args], %kwargs)
                 !! $p5.invoke($module, $name, |@args.list, |%kwargs)
         };
         $method.set_name($name);
-        self.add_method($type, $name, $method)
+
+        $proto.add_dispatchee($method);
+
+        my $defined_type := Metamodel::DefiniteHOW.new_type(:base_type($type), :definite(1));
+        my $generic-no-args := my method no-args(::T $:) {
+            self.defined
+                ?? %_
+                    ?? $p5.invoke-gv-args(self.wrapped-perl5-object, $gv, Capture.new(:hash(%_)))
+                    !! $p5.invoke(self.wrapped-perl5-object, $gv)
+                !! $p5.invoke($module, $name, |%_);
+        };
+        $proto.add_dispatchee($generic-no-args.instantiate_generic(%(:T($defined_type))));
+        $proto.add_dispatchee(method () {
+            self.defined
+                ??  %_
+                    ?? $p5.invoke-gv-args(self.wrapped-perl5-object, $gv, Capture.new(:hash(%_)))
+                    !! $p5.invoke(self.wrapped-perl5-object, $gv)
+                !! $p5.invoke($module, $name, |%_)
+        });
+        $proto.add_dispatchee(method (\arg) {
+            self.defined
+                ?? %_
+                    ?? $p5.invoke-gv-args(self.wrapped-perl5-object, $gv, Capture.new(:list([arg]), :hash(%_)))
+                    !! $p5.invoke-gv-arg(self.wrapped-perl5-object, $gv, arg)
+                !! $p5.invoke($module, $name, arg, |%_)
+        });
+
+        self.add_method($type, $name, $proto)
     }
 
     method BUILDPLAN($type) {

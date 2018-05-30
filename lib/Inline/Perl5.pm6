@@ -449,7 +449,11 @@ multi method invoke(Pointer $obj, Str $function) {
     self.unpack_return_values($av, $retvals, $type);
 }
 
-method look-up-method(Pointer $obj, Str $name) {
+multi method look-up-method(Str $module, Str $name) {
+    $!p5.p5_look_up_package_method($module, $name)
+}
+
+multi method look-up-method(Pointer $obj, Str $name) {
     $!p5.p5_look_up_method($obj, $name)
 }
 
