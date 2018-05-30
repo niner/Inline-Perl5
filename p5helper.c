@@ -593,6 +593,14 @@ SV *p5_call_package_method(PerlInterpreter *my_perl, char *package, char *name, 
     }
 }
 
+GV *p5_look_up_package_method(PerlInterpreter *my_perl, char *module, char *name) {
+    HV * const pkg = gv_stashpv(module, 0);
+    GV * const gv = Perl_gv_fetchmethod_autoload(aTHX_ pkg, name, TRUE);
+    if (gv && isGV(gv))
+        return gv;
+    return NULL;
+}
+
 GV *p5_look_up_method(PerlInterpreter *my_perl, SV *obj, char *name) {
     HV * const pkg = SvSTASH((SV*)SvRV(obj));
     GV * const gv = Perl_gv_fetchmethod_autoload(aTHX_ pkg, name, TRUE);
