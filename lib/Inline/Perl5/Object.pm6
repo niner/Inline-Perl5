@@ -36,7 +36,7 @@ class Inline::Perl5::Object {
         $role.^add_multi_method($name, method () {
             %_
                 ?? $!perl5.invoke-gv-args($!ptr, $gv, Capture.new(:hash(%_)))
-                !! $!perl5.invoke($!ptr, $gv)
+                !! $!perl5.invoke-gv($!ptr, $gv)
         });
         $role.^add_multi_method($name, method (\arg) {
             %_
@@ -52,7 +52,7 @@ class Inline::Perl5::Object {
 
         @args.elems || %kwargs.elems
             ?? $!perl5.invoke-gv-args($!ptr, $gv, Capture.new(:list(@args), :hash(%kwargs)))
-            !! $!perl5.invoke($!ptr, $gv);
+            !! $!perl5.invoke-gv($!ptr, $gv);
     }
 }
 

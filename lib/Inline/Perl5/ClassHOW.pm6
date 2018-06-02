@@ -116,38 +116,26 @@ class Inline::Perl5::ClassHOW
         my $proto := $generic-proto.instantiate_generic(%('T' => $type));
         $proto.set_name($name);
 
-        my $method := my method (*@args, *%kwargs) {
+        my $method := my method many-args(Any: *@args, *%kwargs) {
             self.defined
                 ?? $p5.invoke-parent($module, self.wrapped-perl5-object, False, $name, [flat self, |@args], %kwargs)
                 !! $p5.invoke($module, $name, |@args.list, |%kwargs)
         };
-        $method.set_name($name);
-
         $proto.add_dispatchee($method);
 
         my $defined_type := Metamodel::DefiniteHOW.new_type(:base_type($type), :definite(1));
-        my $generic-no-args := my method no-args(::T $:) {
-            self.defined
-                ?? %_
-                    ?? $p5.invoke-gv-args(self.wrapped-perl5-object, $gv, Capture.new(:hash(%_)))
-                    !! $p5.invoke(self.wrapped-perl5-object, $gv)
-                !! $p5.invoke($module, $name, |%_);
+        my $generic-no-args := my method no-args(Any:D:) {
+            %_.elems
+                ?? $p5.invoke-gv-args(self.wrapped-perl5-object, $gv, Capture.new(:hash(%_)))
+                !! $p5.invoke-gv(self.wrapped-perl5-object, $gv)
         };
         $proto.add_dispatchee($generic-no-args.instantiate_generic(%(:T($defined_type))));
-        $proto.add_dispatchee(method () {
-            self.defined
-                ??  %_
-                    ?? $p5.invoke-gv-args(self.wrapped-perl5-object, $gv, Capture.new(:hash(%_)))
-                    !! $p5.invoke(self.wrapped-perl5-object, $gv)
-                !! $p5.invoke($module, $name, |%_)
-        });
-        $proto.add_dispatchee(method (\arg) {
-            self.defined
-                ?? %_
-                    ?? $p5.invoke-gv-args(self.wrapped-perl5-object, $gv, Capture.new(:list([arg]), :hash(%_)))
-                    !! $p5.invoke-gv-arg(self.wrapped-perl5-object, $gv, arg)
-                !! $p5.invoke($module, $name, arg, |%_)
-        });
+        my $one-arg := my method one-arg(Any:D: \arg) {
+            %_.elems
+                ?? $p5.invoke-gv-args(self.wrapped-perl5-object, $gv, Capture.new(:list([arg]), :hash(%_)))
+                !! $p5.invoke-gv-arg(self.wrapped-perl5-object, $gv, arg)
+        };
+        $proto.add_dispatchee($one-arg);
 
         self.add_method($type, $name, $proto)
     }
