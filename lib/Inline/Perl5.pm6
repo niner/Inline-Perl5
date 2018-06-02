@@ -843,25 +843,25 @@ method !create_wrapper_class(Str $module, Stash $stash) {
     my @existing = $ns{$inner}.WHO.pairs;
     unless $ns{$inner}:exists {
         $ns{$inner} := $class;
-        $class.WHO{$_.key} := $_.value for @existing;
+        $class.WHO.BIND-KEY($_.key, $_.value) for @existing;
     }
 
     if $first-time {
         # install subs like Test::More::ok
         for @$symbols -> $name {
-            $class.WHO{"&$name"} := sub (*@args) {
+            $class.WHO.BIND-KEY("&$name", sub (*@args) {
                 self.call("{$module}::$name", @args.list);
-            }
+            });
         }
         for @$variables -> $name {
-            $class.WHO{'$' ~ $name} := Proxy.new(
+            $class.WHO.BIND-KEY('$' ~ $name, Proxy.new(
                 FETCH => {
                     Inline::Perl5.default_perl5.global('$' ~ $module ~ '::' ~ $name);
                 },
                 STORE => -> $, $val {
                     Inline::Perl5.default_perl5.set_global('$' ~ $module ~ '::' ~ $name, $val);
                 },
-            );
+            ));
         }
     }
 
