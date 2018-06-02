@@ -136,33 +136,59 @@ class Inline::Perl5::ClassHOW
         my $generic-proto := my proto method AUTOGEN(::T $: |) { * }
         my $proto := $generic-proto.instantiate_generic(%('T' => $type));
         $proto.set_name($name);
+        $proto does role :: {
+            has &.many-args;
+            has &.one-arg;
+            has &.no-args;
+            method find_best_dispatchee(Mu \capture) {
+                use nqp;
+                sub add_to_cache(\entry) {
+                    nqp::scwbdisable();
+                    nqp::bindattr(self, Routine, '$!dispatch_cache',
+                        nqp::multicacheadd(
+                            nqp::getattr(self, Routine, '$!dispatch_cache'),
+                            capture, entry));
+                    nqp::scwbenable();
+                    entry
+                }
+                add_to_cache(
+                    nqp::capturenamedshash(capture) || !nqp::captureposarg(capture, 0).defined
+                        ?? &!many-args
+                        !! nqp::captureposelems(capture) == 1
+                            ?? &!no-args
+                            !! nqp::captureposelems(capture) == 2 && !(nqp::captureposarg(capture, 1) ~~ Pair)
+                                ?? &!one-arg
+                                !! &!many-args
+                )
+            }
+            method add_methods(&many-args, &one-arg, &no-args) {
+                &!many-args := &many-args;
+                &!one-arg := &one-arg;
+                &!no-args := &no-args;
+            }
+        };
 
-        my $method := my method many-args(Any: *@args, *%kwargs) {
-            self.defined
-                ?? $p5.invoke-parent($module, self.wrapped-perl5-object, False, $name, [flat self, |@args], %kwargs)
+        my $method := my sub many-args(Any $self, *@args, *%kwargs) {
+            $self.defined
+                ?? $p5.invoke-parent($module, $self.wrapped-perl5-object, False, $name, [flat $self, |@args], %kwargs)
                 !! $p5.invoke($module, $name, |@args.list, |%kwargs)
         };
         $proto.add_dispatchee($method);
 
         my $defined_type := Metamodel::DefiniteHOW.new_type(:base_type($type), :definite(1));
-        my $generic-no-args := my method no-args(Any:D:) {
-            %_.elems
-                ?? $p5.invoke-gv-args(self.wrapped-perl5-object, $gv, Capture.new(:hash(%_)))
-                !! $p5.invoke-gv(self.wrapped-perl5-object, $gv)
+        my $no-args := my sub no-args(Any:D $self) {
+            $p5.invoke-gv($self.wrapped-perl5-object, $gv)
         };
-        $proto.add_dispatchee($generic-no-args.instantiate_generic(%(:T($defined_type))));
-        my $one-pair-arg := my method one-pair-arg(Any:D: Pair \arg) {
-            %_.elems
-                ?? $p5.invoke-gv-args(self.wrapped-perl5-object, $gv, Capture.new(:list([arg]), :hash(%_)))
-                !! $p5.invoke-gv-arg(self.wrapped-perl5-object, $gv, arg)
+        $proto.add_dispatchee($no-args);
+        my $one-pair-arg := my sub one-pair-arg(Any:D $self, Pair \arg) {
+            $p5.invoke-gv-arg($self.wrapped-perl5-object, $gv, arg)
         };
         $proto.add_dispatchee($one-pair-arg);
-        my $one-arg := my method one-arg(Any:D: \arg) {
-            %_.elems
-                ?? $p5.invoke-gv-args(self.wrapped-perl5-object, $gv, Capture.new(:list([arg]), :hash(%_)))
-                !! $p5.invoke-gv-simple-arg(self.wrapped-perl5-object, $gv, arg)
+        my $one-arg := my sub one-arg(Any:D $self, \arg) {
+            $p5.invoke-gv-simple-arg($self.wrapped-perl5-object, $gv, arg)
         };
         $proto.add_dispatchee($one-arg);
+        $proto.add_methods($method, $one-arg, $no-args);
 
         self.add_method($type, $name, $proto)
     }
