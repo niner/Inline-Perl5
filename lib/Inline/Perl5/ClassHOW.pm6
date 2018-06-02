@@ -151,10 +151,16 @@ class Inline::Perl5::ClassHOW
                 !! $p5.invoke-gv(self.wrapped-perl5-object, $gv)
         };
         $proto.add_dispatchee($generic-no-args.instantiate_generic(%(:T($defined_type))));
-        my $one-arg := my method one-arg(Any:D: \arg) {
+        my $one-pair-arg := my method one-pair-arg(Any:D: Pair \arg) {
             %_.elems
                 ?? $p5.invoke-gv-args(self.wrapped-perl5-object, $gv, Capture.new(:list([arg]), :hash(%_)))
                 !! $p5.invoke-gv-arg(self.wrapped-perl5-object, $gv, arg)
+        };
+        $proto.add_dispatchee($one-pair-arg);
+        my $one-arg := my method one-arg(Any:D: \arg) {
+            %_.elems
+                ?? $p5.invoke-gv-args(self.wrapped-perl5-object, $gv, Capture.new(:list([arg]), :hash(%_)))
+                !! $p5.invoke-gv-simple-arg(self.wrapped-perl5-object, $gv, arg)
         };
         $proto.add_dispatchee($one-arg);
 
