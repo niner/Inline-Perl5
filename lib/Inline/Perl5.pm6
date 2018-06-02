@@ -479,9 +479,29 @@ method invoke-gv(Pointer $obj, Pointer $function) {
     self.unpack_return_values($av, $retvals, $type);
 }
 
+method invoke-gv-simple-arg(Pointer $obj, Pointer $function, $arg) {
+    my @svs := CArray[Pointer].new();
+    @svs.ASSIGN-POS(0, $obj);
+    @svs.ASSIGN-POS(1, self.p6_to_p5($arg));
+    my int32 $retvals;
+    my int32 $err;
+    my int32 $type;
+    my $av = $!p5.p5_call_gv(
+        $obj,
+        0,
+        $function,
+        2,
+        nativecast(Pointer, @svs),
+        $retvals,
+        $err,
+        $type,
+    );
+    self.handle_p5_exception() if $err;
+    self.unpack_return_values($av, $retvals, $type);
+}
+
 method invoke-gv-arg(Pointer $obj, Pointer $function, $arg) {
     my @svs := CArray[Pointer].new();
-    my Int $j = 0;
     @svs[0] = $obj;
     if $arg.WHAT =:= Pair {
         @svs[1] = self.p6_to_p5($arg.key);
