@@ -461,7 +461,7 @@ method stash-name(Pointer $obj) {
     $!p5.p5_stash_name($obj)
 }
 
-multi method invoke(Pointer $obj, Pointer $function) {
+method invoke-gv(Pointer $obj, Pointer $function) {
     my int32 $retvals;
     my int32 $err;
     my int32 $type;
