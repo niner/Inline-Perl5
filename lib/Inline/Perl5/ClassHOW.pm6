@@ -28,9 +28,9 @@ class Inline::Perl5::ClassHOW
         $type
     }
 
-    method compose($type) {
+    method compose(\type) {
         # Set up type checking with cache.
-        Metamodel::Primitives.configure_type_checking($type,
+        Metamodel::Primitives.configure_type_checking(type,
             [Any, Mu],
             :authoritative, :call_accepts);
 
@@ -54,20 +54,34 @@ class Inline::Perl5::ClassHOW
                 return $p5.invoke($module, 'new', |@args.list, |%args.hash);
             }
         };
-        Metamodel::Primitives.install_method_cache($type, %!cache, :!authoritative);
+        Metamodel::Primitives.install_method_cache(type, %!cache, :!authoritative);
 
-        self.add_attribute($type, Attribute.new(
+        use nqp;
+        nqp::bindattr(self, $?CLASS, '%!attribute_lookup', nqp::hash());
+        nqp::bindattr(self, $?CLASS, '@!attributes', nqp::list());
+
+        self.add_attribute(type, Attribute.new(
             :name<$!wrapped-perl5-object>,
             :type(Pointer),
-            :package($type),
+            :package(type),
             :has_accessor(1),
         ));
 
         $!composed = True;
-        self.compose_attributes($type);
-        self.compose_repr($type);
+        my $compiler_services := $*W.get_compiler_services(Match.new) if $*W;
+        self.compose_attributes(type, :$compiler_services);
+        Metamodel::Primitives.compose_type(
+            type,
+            {
+                attribute => [
+                    [type, [{:name<$!wrapped-perl5-object>, :type(Pointer)},], []],
+                ]
+            }
+        );
+        nqp::bindattr(self, $?CLASS, '$!composed_repr', nqp::unbox_i(1));
+        $*W.add_object(type) if $*W;
 
-        $type
+        type
     }
 
     method add_method($type, $name, \meth) is raw {
@@ -82,11 +96,18 @@ class Inline::Perl5::ClassHOW
     }
 
     method method_table($type) is raw {
-        %!cache.FLATTENABLE_HASH
+        use nqp;
+        my class NQPHash is repr('VMHash') { };
+        my Mu \result := nqp::create(NQPHash);
+        for %!cache {
+            nqp::bindkey(result, $_.key, nqp::decont($_.value));
+        }
+        result
     }
 
     method submethod_table($type) is raw {
-        Map.new.FLATTENABLE_HASH
+        use nqp;
+        nqp::hash()
     }
 
     method type_check(Mu $, Mu \check) {
@@ -147,16 +168,34 @@ class Inline::Perl5::ClassHOW
     method BUILDALLPLAN($type) {
         [].FLATTENABLE_LIST
     }
-}
 
-=finish
-my $foo := Inline::Perl5::ClassHOW.new_type(:name<Foo>);
-$foo.^compose;
-my $instance = $foo.new;
-$foo.foo;
-$instance.foo;
-note $instance.^name;
-$foo.^add_method('bar', my method bar() { say "bar!"; });
-$instance.bar;
-$instance.item;
-$instance.baz;
+    method compose_attributes(\obj, :$compiler_services) {
+        use nqp;
+        for nqp::hllize(@!attributes) {
+            $_.compose(obj, :$compiler_services)
+        }
+    }
+
+    method mro(\obj) {
+        use nqp;
+        unless @!mro {
+            my class NQPArray is repr('VMArray') {
+                method push(Mu \value) { nqp::push(self, nqp::decont(value)) }
+                method pop() { nqp::pop(self) }
+                method unshift(Mu \value) { nqp::unshift(self, nqp::decont(value)) }
+                method shift() { nqp::shift(self) }
+                method list() {
+                    my \list = List.new;
+                    nqp::bindattr(list, List, '$!reified', self);
+                    list
+                }
+            }
+            nqp::bindattr(self, $?CLASS, '@!mro', nqp::create(NQPArray));
+            nqp::bindpos(@!mro, 0, nqp::decont(obj));
+            for $!base_type.HOW.mro($!base_type) {
+                nqp::push(@!mro, nqp::decont($_));
+            }
+        }
+        @!mro
+    }
+}
