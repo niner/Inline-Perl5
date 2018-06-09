@@ -162,6 +162,18 @@ class Inline::Perl5::ClassHOW
                 )
             }
             ROLE
+        &find_best_dispatchee //= try EVAL q:to/ROLE/;
+            -> \SELF, Mu \capture {
+                use nqp;
+                nqp::capturenamedshash(capture) || !nqp::captureposarg(capture, 0).defined
+                    ?? nqp::getattr(SELF, SELF.WHAT, '&!many-args')
+                    !! nqp::captureposelems(capture) == 1
+                        ?? nqp::getattr(SELF, SELF.WHAT, '&!no-args')
+                        !! nqp::captureposelems(capture) == 2 && !(nqp::captureposarg(capture, 1) ~~ Pair)
+                            ?? nqp::getattr(SELF, SELF.WHAT, '&!one-arg')
+                            !! nqp::getattr(SELF, SELF.WHAT, '&!many-args')
+            }
+            ROLE
         &find_best_dispatchee //= -> \SELF, Mu \capture { use nqp; nqp::getattr(SELF, SELF.WHAT, '&!many-args') };
         $proto does role :: {
             has &!many-args;
