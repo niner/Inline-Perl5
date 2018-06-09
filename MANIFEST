@@ -13,6 +13,7 @@ lib/Inline/Perl5/Array.pm6
 lib/Inline/Perl5/Attributes.pm6
 lib/Inline/Perl5/Callable.pm6
 lib/Inline/Perl5/Caller.pm6
+lib/Inline/Perl5/ClassHOW.pm6
 lib/Inline/Perl5/Extension.pm6
 lib/Inline/Perl5/Hash.pm6
 lib/Inline/Perl5/Interpreter.pm6
@@ -64,6 +65,7 @@ t/lib/TestV6Directly.pm
 t/lib/TestV6.pm
 t/lib/TestV6Sub.pm
 t/lib/UseExport.pm
+t/meta_model.t
 t/modify_array.t
 t/modify_hash.t
 t/overload.t
