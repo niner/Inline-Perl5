@@ -799,21 +799,11 @@ method require(Str $module, Num $version?, Bool :$handle) {
         ::($module).WHO<&EXPORT> := &export;
     }
 
-    my $compunit-handle = class :: is CompUnit::Handle {
+    (CompUnit::Handle.from-unit($stash) does my role :: {
         has &!EXPORT;
-        use nqp;
-        submethod fill(Stash $unit, &EXPORT) {
-            nqp::p6bindattrinvres(
-                nqp::p6bindattrinvres(
-                  nqp::create($?CLASS),
-                  CompUnit::Handle,
-                  '$!unit',
-                  nqp::decont($unit),
-                ),
-                $?CLASS,
-                '&!EXPORT',
-                &EXPORT,
-            )
+        submethod with-export(&EXPORT) {
+            &!EXPORT := &EXPORT;
+            self
         }
         method export-package() returns Stash {
             Stash.new
@@ -821,12 +811,7 @@ method require(Str $module, Num $version?, Bool :$handle) {
         method export-sub() returns Callable {
             &!EXPORT
         }
-    }.fill(
-        $stash,
-        &export,
-    );
-
-    return $compunit-handle;
+    }).with-export(&export);
 }
 
 method !create_wrapper_class(Str $module, Stash $stash) {
