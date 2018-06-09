@@ -1,4 +1,6 @@
 use NativeCall;
+use MONKEY-SEE-NO-EVAL;
+
 class Inline::Perl5::ClassHOW
     does Metamodel::AttributeContainer
     does Metamodel::BaseType
@@ -126,6 +128,7 @@ class Inline::Perl5::ClassHOW
         Any.^find_method($name) // self.add_wrapper_method($type, $name);
     }
 
+    my &find_best_dispatchee;
     method add_wrapper_method($type, $name) is raw {
         my $p5 = $!p5;
         my $module = $!name;
@@ -136,37 +139,43 @@ class Inline::Perl5::ClassHOW
         my $generic-proto := my proto method AUTOGEN(::T $: |) { * }
         my $proto := $generic-proto.instantiate_generic(%('T' => $type));
         $proto.set_name($name);
-        $proto does role :: {
-            has &.many-args;
-            has &.one-arg;
-            has &.no-args;
-            method find_best_dispatchee(Mu \capture) {
+        &find_best_dispatchee //= try EVAL q:to/ROLE/;
+            -> \SELF, Mu \capture {
                 use nqp;
-                sub add_to_cache(\entry) {
+                sub add_to_cache(\SELF, \entry) {
                     nqp::scwbdisable();
-                    nqp::bindattr(self, Routine, '$!dispatch_cache',
+                    nqp::bindattr(SELF, Routine, '$!dispatch_cache',
                         nqp::multicacheadd(
-                            nqp::getattr(self, Routine, '$!dispatch_cache'),
+                            nqp::getattr(SELF, Routine, '$!dispatch_cache'),
                             capture, entry));
                     nqp::scwbenable();
                     entry
                 }
-                add_to_cache(
+                add_to_cache(SELF,
                     nqp::capturenamedshash(capture) || !nqp::captureposarg(capture, 0).defined
-                        ?? &!many-args
+                        ?? nqp::getattr(SELF, SELF.WHAT, '&!many-args')
                         !! nqp::captureposelems(capture) == 1
-                            ?? &!no-args
+                            ?? nqp::getattr(SELF, SELF.WHAT, '&!no-args')
                             !! nqp::captureposelems(capture) == 2 && !(nqp::captureposarg(capture, 1) ~~ Pair)
-                                ?? &!one-arg
-                                !! &!many-args
+                                ?? nqp::getattr(SELF, SELF.WHAT, '&!one-arg')
+                                !! nqp::getattr(SELF, SELF.WHAT, '&!many-args')
                 )
+            }
+            ROLE
+        &find_best_dispatchee //= -> \SELF, Mu \capture { use nqp; nqp::getattr(SELF, SELF.WHAT, '&!many-args') };
+        $proto does role :: {
+            has &!many-args;
+            has &!one-arg;
+            has &!no-args;
+            method find_best_dispatchee(Mu \capture) {
+                find_best_dispatchee(self, capture);
             }
             method add_methods(&many-args, &one-arg, &no-args) {
                 &!many-args := &many-args;
-                &!one-arg := &one-arg;
-                &!no-args := &no-args;
+                &!one-arg   := &one-arg;
+                &!no-args   := &no-args;
             }
-        };
+        }
 
         my $method := my sub many-args(Any $self, *@args, *%kwargs) {
             $self.defined
