@@ -357,9 +357,9 @@ multi method unpack_return_values(Pointer:U \av, int32 \count, int32 \type --> N
 
 multi method unpack_return_values(Pointer:D \av, int32 \count, int32 \type) {
     if count == 1 {
-        my $retval = self.p5_to_p6(av, type);
+        my \retval = self.p5_to_p6(av, type);
         $!p5.p5_sv_refcnt_dec(av);
-        $retval
+        retval
     }
     else {
         Inline::Perl5::Array.new(ip5 => self, p5 => $!p5, :av(av))
