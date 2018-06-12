@@ -235,73 +235,89 @@ method !p5_scalar_ref_to_capture(Pointer $sv) {
 multi method p5_to_p6(Pointer:U \value --> Any) {
 }
 
+my class Undef { };
+my class Blessed { };
+
+# IterationBuffer has the fastest AT-POS
+my constant P5Types = IterationBuffer.new;
+BEGIN P5Types.push: $_ for Any, Blessed, Code, Num, Int, Str, Array, Hash, Inline::Perl5::Hash, Undef, Capture;
+
 multi method p5_to_p6(Pointer:D \value) {
-    my int32 $type = $!p5.p5_get_type(value);
-    self.p5_to_p6(value, $type)
+    self.p5_to_p6_type(value, P5Types.AT-POS($!p5.p5_get_type(value)))
 }
 
-multi method p5_to_p6(Pointer:U \value, \type --> Any) {
+multi method p5_to_p6_type(Pointer:U \value, \type --> Any) {
+}
+
+multi method p5_to_p6_type(Pointer:D \value, Int) {
+    $!p5.p5_sv_iv(value);
+}
+
+multi method p5_to_p6_type(Pointer:D \value, Str) {
+    if $!p5.p5_sv_utf8(value) {
+        $!p5.p5_sv_to_char_star(value);
+    }
+    else {
+        my $string_ptr = CArray[CArray[int8]].new;
+        $string_ptr[0] = CArray[int8];
+        my $len = $!p5.p5_sv_to_buf(value, $string_ptr);
+        my $string := $string_ptr[0];
+        blob8.new(do for ^$len { $string.AT-POS($_) });
+    }
+}
+
+multi method p5_to_p6_type(Pointer:D \value, Num) {
+    $!p5.p5_sv_nv(value);
+}
+
+multi method p5_to_p6_type(Pointer:D \value, Array) {
+    self!p5_array_to_writeback_p6_array(value);
+}
+
+multi method p5_to_p6_type(Pointer:D \value, Hash) {
+    self!p5_hash_to_writeback_p6_hash(value);
+}
+
+multi method p5_to_p6_type(Pointer:D \value, Inline::Perl5::Hash) {
+    $objects.get($!p5.p5_unwrap_p6_hash(value));
+}
+
+multi method p5_to_p6_type(Pointer:D \value, Undef) {
+    Any
+}
+
+multi method p5_to_p6_type(Pointer:D \value, Code) {
+    $!p5.p5_sv_refcnt_inc(value);
+    Inline::Perl5::Callable.new(perl5 => self, ptr => value);
+}
+
+multi method p5_to_p6_type(Pointer:D \value, Capture) {
+    self!p5_scalar_ref_to_capture(value);
+}
+
+multi method p5_to_p6_type(Pointer:D \value, Any) {
+    die "Unsupported type {value} in p5_to_p6";
+}
+
+multi method p5_to_p6_type(Pointer:D \value, Blessed) {
+    if $!p5.p5_is_wrapped_p6_object(value) {
+        $objects.get($!p5.p5_unwrap_p6_object(value));
+    }
+    else {
+        $!p5.p5_sv_refcnt_inc(value);
+        if %loaded_modules{self.stash-name(value)}:exists {
+            my $class := %loaded_modules{self.stash-name(value)};
+            use nqp;
+            nqp::p6bindattrinvres($class.CREATE, $class, '$!wrapped-perl5-object', value)
+        }
+        else {
+            Inline::Perl5::Object.new(perl5 => self, ptr => value)
+        }
+    }
 }
 
 multi method p5_to_p6(Pointer:D \value, \type) {
-    my enum P5Types <Unknown Object SubRef NV IV PV Array Hash P6Hash Undef ScalarRef>;
-
-    if type == IV {
-        $!p5.p5_sv_iv(value);
-    }
-    elsif type == PV {
-        if $!p5.p5_sv_utf8(value) {
-            $!p5.p5_sv_to_char_star(value);
-        }
-        else {
-            my $string_ptr = CArray[CArray[int8]].new;
-            $string_ptr[0] = CArray[int8];
-            my $len = $!p5.p5_sv_to_buf(value, $string_ptr);
-            my $string := $string_ptr[0];
-            blob8.new(do for ^$len { $string.AT-POS($_) });
-        }
-    }
-    elsif type == Object {
-        if $!p5.p5_is_wrapped_p6_object(value) {
-            $objects.get($!p5.p5_unwrap_p6_object(value));
-        }
-        else {
-            $!p5.p5_sv_refcnt_inc(value);
-            if %loaded_modules{self.stash-name(value)}:exists {
-                my $class := %loaded_modules{self.stash-name(value)};
-                use nqp;
-                nqp::p6bindattrinvres($class.CREATE, $class, '$!wrapped-perl5-object', value)
-            }
-            else {
-                Inline::Perl5::Object.new(perl5 => self, ptr => value)
-            }
-        }
-    }
-    elsif type == NV {
-        $!p5.p5_sv_nv(value);
-    }
-    elsif type == Array {
-        self!p5_array_to_writeback_p6_array(value);
-    }
-    elsif type == Hash {
-        self!p5_hash_to_writeback_p6_hash(value);
-    }
-    elsif type == P6Hash {
-        $objects.get($!p5.p5_unwrap_p6_hash(value));
-    }
-    elsif type == Undef {
-        Any;
-    }
-    elsif type == SubRef {
-        $!p5.p5_sv_refcnt_inc(value);
-        Inline::Perl5::Callable.new(perl5 => self, ptr => value);
-    }
-    elsif type == ScalarRef {
-        self!p5_scalar_ref_to_capture(value);
-    }
-    else {
-        die "Unsupported type {value} in p5_to_p6";
-    }
+    self.p5_to_p6_type(value, P5Types.AT-POS(type))
 }
 
 method handle_p5_exception() is hidden-from-backtrace {
@@ -357,7 +373,7 @@ multi method unpack_return_values(Pointer:U \av, int32 \count, int32 \type --> N
 
 multi method unpack_return_values(Pointer:D \av, int32 \count, int32 \type) {
     if count == 1 {
-        my \retval = self.p5_to_p6(av, type);
+        my \retval = self.p5_to_p6_type(av, P5Types.AT-POS(type));
         $!p5.p5_sv_refcnt_dec(av);
         retval
     }
