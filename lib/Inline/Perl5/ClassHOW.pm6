@@ -70,7 +70,7 @@ class Inline::Perl5::ClassHOW
         ));
 
         $!composed = True;
-        my $compiler_services := $*W.get_compiler_services(Match.new) if $*W;
+        my $compiler_services = $*W.get_compiler_services(Match.new) if $*W;
         self.compose_attributes(type, :$compiler_services);
         Metamodel::Primitives.compose_type(
             type,
