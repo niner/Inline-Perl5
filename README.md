@@ -288,7 +288,7 @@ the object you want to pass as a reference:
 ```
 
 `HASH` and `ARRAY` references are made automatically if the Perl 6 objects
-are L<containerized|https://perl6advent.wordpress.com/2017/12/02/>:
+are [containerized](https://perl6advent.wordpress.com/2017/12/02/):
 
 ```perl6
     $p5obj.takes-an-array:      [<a b c>];
