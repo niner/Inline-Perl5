@@ -15,6 +15,7 @@ before_install:
   - curl -L http://install.perlbrew.pl | bash
   - echo 'source ~/perl5/perlbrew/etc/bashrc' >> ~/.bash_profile
   - source ~/perl5/perlbrew/etc/bashrc
+  - perlbrew self-upgrade
   - perlbrew install -Duseshrplib -n --noman -v --switch stable
 
 install:
