@@ -875,14 +875,14 @@ method !create_wrapper_class(Str $module, Stash $stash) {
             });
         }
         for @$variables -> $name {
-            $class.WHO.BIND-KEY('$' ~ $name, Proxy.new(
-                FETCH => {
+            $class.WHO{'$' ~ $name} := Proxy.new(
+                FETCH => -> $ {
                     Inline::Perl5.default_perl5.global('$' ~ $module ~ '::' ~ $name);
                 },
                 STORE => -> $, $val {
                     Inline::Perl5.default_perl5.set_global('$' ~ $module ~ '::' ~ $name, $val);
                 },
-            ));
+            );
         }
     }
 
