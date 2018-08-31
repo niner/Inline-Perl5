@@ -11,6 +11,7 @@ use Inline::Perl5::Extension;
 use Inline::Perl5::Hash;
 use Inline::Perl5::Object;
 use Inline::Perl5::Parent;
+use Inline::Perl5::String;
 use Inline::Perl5::Callable;
 
 has Inline::Perl5::Interpreter $!p5;
@@ -136,6 +137,9 @@ multi method p6_to_p5(Map:D $value) returns Pointer {
     }
     $!p5.p5_newRV_noinc($hv);
 }
+multi method p6_to_p5(Inline::Perl5::String:D $value) returns Pointer {
+    $value.sv
+}
 multi method p6_to_p5(Inline::Perl5::Hash:D $value) returns Pointer {
     $!p5.p5_newRV_inc($value.hv)
 }
@@ -255,7 +259,8 @@ multi method p5_to_p6_type(Pointer:D \value, Int) {
 
 multi method p5_to_p6_type(Pointer:D \value, Str) {
     if $!p5.p5_sv_utf8(value) {
-        $!p5.p5_sv_to_char_star(value);
+        #$!p5.p5_sv_to_char_star(value);
+        Inline::Perl5::String.new(:p5($!p5), :sv(value))
     }
     else {
         my $string_ptr = CArray[CArray[int8]].new;
@@ -317,6 +322,7 @@ multi method p5_to_p6_type(Pointer:D \value, Blessed) {
 }
 
 multi method p5_to_p6(Pointer:D \value, \type) {
+    $!p5.
     self.p5_to_p6_type(value, P5Types.AT-POS(type))
 }
 
@@ -696,7 +702,7 @@ class Perl6Callbacks {
         return;
     }
     method run($code) {
-        return EVAL $code;
+        return EVAL $code.Str;
         CONTROL {
             when CX::Warn {
                 note $_.gist;
@@ -704,8 +710,8 @@ class Perl6Callbacks {
             }
         }
     }
-    method call(Str $name, @args) {
-        return &::($name)(|@args);
+    method call(Stringy $name, @args) {
+        return &::($name.Str)(|@args);
         CONTROL {
             when CX::Warn {
                 note $_.gist;
@@ -713,7 +719,7 @@ class Perl6Callbacks {
             }
         }
     }
-    method invoke(Str $package, Str $name, @args) {
+    method invoke(Stringy $package, Stringy $name, @args) {
         my %named = classify {$_.WHAT =:= Pair}, @args;
         %named<False> //= [];
         %named<True> //= [];
@@ -790,7 +796,7 @@ method require(Str $module, Num $version?, Bool :$handle) {
     my $stash := $handle ?? Stash.new !! ::GLOBAL.WHO;
 
     my $class;
-    for @packages.grep(*.defined).grep(/<-lower -[:]>/) -> $package {
+    for @packages.grep(*.defined).map(*.Str).grep(/<-lower -[:]>/) -> $package {
         next if try ::($package) ~~ Inline::Perl5::Extension;
         my $created := self!create_wrapper_class($package, $stash);
         $class := $created if $package eq $module;
@@ -847,7 +853,7 @@ method !create_wrapper_class(Str $module, Stash $stash) {
 
         # install methods
         for @$symbols -> $name {
-            $class.^add_wrapper_method($name);
+            $class.^add_wrapper_method($name.Str);
         }
 
         $class.^compose;
