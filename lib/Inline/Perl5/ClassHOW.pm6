@@ -11,6 +11,7 @@ class Inline::Perl5::ClassHOW
 {
     has %!cache;
     has $!p5;
+    has $!ip5;
     has $!composed;
 
     my $archetypes := Metamodel::Archetypes.new(
@@ -19,10 +20,10 @@ class Inline::Perl5::ClassHOW
         $archetypes
     }
 
-    submethod BUILD(:$!p5) { }
+    submethod BUILD(:$!p5, :$!ip5) { }
 
-    method new_type(:$name, :$p5) is raw {
-        my $how = self.new(:$p5);
+    method new_type(:$name, :$p5, :$ip5) is raw {
+        my $how = self.new(:$p5, :$ip5);
         my $type := Metamodel::Primitives.create_type($how);
         $how.set_base_type($type, Any);
         $how.set_name($type, $name);
@@ -134,6 +135,7 @@ class Inline::Perl5::ClassHOW
     my &find_best_dispatchee;
     method add_wrapper_method($type, $name) is raw {
         my $p5 = $!p5;
+        my $ip5 = $!ip5;
         my $module = $!name;
 
         my $gv := $!p5.look-up-method(self.name($type), $name)
@@ -201,7 +203,19 @@ class Inline::Perl5::ClassHOW
 
         my $defined_type := Metamodel::DefiniteHOW.new_type(:base_type($type), :definite(1));
         my $no-args := my sub no-args(Any:D \SELF) {
-            $p5.invoke-gv(SELF.wrapped-perl5-object, $gv)
+            my int32 $retvals;
+            my int32 $err;
+            my int32 $type;
+            my $av = $ip5.p5_call_gv(
+                $gv,
+                1,
+                SELF.wrapped-perl5-object,
+                $retvals,
+                $err,
+                $type,
+            );
+            $p5.handle_p5_exception() if $err;
+            $p5.unpack_return_values($av, $retvals, $type);
         };
         $proto.add_dispatchee($no-args);
         my $one-pair-arg := my sub one-pair-arg(Any:D $self, Pair \arg) {
@@ -209,7 +223,19 @@ class Inline::Perl5::ClassHOW
         };
         $proto.add_dispatchee($one-pair-arg);
         my $one-arg := my sub one-arg(Any:D \SELF, \arg) {
-            $p5.invoke-gv-simple-arg(SELF.wrapped-perl5-object, $gv, arg)
+            my int32 $retvals = 0;
+            my int32 $err = 0;
+            my int32 $type = 0;
+            my $av = $ip5.p5_call_gv_two_args(
+                $gv,
+                SELF.wrapped-perl5-object,
+                $p5.p6_to_p5(arg),
+                $retvals,
+                $type,
+                $err,
+            );
+            $p5.handle_p5_exception if $err;
+            $p5.unpack_return_values($av, $retvals, $type);
         };
         $proto.add_dispatchee($one-arg);
         $proto.add_methods($method, $one-arg, $no-args);

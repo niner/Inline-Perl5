@@ -481,8 +481,6 @@ method invoke-gv(Pointer $obj, Pointer $function) {
     my int32 $err;
     my int32 $type;
     my $av = $!p5.p5_call_gv(
-        $obj,
-        0,
         $function,
         1,
         $obj,
@@ -502,8 +500,6 @@ method invoke-gv-simple-arg(Pointer $obj, Pointer $function, $arg) {
     my int32 $err;
     my int32 $type;
     my $av = $!p5.p5_call_gv(
-        $obj,
-        0,
         $function,
         2,
         nativecast(Pointer, @svs),
@@ -529,8 +525,6 @@ method invoke-gv-arg(Pointer $obj, Pointer $function, $arg) {
     my int32 $err;
     my int32 $type;
     my $av = $!p5.p5_call_gv(
-        $obj,
-        0,
         $function,
         2,
         nativecast(Pointer, @svs),
@@ -597,8 +591,6 @@ method invoke-gv-args(Pointer $obj, Pointer $function, Capture $args) {
     my int32 $err;
     my int32 $type;
     my $av = $!p5.p5_call_gv(
-        $obj,
-        0,
         $function,
         $j,
         nativecast(Pointer, @svs),
@@ -847,7 +839,7 @@ method !create_wrapper_class(Str $module, Stash $stash) {
         my $p5 := self;
 
         %loaded_modules{$module} := $class :=
-            Inline::Perl5::ClassHOW.new_type(name => $module, :p5(self));
+            Inline::Perl5::ClassHOW.new_type(name => $module, :p5(self), :ip5($!p5));
 
         # install methods
         for @$symbols -> $name {
