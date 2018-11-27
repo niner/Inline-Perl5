@@ -137,6 +137,17 @@ object.  You can call methods on it like on any other object.
 Please note that since Perl 6 does not have the same concept of "context",
 Perl 5 methods are always called in list context.
 
+## Access a Perl 5 object's data directly
+
+Most objects in Perl 5 are blessed hash references. Some of them don't even
+provide accessor methods but require you to just access the hash fields
+directly. This works the same in Perl 6:
+```
+    use Foo:from<Perl5>;
+    my $foo = Foo.new;
+    say $foo<some_attribute>;
+```
+
 ## Run arbitrary Perl 5 code
 
 Perl6's EVAL function supports multiple languages, just like the "use"
@@ -247,7 +258,8 @@ Perl 6 classes:
 
 You can override methods and the overridden methods will be called even by the
 Perl 5 methods in your base class. However, it is not yet possible to directly
-access the Perl 5 object's data, i.e. <code>$self->{foo}</code>.
+write to the Perl 5 object's data, i.e. <code>$self->{foo} = 1;</code>. Read
+access however is possible, i.e. <code>my $foo = self<foo>;</code>.
 
 When <code>use</code> cannot be used to load the Perl 5 module, the
 Inline::Perl5::Perl5Parent role allows can be used for subclassing.

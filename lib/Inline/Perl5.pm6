@@ -674,6 +674,11 @@ method execute(Pointer $code_ref, *@args) {
     self.unpack_return_values($av, $retvals, $type);
 }
 
+method at-key(Pointer $obj, \key) {
+    my $buf = $utf8-encoder.encode-chars(key);
+    self.p5_to_p6($!p5.p5_hv_fetch($!p5.p5_sv_rv($obj), $buf.elems, $buf))
+}
+
 method global(Str $name) {
     self.p5_to_p6($!p5.p5_get_global($name))
 }

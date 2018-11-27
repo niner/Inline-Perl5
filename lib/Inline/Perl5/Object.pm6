@@ -54,6 +54,10 @@ class Inline::Perl5::Object {
             ?? $!perl5.invoke-gv-args($!ptr, $gv, Capture.new(:list(@args), :hash(%kwargs)))
             !! $!perl5.invoke-gv($!ptr, $gv);
     }
+
+    method AT-KEY(Inline::Perl5::Object:D: Str() \key) is raw {
+        $!perl5.at-key($!ptr, key)
+    }
 }
 
 BEGIN {

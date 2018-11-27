@@ -56,6 +56,9 @@ class Inline::Perl5::ClassHOW
                 return $p5.invoke($module, 'new', |@args.list, |%args.hash);
             }
         };
+        %!cache<AT-KEY> := my method AT-KEY(\SELF: Str() \key) {
+            $p5.at-key(SELF.wrapped-perl5-object, key)
+        }
         Metamodel::Primitives.install_method_cache(type, %!cache, :!authoritative);
 
         use nqp;
