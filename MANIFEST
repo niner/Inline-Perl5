@@ -68,6 +68,7 @@ t/lib/UseExport.pm
 t/meta_model.t
 t/modify_array.t
 t/modify_hash.t
+t/object_hash.t
 t/overload.t
 t/p5_to_p6.t
 t/p6_object_destructor.t
