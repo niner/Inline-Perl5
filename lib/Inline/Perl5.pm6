@@ -23,8 +23,7 @@ my %loaded_modules;
 # I'd like to call this from Inline::Perl5::Interpreter
 # But it raises an error in the END { ... } call
 use NativeCall;
-my constant $p5helper = %?RESOURCES<libraries/p5helper>.Str;
-my constant $p5helper_resource = %?RESOURCES<libraries/p5helper>;
+my constant $p5helper = %?RESOURCES<libraries/p5helper>;
 sub p5_terminate() is native($p5helper) { ... }
 
 
