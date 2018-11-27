@@ -5,12 +5,12 @@ class Inline::Perl5::Array does Iterable does Positional {
     has $!ip5; # Had to remove the Inline::Perl5 type to prevent circular dep
     has Inline::Perl5::Interpreter $!p5;
     has Pointer $.av;
-    method new(:$ip5, :$p5, :$av) {
+    method new(:$ip5 is raw, :$p5 is raw, :$av is raw) {
         my \arr = self.CREATE;
         arr.BUILD(:$ip5, :$p5, :$av);
         arr
     }
-    submethod BUILD(:$!ip5, :$!p5, :$!av) {
+    submethod BUILD(:$!ip5 is raw, :$!p5 is raw, :$!av is raw) {
     }
     submethod DESTROY() {
         $!ip5.sv_refcnt_dec($!av);

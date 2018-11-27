@@ -200,16 +200,16 @@ class Inline::Perl5::ClassHOW
         $proto.add_dispatchee($method);
 
         my $defined_type := Metamodel::DefiniteHOW.new_type(:base_type($type), :definite(1));
-        my $no-args := my sub no-args(Any:D $self) {
-            $p5.invoke-gv($self.wrapped-perl5-object, $gv)
+        my $no-args := my sub no-args(Any:D \SELF) {
+            $p5.invoke-gv(SELF.wrapped-perl5-object, $gv)
         };
         $proto.add_dispatchee($no-args);
         my $one-pair-arg := my sub one-pair-arg(Any:D $self, Pair \arg) {
             $p5.invoke-gv-arg($self.wrapped-perl5-object, $gv, arg)
         };
         $proto.add_dispatchee($one-pair-arg);
-        my $one-arg := my sub one-arg(Any:D $self, \arg) {
-            $p5.invoke-gv-simple-arg($self.wrapped-perl5-object, $gv, arg)
+        my $one-arg := my sub one-arg(Any:D \SELF, \arg) {
+            $p5.invoke-gv-simple-arg(SELF.wrapped-perl5-object, $gv, arg)
         };
         $proto.add_dispatchee($one-arg);
         $proto.add_methods($method, $one-arg, $no-args);
