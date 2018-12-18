@@ -916,7 +916,7 @@ method retrieve_scalar_context() {
 
 class X::Inline::Perl5::NoMultiplicity is Exception {
     method message() {
-        "You need to compile perl with -DMULTIPLICITY for running multiple interpreters."
+        "You need to compile perl with -Dusemultiplicity for running multiple interpreters."
     }
 }
 
