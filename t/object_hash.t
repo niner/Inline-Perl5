@@ -6,7 +6,7 @@ use Test;
 use lib:from<Perl5> 't/lib';
 use A:from<Perl5>;
 
-my $p5 = Inline::Perl5.new;
+my $p5 = Inline::Perl5.default_perl5;
 
 $p5.run: q:to/PERL5/;
     package Foo;
