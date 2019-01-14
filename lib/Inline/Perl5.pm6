@@ -794,7 +794,7 @@ method require(Str $module, Num $version?, Bool :$handle) {
     my $stash := $handle ?? Stash.new !! ::GLOBAL.WHO;
 
     my $class;
-    for @packages.grep(*.defined).grep(/<-lower -[:]>/) -> $package {
+    for @packages.grep(*.defined).grep(/<-lower -[:]>/).grep(*.starts-with: $module) -> $package {
         next if try ::($package) ~~ Inline::Perl5::Extension;
         my $created := self!create_wrapper_class($package, $stash);
         $class := $created if $package eq $module;

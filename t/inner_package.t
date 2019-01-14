@@ -7,7 +7,7 @@ use Test;
 
 is(HasInnerPackage.func, 'has-inner-package', 'HasInnerPackage');
 
-is(InnerPackage.func, 'inner-package', 'InnerPackage');
+is(HasInnerPackage::InnerPackage.func, 'inner-package', 'InnerPackage');
 
 done-testing;
 
