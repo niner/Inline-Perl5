@@ -620,13 +620,12 @@ char *p5_stash_name(PerlInterpreter *my_perl, SV *obj) {
     return HvNAME(pkg);
 }
 
-SV *p5_call_gv(PerlInterpreter *my_perl, SV *obj, I32 context, GV *gv, int len, SV *args[], I32 *count, I32 *err, I32 *type) {
+SV *p5_call_gv(PerlInterpreter *my_perl, GV *gv, int len, SV *args[], I32 *count, I32 *err, I32 *type) {
     PERL_SET_CONTEXT(my_perl);
     {
         dSP;
         int i;
         SV * retval = NULL;
-        int flags = (context ? G_SCALAR : G_ARRAY) | G_EVAL;
 
         ENTER;
         SAVETMPS;
@@ -648,7 +647,7 @@ SV *p5_call_gv(PerlInterpreter *my_perl, SV *obj, I32 context, GV *gv, int len, 
 
         SV * const rv = sv_2mortal(newRV((SV*)GvCV(gv)));
 
-        *count = call_sv(rv, flags);
+        *count = call_sv(rv, G_ARRAY | G_EVAL);
         SPAGAIN;
 
         handle_p5_error(err);

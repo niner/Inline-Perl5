@@ -184,7 +184,7 @@ class Inline::Perl5::Interpreter is repr('CPointer') {
     method p5_stash_name(Pointer) is native($p5helper)
         returns Str { ... }
 
-    method p5_call_gv(Pointer, int32, Pointer, int32, Pointer, int32 is rw, int32 is rw, int32 is rw) is native($p5helper)
+    method p5_call_gv(Pointer, int32, Pointer, int32 is rw, int32 is rw, int32 is rw) is native($p5helper)
         returns Pointer { ... }
 
     method p5_call_method(Pointer, int32, Str, int32, Pointer, int32 is rw, int32 is rw, int32 is rw) is native($p5helper)
