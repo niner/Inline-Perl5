@@ -12,6 +12,7 @@ use Inline::Perl5::Hash;
 use Inline::Perl5::Object;
 use Inline::Perl5::Parent;
 use Inline::Perl5::Callable;
+use Inline::Perl5::TypeGlob;
 
 has Inline::Perl5::Interpreter $!p5;
 has Bool $!external_p5 = False;
@@ -179,6 +180,9 @@ multi method p6_to_p5(Regex:D $value) {
     self.handle_p5_exception() if $err;
     self.p6_to_p5(self.unpack_return_values($av, $retvals, $type))
 }
+multi method p6_to_p5(Inline::Perl5::TypeGlob:D $value) returns Pointer {
+    $value.gv
+}
 
 method p5_sv_reftype(Pointer $sv) {
     return $!p5.p5_sv_reftype($sv);
@@ -236,10 +240,11 @@ multi method p5_to_p6(Pointer:U \value --> Any) {
 
 my class Undef { };
 my class Blessed { };
+my class TypeGlob { };
 
 # IterationBuffer has the fastest AT-POS
 my constant P5Types = IterationBuffer.new;
-BEGIN P5Types.push: $_ for Any, Blessed, Code, Num, Int, Str, Array, Hash, Inline::Perl5::Hash, Undef, Capture;
+BEGIN P5Types.push: $_ for Any, Blessed, Code, Num, Int, Str, Array, Hash, Inline::Perl5::Hash, Undef, Capture, TypeGlob;
 
 multi method p5_to_p6(Pointer:D \value) {
     self.p5_to_p6_type(value, P5Types.AT-POS($!p5.p5_get_type(value)))
@@ -295,7 +300,8 @@ multi method p5_to_p6_type(Pointer:D \value, Capture) {
 }
 
 multi method p5_to_p6_type(Pointer:D \value, Any) {
-    die "Unsupported type {value} in p5_to_p6";
+    my $type = $!p5.p5_get_type(value);
+    die "Unsupported type {value} ($type) in p5_to_p6";
 }
 
 multi method p5_to_p6_type(Pointer:D \value, Blessed) {
@@ -313,6 +319,11 @@ multi method p5_to_p6_type(Pointer:D \value, Blessed) {
             Inline::Perl5::Object.new(perl5 => self, ptr => value)
         }
     }
+}
+
+multi method p5_to_p6_type(Pointer:D \value, TypeGlob) {
+    $!p5.p5_sv_refcnt_inc(value);
+    Inline::Perl5::TypeGlob.new(:ip5(self), :gv(value))
 }
 
 multi method p5_to_p6(Pointer:D \value, \type) {

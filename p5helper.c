@@ -461,6 +461,9 @@ I32 p5_get_type(PerlInterpreter *my_perl, SV *sv) {
     else if (p5_is_scalar_ref(my_perl, sv)) {
         return 10;
     }
+    else if (SvTYPE(sv) == SVt_PVGV) {
+        return 11;
+    }
     else {
         return 0;
     }

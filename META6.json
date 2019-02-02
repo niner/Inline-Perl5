@@ -19,6 +19,7 @@
         "Inline::Perl5::Interpreter":     "lib/Inline/Perl5/Interpreter.pm6",
         "Inline::Perl5::Object":          "lib/Inline/Perl5/Object.pm6",
         "Inline::Perl5::Parent":          "lib/Inline/Perl5/Parent.pm6",
+        "Inline::Perl5::TypeGlob":        "lib/Inline/Perl5/TypeGlob.pm6",
 	"Inline::Language::ObjectKeeper": "lib/Inline/Language/ObjectKeeper.pm6"
     },
     "resources"      : [
