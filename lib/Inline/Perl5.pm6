@@ -942,7 +942,13 @@ method require(Str $module, Num $version?, Bool :$handle) {
     }
 
     my &export := sub EXPORT(*@args) {
-            $*W.do_pragma(Any, 'precompilation', False, []);
+            if $*W {
+                my $block := {
+                    self.BUILD;
+                };
+                $*W.add_object($block);
+                my $op := $*W.add_phaser(Mu, 'INIT', $block, class :: { method cuid { (^2**128).pick }});
+            }
             my @symbols = self.import($module, @args.list).map({
                 my $name = $_;
                 '&' ~ $name => sub (|args) {
@@ -1126,7 +1132,7 @@ method BUILD(*%args) {
         }
     }
 
-    if ($*W) {
+    if ($*W and not $*W.is_precompilation_mode) { #FIXME don't know why it doesn't work with precomp
         my $block := { self.init_data(CALLER::<$=finish>) if CALLER::<$=finish> };
         $*W.add_object($block);
         my $op := $*W.add_phaser(Mu, 'INIT', $block, class :: { method cuid { (^2**128).pick }});
