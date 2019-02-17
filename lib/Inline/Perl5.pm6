@@ -927,16 +927,24 @@ method require(Str $module, Num $version?, Bool :$handle) {
 
     return unless self eq $default_perl5; # Only create Perl 6 packages for the primary interpreter to avoid confusion
 
-    if try ::($module) ~~ Inline::Perl5::Extension {
-        # Wrapper package already created. Nothing left for us to do.
-        return CompUnit::Handle.from-unit(Stash.new);
+    {
+        my $module_symbol = ::($module);
+        if $module_symbol.isa(Failure) {
+            $module_symbol.Bool;
+        }
+        elsif $module_symbol.isa(Inline::Perl5::Extension) {
+            # Wrapper package already created. Nothing left for us to do.
+            return CompUnit::Handle.from-unit(Stash.new);
+        }
     }
 
     my $stash := $handle ?? Stash.new !! ::GLOBAL.WHO;
 
     my $class;
     for @packages.grep(*.defined).grep(/<-lower -[:]>/).grep(*.starts-with: $module) -> $package {
-        next if try ::($package) ~~ Inline::Perl5::Extension;
+        my $symbol = ::($package);
+        next if $symbol.isa(Failure);
+        next if $symbol.isa(Inline::Perl5::Extension);
         my $created := self!create_wrapper_class($package, $stash);
         $class := $created if $package eq $module;
     }
