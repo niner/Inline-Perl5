@@ -7,7 +7,6 @@ Inline::Perl5
 # SYNOPSIS
 
 ```
-    use Inline::Perl5;
     use DBI:from<Perl5>;
 
     my $dbh = DBI.connect('dbi:Pg:database=test');
@@ -83,6 +82,8 @@ They can be used as if they were Perl 6 modules:
     ok 'yes', 'looks like a Perl 6 function';
 ```
 
+In this example, the `plan` function exported by `Test::More` is called.
+
 Inline::Perl5's call($name, \*@args) method allows calling arbitrary Perl 5
 functions. Use a fully qualified name (like "Test::More::ok") if the function
 is not in the "main" namespace.
@@ -127,15 +128,29 @@ Once you have a Perl 5 object in a variable it will behave just like a Perl 6
 object.  You can call methods on it like on any other object.
 
 ```
-    use Inline::Perl5;
     use IO::Compress::Bzip2:from<Perl5>;
     my $bzip2 = IO::Compress::Bzip2.new('/tmp/foo.bz2');
     $bzip2.print($data);
     $bzip2.close;
 ```
 
+### Invoking a method in scalar context
+
 Please note that since Perl 6 does not have the same concept of "context",
-Perl 5 methods are always called in list context.
+Perl 5 methods are by default called in list context. If you need to call the
+method in scalar context, you can tell it so explicitly, by passing the
+`Scalar` type object as first argument:
+
+```
+    use IO::Compress::Bzip2:from<Perl5>;
+    my $bzip2 = IO::Compress::Bzip2.new(Scalar, '/tmp/foo.bz2');
+    $bzip2.print(Scalar, $data);
+    $bzip2.close(Scalar);
+```
+
+This may be neccessary if the Perl 5 method exposes different behavior when
+called in list and scalar context. Calling in scalar context may also improve
+performance in some cases.
 
 ## Access a Perl 5 object's data directly
 

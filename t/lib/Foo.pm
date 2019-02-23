@@ -68,6 +68,10 @@ sub split {
     return 'split';
 }
 
+sub context {
+    return(wantarray ? 'list' : 'scalar');
+}
+
 __PACKAGE__->meta->make_immutable;
 
 1;

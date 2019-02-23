@@ -665,6 +665,48 @@ SV *p5_call_gv(PerlInterpreter *my_perl, GV *gv, int len, SV *args[], I32 *count
     }
 }
 
+SV *p5_scalar_call_gv(PerlInterpreter *my_perl, GV *gv, int len, SV *args[], I32 *count, I32 *err, I32 *type) {
+    PERL_SET_CONTEXT(my_perl);
+    {
+        dSP;
+        int i;
+        SV * retval = NULL;
+
+        ENTER;
+        SAVETMPS;
+
+        PUSHMARK(SP);
+
+        if (len > 1) {
+            XPUSHs(args[0]);
+            for (i = 1; i < len; i++) {
+                if (args[i] != NULL) /* skip Nil which gets turned into NULL */
+                    XPUSHs(sv_2mortal(args[i]));
+            }
+        }
+        else if (len > 0)
+            if (args != NULL) /* skip Nil which gets turned into NULL */
+                XPUSHs((SV*)args);
+
+        PUTBACK;
+
+        SV * const rv = sv_2mortal(newRV((SV*)GvCV(gv))); /* FIXME: can be done once */
+
+        *count = call_sv(rv, G_SCALAR | G_EVAL);
+        SPAGAIN;
+
+        handle_p5_error(err);
+        retval = pop_return_values(my_perl, sp, *count, type);
+        SPAGAIN;
+
+        PUTBACK;
+        FREETMPS;
+        LEAVE;
+
+        return retval;
+    }
+}
+
 SV *p5_call_gv_two_args(PerlInterpreter *my_perl, GV *gv, SV *arg, SV *arg2, I32 *count, I32 *type, I32 *err) {
     PERL_SET_CONTEXT(my_perl);
     {
@@ -684,6 +726,41 @@ SV *p5_call_gv_two_args(PerlInterpreter *my_perl, GV *gv, SV *arg, SV *arg2, I32
         SV * const rv = sv_2mortal(newRV((SV*)GvCV(gv)));
 
         *count = call_sv(rv, G_ARRAY | G_EVAL);
+        SPAGAIN;
+
+        handle_p5_error(err);
+        if (*err)
+            fprintf(stderr, "err: %d\n", *err);
+        retval = pop_return_values(my_perl, sp, *count, type);
+        SPAGAIN;
+
+        PUTBACK;
+        FREETMPS;
+        LEAVE;
+
+        return retval;
+    }
+}
+
+SV *p5_scalar_call_gv_two_args(PerlInterpreter *my_perl, GV *gv, SV *arg, SV *arg2, I32 *count, I32 *type, I32 *err) {
+    PERL_SET_CONTEXT(my_perl);
+    {
+        dSP;
+        SV * retval = NULL;
+
+        ENTER;
+        SAVETMPS;
+
+        PUSHMARK(SP);
+
+        XPUSHs((SV*)arg);
+        XPUSHs((SV*)arg2);
+
+        PUTBACK;
+
+        SV * const rv = sv_2mortal(newRV((SV*)GvCV(gv)));
+
+        *count = call_sv(rv, G_SCALAR | G_EVAL);
         SPAGAIN;
 
         handle_p5_error(err);

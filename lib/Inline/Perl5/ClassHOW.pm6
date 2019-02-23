@@ -156,14 +156,23 @@ class Inline::Perl5::ClassHOW
                     nqp::scwbenable();
                     entry
                 }
+                my $arity = nqp::captureposelems(capture);
                 add_to_cache(SELF,
                     nqp::capturenamedshash(capture) || !nqp::captureposarg(capture, 0).defined
-                        ?? nqp::getattr(SELF, SELF.WHAT, '&!many-args')
-                        !! nqp::captureposelems(capture) == 1
+                        ?? $arity < 2 || nqp::captureposarg(capture, 1) !=== Scalar
+                            ?? nqp::getattr(SELF, SELF.WHAT, '&!many-args')
+                            !! nqp::getattr(SELF, SELF.WHAT, '&!scalar-many-args')
+                        !! $arity == 1
                             ?? nqp::getattr(SELF, SELF.WHAT, '&!no-args')
-                            !! nqp::captureposelems(capture) == 2 && !(nqp::captureposarg(capture, 1) ~~ Pair)
-                                ?? nqp::getattr(SELF, SELF.WHAT, '&!one-arg')
-                                !! nqp::getattr(SELF, SELF.WHAT, '&!many-args')
+                            !! $arity == 2 && !(nqp::captureposarg(capture, 1) ~~ Pair)
+                                ?? nqp::captureposarg(capture, 1) === Scalar
+                                    ?? nqp::getattr(SELF, SELF.WHAT, '&!scalar-no-args')
+                                    !! nqp::getattr(SELF, SELF.WHAT, '&!one-arg')
+                                !! $arity == 3 && nqp::captureposarg(capture, 1) === Scalar
+                                    ?? nqp::getattr(SELF, SELF.WHAT, '&!scalar-one-arg')
+                                    !! nqp::captureposarg(capture, 1) === Scalar
+                                        ?? nqp::getattr(SELF, SELF.WHAT, '&!scalar-many-args')
+                                        !! nqp::getattr(SELF, SELF.WHAT, '&!many-args')
                 )
             }
             ROLE
@@ -182,24 +191,36 @@ class Inline::Perl5::ClassHOW
         &find_best_dispatchee //= -> \SELF, Mu \capture { use nqp; nqp::getattr(SELF, SELF.WHAT, '&!many-args') };
         $proto does role :: {
             has &!many-args;
+            has &!scalar-many-args;
             has &!one-arg;
+            has &!scalar-one-arg;
             has &!no-args;
+            has &!scalar-no-args;
             method find_best_dispatchee(Mu \capture) {
                 find_best_dispatchee(self, capture);
             }
-            method add_methods(&many-args, &one-arg, &no-args) {
-                &!many-args := &many-args;
-                &!one-arg   := &one-arg;
-                &!no-args   := &no-args;
+            method add_methods(&many-args, &scalar-many-args, &one-arg, &scalar-one-arg, &no-args, &scalar-no-args) {
+                &!many-args        := &many-args;
+                &!scalar-many-args := &scalar-many-args;
+                &!one-arg          := &one-arg;
+                &!scalar-one-arg   := &scalar-one-arg;
+                &!no-args          := &no-args;
+                &!scalar-no-args   := &scalar-no-args;
             }
         }
 
-        my $method := my sub many-args(Any $self, *@args, *%kwargs) {
+        my $many-args := my sub many-args(Any $self, *@args, *%kwargs) {
             $self.defined
                 ?? $p5.invoke-parent($module, $self.wrapped-perl5-object, False, $name, [flat $self, |@args], %kwargs)
                 !! $p5.invoke($module, $name, |@args.list, |%kwargs)
         };
-        $proto.add_dispatchee($method);
+        $proto.add_dispatchee($many-args);
+        my $scalar-many-args := my sub scalar-many-args(Any $self, Scalar:U, *@args, *%kwargs) {
+            $self.defined
+                ?? $p5.invoke-parent($module, $self.wrapped-perl5-object, True, $name, [flat $self, |@args], %kwargs)
+                !! $p5.invoke($module, $name, |@args.list, |%kwargs)
+        };
+        $proto.add_dispatchee($many-args);
 
         my $defined_type := Metamodel::DefiniteHOW.new_type(:base_type($type), :definite(1));
         my $no-args := my sub no-args(Any:D \SELF) {
@@ -218,6 +239,22 @@ class Inline::Perl5::ClassHOW
             $p5.unpack_return_values($av, $retvals, $type);
         };
         $proto.add_dispatchee($no-args);
+        my $scalar-no-args := my sub scalar-no-args(Any:D \SELF, Scalar:U) {
+            my int32 $retvals;
+            my int32 $err;
+            my int32 $type;
+            my $av = $ip5.p5_scalar_call_gv(
+                $gv,
+                1,
+                SELF.wrapped-perl5-object,
+                $retvals,
+                $err,
+                $type,
+            );
+            $p5.handle_p5_exception() if $err;
+            $p5.unpack_return_values($av, $retvals, $type);
+        };
+        $proto.add_dispatchee($scalar-no-args);
         my $one-pair-arg := my sub one-pair-arg(Any:D $self, Pair \arg) {
             $p5.invoke-gv-arg($self.wrapped-perl5-object, $gv, arg)
         };
@@ -238,7 +275,23 @@ class Inline::Perl5::ClassHOW
             $p5.unpack_return_values($av, $retvals, $type);
         };
         $proto.add_dispatchee($one-arg);
-        $proto.add_methods($method, $one-arg, $no-args);
+        my $scalar-one-arg := my sub scalar-one-arg(Any:D \SELF, Scalar:U, \arg) {
+            my int32 $retvals = 0;
+            my int32 $err = 0;
+            my int32 $type = 0;
+            my $av = $ip5.p5_scalar_call_gv_two_args(
+                $gv,
+                SELF.wrapped-perl5-object,
+                $p5.p6_to_p5(arg),
+                $retvals,
+                $type,
+                $err,
+            );
+            $p5.handle_p5_exception if $err;
+            $p5.unpack_return_values($av, $retvals, $type);
+        };
+        $proto.add_dispatchee($scalar-one-arg);
+        $proto.add_methods($many-args, $scalar-many-args, $one-arg, $scalar-one-arg, $no-args, $scalar-no-args);
 
         self.add_method($type, $name, $proto)
     }

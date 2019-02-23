@@ -503,6 +503,22 @@ method invoke-gv(Pointer $obj, Pointer $function) {
     self.unpack_return_values($av, $retvals, $type);
 }
 
+method scalar-invoke-gv(Pointer $obj, Pointer $function) {
+    my int32 $retvals;
+    my int32 $err;
+    my int32 $type;
+    my $av = $!p5.p5_scalar_call_gv(
+        $function,
+        1,
+        $obj,
+        $retvals,
+        $err,
+        $type,
+    );
+    self.handle_p5_exception() if $err;
+    self.unpack_return_values($av, $retvals, $type);
+}
+
 method invoke-gv-simple-arg(Pointer $obj, Pointer $function, $arg) {
     my @svs := CArray[Pointer].new();
     @svs.ASSIGN-POS(0, $obj);
@@ -536,6 +552,31 @@ method invoke-gv-arg(Pointer $obj, Pointer $function, $arg) {
     my int32 $err;
     my int32 $type;
     my $av = $!p5.p5_call_gv(
+        $function,
+        2,
+        nativecast(Pointer, @svs),
+        $retvals,
+        $err,
+        $type,
+    );
+    self.handle_p5_exception() if $err;
+    self.unpack_return_values($av, $retvals, $type);
+}
+
+method scalar-invoke-gv-arg(Pointer $obj, Pointer $function, $arg) {
+    my @svs := CArray[Pointer].new();
+    @svs[0] = $obj;
+    if $arg.WHAT =:= Pair {
+        @svs[1] = self.p6_to_p5($arg.key);
+        @svs[2] = self.p6_to_p5($arg.value);
+    }
+    else {
+        @svs[1] = self.p6_to_p5($arg);
+    }
+    my int32 $retvals;
+    my int32 $err;
+    my int32 $type;
+    my $av = $!p5.p5_scalar_call_gv(
         $function,
         2,
         nativecast(Pointer, @svs),
@@ -602,6 +643,38 @@ method invoke-gv-args(Pointer $obj, Pointer $function, Capture $args) {
     my int32 $err;
     my int32 $type;
     my $av = $!p5.p5_call_gv(
+        $function,
+        $j,
+        nativecast(Pointer, @svs),
+        $retvals,
+        $err,
+        $type,
+    );
+    self.handle_p5_exception() if $err;
+    self.unpack_return_values($av, $retvals, $type);
+}
+
+method scalar-invoke-gv-args(Pointer $obj, Pointer $function, Capture $args) {
+    my @svs := CArray[Pointer].new();
+    my Int $j = 0;
+    @svs[$j++] = $obj;
+    for $args.list {
+        if $_.WHAT =:= Pair {
+            @svs[$j++] = self.p6_to_p5($_.key);
+            @svs[$j++] = self.p6_to_p5($_.value);
+        }
+        else {
+            @svs[$j++] = self.p6_to_p5($_);
+        }
+    }
+    for $args.hash {
+        @svs[$j++] = self.p6_to_p5($_.key);
+        @svs[$j++] = self.p6_to_p5($_.value);
+    }
+    my int32 $retvals;
+    my int32 $err;
+    my int32 $type;
+    my $av = $!p5.p5_scalar_call_gv(
         $function,
         $j,
         nativecast(Pointer, @svs),
