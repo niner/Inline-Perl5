@@ -1132,11 +1132,17 @@ use warnings;
 
 package Perl6::Object;
 
-use overload '""' => sub {
-    my ($self) = @_;
+use overload
+	'""' => sub {
+	    my ($self) = @_;
 
-    return $self->Str;
-};
+	    return $self->Str;
+	},
+	'cmp' => sub {
+            my ($self, $other) = @_;
+
+            return $self->Str cmp $other;
+	};
 
 our $AUTOLOAD;
 sub AUTOLOAD {
