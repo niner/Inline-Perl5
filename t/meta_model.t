@@ -4,7 +4,7 @@ BEGIN {
     plan 19; # adjust the skip as well!
 
     unless EVAL 'eval { require Moose; 1};', :lang<Perl5> {
-        skip('Perl 5 Moose module not available', 3);
+        skip('Perl 5 Moose module not available', 19);
         exit;
     }
 }
