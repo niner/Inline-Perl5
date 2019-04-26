@@ -17,9 +17,9 @@ use Inline::Perl5::TypeGlob;
 has Inline::Perl5::Interpreter $!p5;
 has Bool $!external_p5 = False;
 has Bool $!scalar_context = False;
+has %!loaded_modules;
 
 my $default_perl5;
-my %loaded_modules;
 
 # I'd like to call this from Inline::Perl5::Interpreter
 # But it raises an error in the END { ... } call
@@ -310,10 +310,19 @@ multi method p5_to_p6_type(Pointer:D \value, Blessed) {
     }
     else {
         $!p5.p5_sv_refcnt_inc(value);
-        if %loaded_modules{self.stash-name(value)}:exists {
-            my $class := %loaded_modules{self.stash-name(value)};
+        my $stash-name = self.stash-name(value);
+        if %!loaded_modules{$stash-name}:exists {
+            my $class := %!loaded_modules{$stash-name};
             use nqp;
-            nqp::p6bindattrinvres($class.CREATE, $class, '$!wrapped-perl5-object', value)
+            my $p5class := $class.^mro.list.first({nqp::istype($_.HOW, Inline::Perl5::ClassHOW)});
+            if $p5class !=:= Nil {
+                my $obj = nqp::p6bindattrinvres($class.CREATE, $p5class, '$!wrapped-perl5-object', value);
+                $!p5.p5_add_magic(value, $objects.keep($obj));
+                $obj
+            }
+            else {
+                Inline::Perl5::Object.new(perl5 => self, ptr => value)
+            }
         }
         else {
             Inline::Perl5::Object.new(perl5 => self, ptr => value)
@@ -453,6 +462,48 @@ multi method invoke(Str $package, Str $function, *@args, *%args) {
         $err,
         $type,
     );
+    self.handle_p5_exception() if $err;
+    self.unpack_return_values($av, $retvals, $type);
+}
+
+multi method invoke(Any:U $package, Str $base_package, Str $function, *@args, *%args) {
+    my int32 $retvals;
+    my int32 $err;
+    my int32 $type;
+    my $av = $!p5.p5_call_inherited_package_method(
+        $package.^name,
+        $base_package,
+        $function,
+        |self.setup_arguments(@args, %args),
+        $retvals,
+        $err,
+        $type,
+    );
+    if $type == -1 {
+        # need to create the P5 wrapper package
+        self.run: "
+            package {$package.^name} \{
+                our @ISA = qw(Perl6::Object $base_package);
+                {
+                    join "\n", $package.^methods.map(*.name).grep(/^\w+$/).grep({$_ ne 'DESTROY' and $_ ne 'isa' and $_ ne 'can'}).unique.map: -> $name {
+                        qq[sub $name \{
+                            Perl6::Object::call_method('$name', \@_);
+                        \}]
+                    }
+                }
+            \}
+        ";
+        $av = $!p5.p5_call_inherited_package_method(
+            $package.^name,
+            $base_package,
+            $function,
+            |self.setup_arguments(@args, %args),
+            $retvals,
+            $err,
+            $type,
+        );
+        %!loaded_modules{$package.^name} := $package;
+    }
     self.handle_p5_exception() if $err;
     self.unpack_return_values($av, $retvals, $type);
 }
@@ -915,14 +966,14 @@ method !create_wrapper_class(Str $module, Stash $stash) {
     my $first-time = True;
     my $symbols = self.subs_in_module($module);
     my $variables = self.variables_in_module($module);
-    if %loaded_modules{$module}:exists {
-        $class := %loaded_modules{$module};
+    if %!loaded_modules{$module}:exists {
+        $class := %!loaded_modules{$module};
         $first-time = False;
     }
     else {
         my $p5 := self;
 
-        %loaded_modules{$module} := $class :=
+        %!loaded_modules{$module} := $class :=
             Inline::Perl5::ClassHOW.new_type(name => $module, :p5(self), :ip5($!p5));
 
         # install methods

@@ -37,25 +37,14 @@ class Inline::Perl5::ClassHOW
             [Any, Mu],
             :authoritative, :call_accepts);
 
+        my $p5 = $!p5;
+        my $module = $!name;
+
         # Steal methods of Any/Mu for our method cache.
         for flat Any.^method_table.pairs, Mu.^method_table.pairs {
             %!cache{.key} //= .value;
         }
-        my $p5 = $!p5;
-        my $module = $!name;
-        %!cache<new> := my method new(\SELF: *@args, *%args) {
-            if (SELF.^name ne $module) { # subclass
-                my $self = Metamodel::Primitives.rebless(
-                    $p5.invoke($module, 'new', |@args, |%args.kv),
-                    SELF.WHAT,
-                );
-                $p5.rebless($self.wrapped-perl5-object, 'Perl6::Object', $self);
-                $self.BUILDALL(@args, %args);
-                return $self;
-            }
-            else {
-                return $p5.invoke($module, 'new', |@args.list, |%args.hash);
-            }
+        %!cache<DESTROY> := my method DESTROY (\SELF:) {
         };
         %!cache<AT-KEY> := my method AT-KEY(\SELF: Str() \key) {
             $p5.at-key(SELF.wrapped-perl5-object, key)
@@ -85,6 +74,7 @@ class Inline::Perl5::ClassHOW
             }
         );
         nqp::bindattr(self, $?CLASS, '$!composed_repr', nqp::unbox_i(1));
+        self.add_wrapper_method(type, 'new');
         $*W.add_object(type) if $*W;
 
         type
@@ -138,8 +128,7 @@ class Inline::Perl5::ClassHOW
         my $ip5 = $!ip5;
         my $module = $!name;
 
-        my $gv := $!p5.look-up-method(self.name($type), $name)
-            or die qq/Could not find method "$name" of "{self.name($type)}" object/;
+        my $gv := $!p5.look-up-method(self.name($type), $name);
 
         my $generic-proto := my proto method AUTOGEN(::T $: |) { * }
         my $proto := $generic-proto.instantiate_generic(%('T' => $type));
@@ -212,13 +201,13 @@ class Inline::Perl5::ClassHOW
         my $many-args := my sub many-args(Any $self, *@args, *%kwargs) {
             $self.defined
                 ?? $p5.invoke-parent($module, $self.wrapped-perl5-object, False, $name, [flat $self, |@args], %kwargs)
-                !! $p5.invoke($module, $name, |@args.list, |%kwargs)
+                !! $p5.invoke($self, $module, $name, |@args.list, |%kwargs)
         };
         $proto.add_dispatchee($many-args);
         my $scalar-many-args := my sub scalar-many-args(Any $self, Scalar:U, *@args, *%kwargs) {
             $self.defined
                 ?? $p5.invoke-parent($module, $self.wrapped-perl5-object, True, $name, [flat $self, |@args], %kwargs)
-                !! $p5.invoke($module, $name, |@args.list, |%kwargs)
+                !! $p5.invoke($self, $module, $name, |@args.list, |%kwargs)
         };
         $proto.add_dispatchee($many-args);
 
@@ -230,7 +219,7 @@ class Inline::Perl5::ClassHOW
             my $av = $ip5.p5_call_gv(
                 $gv,
                 1,
-                SELF.wrapped-perl5-object,
+                $p5.p6_to_p5(SELF),
                 $retvals,
                 $err,
                 $type,
@@ -301,7 +290,7 @@ class Inline::Perl5::ClassHOW
     }
 
     method BUILDALLPLAN($type) {
-        [].FLATTENABLE_LIST
+        []
     }
 
     method compose_attributes(\obj, :$compiler_services) {

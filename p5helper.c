@@ -600,10 +600,50 @@ GV *p5_look_up_package_method(PerlInterpreter *my_perl, char *module, char *name
     PERL_SET_CONTEXT(my_perl);
     {
         HV * const pkg = gv_stashpvn(module, strlen(module), 0);
-        GV * const gv = Perl_gv_fetchmethod_autoload(aTHX_ pkg, name, TRUE);
+        GV * const gv = gv_fetchmeth_pvn(pkg, name, strlen(name), -1, SVf_UTF8);
         if (gv && isGV(gv))
             return gv;
         return NULL;
+    }
+}
+
+SV *p5_call_inherited_package_method(PerlInterpreter *my_perl, char *package, char *base_package, char *name, int len, SV *args[], I32 *count, I32 *err, I32 *type) {
+    PERL_SET_CONTEXT(my_perl);
+    {
+        dSP;
+        SV * retval = NULL;
+        HV * stash = gv_stashpvn(package, strlen(package), SVf_UTF8);
+        int flags = G_ARRAY | G_EVAL;
+
+        if (stash == NULL) {
+            *type = -1; /* signal that a wrapper package needs to be created */
+            return NULL;
+        }
+
+        ENTER;
+        SAVETMPS;
+
+        PUSHMARK(SP);
+
+        XPUSHs(newSVpv(package, 0));
+        push_arguments(sp, len, args);
+
+        {
+            GV * const gv = p5_look_up_package_method(my_perl, base_package, name);
+            SV * const rv = sv_2mortal(newRV((SV*)GvCV(gv)));
+            *count = call_sv(rv, flags);
+        }
+
+        SPAGAIN;
+
+        handle_p5_error(err);
+
+        retval = pop_return_values(my_perl, sp, *count, type);
+
+        FREETMPS;
+        LEAVE;
+
+        return retval;
     }
 }
 
@@ -1001,6 +1041,19 @@ void p5_rebless_object(PerlInterpreter *my_perl, SV *obj, char *package, IV i) {
     }
 }
 
+void p5_add_magic(PerlInterpreter *my_perl, SV *obj, IV i) {
+    PERL_SET_CONTEXT(my_perl);
+    {
+        SV * const inst = SvRV(obj);
+        _perl6_magic priv;
+
+        /* set up magic */
+        priv.key = PERL6_MAGIC_KEY;
+        priv.index = i;
+        sv_magicext(inst, inst, PERL_MAGIC_ext, &p5_inline_mg_vtbl, (char *) &priv, sizeof(priv));
+    }
+}
+
 SV *p5_wrap_p6_object(PerlInterpreter *my_perl, IV i, SV *p5obj) {
     PERL_SET_CONTEXT(my_perl);
     {
@@ -1223,6 +1276,10 @@ XS(p5_call_p6_method) {
     }
     SV * const obj_deref = SvRV(obj);
     MAGIC * const mg = mg_find(obj_deref, '~');
+    if (!mg) {
+        XSRETURN_EMPTY;
+        return;
+    }
     _perl6_magic* const p6mg = (_perl6_magic*)(mg->mg_ptr);
     SV *err = NULL;
     SV * const args_rv = newRV_noinc((SV *) args);

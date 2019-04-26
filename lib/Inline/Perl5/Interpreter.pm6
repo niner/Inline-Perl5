@@ -205,10 +205,16 @@ class Inline::Perl5::Interpreter is repr('CPointer') {
     method p5_call_package_method(Str, Str, int32, CArray[Pointer], int32 is rw, int32 is rw, int32 is rw) is native($p5helper)
         returns Pointer { ... }
 
+    method p5_call_inherited_package_method(Str, Str, Str, int32, CArray[Pointer], int32 is rw, int32 is rw, int32 is rw) is native($p5helper)
+        returns Pointer { ... }
+
     method p5_call_code_ref(Pointer, int32, CArray[Pointer], int32 is rw, int32 is rw, int32 is rw) is native($p5helper)
         returns Pointer { ... }
 
     method p5_rebless_object(Pointer, Str, IV) is native($p5helper)
+        { ... }
+
+    method p5_add_magic(Pointer, IV) is native($p5helper)
         { ... }
 
     method p5_destruct_perl() is native($p5helper)

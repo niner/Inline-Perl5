@@ -47,9 +47,9 @@ sub baz {
 }
 
 @Perl6::Object::Foo::ISA = ("Perl6::Object");
-@Perl6::Object::Bar::ISA = ("Perl6::Object");
+@Perl6::Object::P5Bar::ISA = ("Perl6::Object");
 
-package Bar;
+package P5Bar;
 
 use Moose;
 
@@ -81,7 +81,7 @@ class Baz does Inline::Perl5::Perl5Parent['Foo', $p5] {
 
 is(Baz.new.test, 'Perl6!');
 
-class Qux does Inline::Perl5::Perl5Parent['Bar', $p5] {
+class Qux does Inline::Perl5::Perl5Parent['P5Bar', $p5] {
     method qux {
         return "Perl6!!";
     }
