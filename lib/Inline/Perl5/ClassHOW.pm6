@@ -219,7 +219,7 @@ class Inline::Perl5::ClassHOW
             my $av = $ip5.p5_call_gv(
                 $gv,
                 1,
-                $p5.p6_to_p5(SELF),
+                SELF.wrapped-perl5-object,
                 $retvals,
                 $err,
                 $type,
