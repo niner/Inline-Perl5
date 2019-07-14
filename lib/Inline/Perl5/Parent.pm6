@@ -9,7 +9,7 @@ role Inline::Perl5::Parent[Str:D $package, $perl5] {
 
     method initialize-perl5-object($parent, @args, %args) {
         $!parent = $parent // $perl5.invoke($package, 'new', |@args, |%args.kv);
-        $perl5.rebless($!parent, "Perl6::Object::$package", self);
+        $perl5.rebless($!parent, "Perl6::Object::$package", self); # also adds magic
         return self;
     }
 

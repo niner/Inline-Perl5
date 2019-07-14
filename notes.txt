@@ -1,0 +1,34 @@
+FIXME sv_2mortal the P5 ref when wrapping in P6.
+
+in P5 destructor: remove object from objects PPA and set P6 object id to 0 as a flag,
+arm the destructor again: sv_2mortal(SvREFCNT_inc(self))
+when passing the object to P5 again and we note that it already has magic, but the object id is 0,
+add the P6 object to the list and note the id
+
+scrap that! New plan: I can use the original reference to the P5 object that
+contains the base class' data and store it in the Perl 6 object. And when I
+pass the Perl 6 object to Perl 5 code I can simply create a new reference that
+will be pretty indistiguishable from the original one but will have an
+independent reference count. DOESNT WORK! Every variable is a new SV, i.e. a new ref
+This way the Perl 6 object will have complete ownership of the Perl 5 kernel,
+while it's still possible for Perl 5 code to keep the Perl 6 object alive!
+
+Plan: start with refcnt 1
+When passing to P5: add magic, keep refcnt at 1 and mortalize
+in destructor: free P6 object and resurrect
+When passing to P5 again: re-set index, keep refcnt at 1 and mortalize
+in P6 destructor: remove magic, free P5 object
+
+Case 1: obj created, never passed to P5 and destroyed
+  create: ref refcnt 1, obj refcnt 1
+  destroyed: ref refcnt 0, obj refcnt 0 (no magic!)
+Case 2: obj created, passed only to P5 and destroyed
+  create: ref refcnt 1, obj refcnt 1
+  passed to P5, ref refcnt 1, obj refcnt 2 (mortalized)
+  destroyed in P5: refcnt 1, disabled magic
+      -> P6 obj gets collected -> P5 obj destroyed because no magic
+Case 3: obj created, passed to P5, kept in P6, later destroyed
+  create: refcnt 1
+  passed to P5, refcnt 2, mortalized
+  destroyed in P5: refcnt 1, disabled magic
+Case 5: obj created, passed to P5, kept in P6, later released in P6

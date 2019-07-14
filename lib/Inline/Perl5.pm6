@@ -96,18 +96,31 @@ sub free_p6_object(Int $index) {
     $objects.free($index);
 }
 
+method unwrap-perl5-object($value) {
+    my $o = $value.wrapped-perl5-object;
+    $!p5.p5_is_live_wrapped_p6_object($o)
+        ?? $!p5.p5_newRV_inc($o)
+        !! $!p5.p5_add_magic($o, $objects.keep($value))
+}
+
 multi method p6_to_p5(Any:D $value) {
     if $value.^mro.grep: {$_.HOW ~~ Inline::Perl5::ClassHOW} {
-        my $sv = $value.wrapped-perl5-object;
-        $!p5.p5_sv_refcnt_inc($sv);
-        return $sv
+        my $o = $value.wrapped-perl5-object;
+        if $!p5.p5_is_live_wrapped_p6_object($o) {
+            $!p5.p5_newRV_inc($o)
+        }
+        else {
+            $!p5.p5_add_magic($o, $objects.keep($value))
+        }
     }
-    my $index = $objects.keep($value);
+    else {
+        my $index = $objects.keep($value);
 
-    $!p5.p5_wrap_p6_object(
-        $index,
-        Pointer,
-    );
+        $!p5.p5_wrap_p6_object(
+            $index,
+            Pointer,
+        )
+    }
 }
 multi method p6_to_p5(Callable:D $value, Pointer $inst = Pointer) {
     my $index = $objects.keep($value);
@@ -182,6 +195,10 @@ multi method p6_to_p5(Regex:D $value) {
 }
 multi method p6_to_p5(Inline::Perl5::TypeGlob:D $value) returns Pointer {
     $value.gv
+}
+
+method p5_sv_rv(Pointer $sv) {
+    return $!p5.p5_sv_rv($sv);
 }
 
 method p5_sv_reftype(Pointer $sv) {
@@ -316,9 +333,10 @@ multi method p5_to_p6_type(Pointer:D \value, Blessed) {
             use nqp;
             my $p5class := $class.^mro.list.first({nqp::istype($_.HOW, Inline::Perl5::ClassHOW)});
             if $p5class !=:= Nil {
-                my $obj = nqp::p6bindattrinvres($class.CREATE, $p5class, '$!wrapped-perl5-object', value);
-                $!p5.p5_add_magic(value, $objects.keep($obj));
-                $obj
+                my $obj = $!p5.p5_sv_rv(value);
+                $!p5.p5_sv_refcnt_inc($obj);
+                $!p5.p5_sv_refcnt_dec(value);
+                nqp::p6bindattrinvres($class.CREATE, $p5class, '$!wrapped-perl5-object', $obj);
             }
             else {
                 Inline::Perl5::Object.new(perl5 => self, ptr => value)
@@ -484,6 +502,7 @@ multi method invoke(Any:U $package, Str $base_package, Str $function, *@args, *%
         self.run: "
             package {$package.^name} \{
                 our @ISA = qw(Perl6::Object $base_package);
+                sub DESTROY \{ \$_[0]->{$base_package}::DESTROY; \}
                 {
                     join "\n", $package.^methods.map(*.name).grep(/^\w+$/).grep({$_ ne 'DESTROY' and $_ ne 'isa' and $_ ne 'can'}).unique.map: -> $name {
                         qq[sub $name \{
@@ -802,7 +821,7 @@ method execute(Pointer $code_ref, *@args) {
 
 method at-key(Pointer $obj, \key) {
     my $buf = $utf8-encoder.encode-chars(key);
-    self.p5_to_p6($!p5.p5_hv_fetch($!p5.p5_sv_rv($obj), $buf.elems, $buf))
+    self.p5_to_p6($!p5.p5_hv_fetch($obj, $buf.elems, $buf))
 }
 
 method global(Str $name) {

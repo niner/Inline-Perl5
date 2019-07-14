@@ -31,6 +31,21 @@ class Inline::Perl5::ClassHOW
         $type
     }
 
+    method ip5(\type) {
+        $!ip5;
+    }
+
+    my $destroyers := [
+            my method DESTROY (\SELF:) {
+                SELF.^ip5.p5_remove_magic(SELF.wrapped-perl5-object);
+                SELF.^ip5.p5_sv_refcnt_dec(SELF.wrapped-perl5-object);
+            },
+        ].FLATTENABLE_LIST;
+
+    method destroyers(\type) {
+        $destroyers
+    }
+
     method compose(\type) {
         # Set up type checking with cache.
         Metamodel::Primitives.configure_type_checking(type,
@@ -38,22 +53,39 @@ class Inline::Perl5::ClassHOW
             :authoritative, :call_accepts);
 
         my $p5 = $!p5;
+        my $ip5 = $!ip5;
         my $module = $!name;
+
+        $p5.run: "
+            package $module \{
+                my \$destroy;
+                BEGIN \{ \$destroy = \\&{$module}::DESTROY; \};
+                {'sub DESTROY { $destroy->(@_) if Perl6::Object::destroy($_[0]) and $destroy and $destroy ne \&DESTROY; }'}
+            \}
+        ";
 
         # Steal methods of Any/Mu for our method cache.
         for flat Any.^method_table.pairs, Mu.^method_table.pairs {
             %!cache{.key} //= .value;
         }
-        %!cache<DESTROY> := my method DESTROY (\SELF:) {
-        };
+
+        %!cache<Str> := my method Str(\SELF:) {
+            SELF.^name ~ '(' ~ SELF.wrapped-perl5-object.gist ~ ')'
+        }
         %!cache<AT-KEY> := my method AT-KEY(\SELF: Str() \key) {
             $p5.at-key(SELF.wrapped-perl5-object, key)
+        }
+        %!cache<DESTROY> := my method DESTROY(\SELF:) {
+            $ip5.p5_remove_magic(SELF.wrapped-perl5-object);
+            $ip5.p5_sv_refcnt_dec(SELF.wrapped-perl5-object);
         }
         Metamodel::Primitives.install_method_cache(type, %!cache, :!authoritative);
 
         use nqp;
         nqp::bindattr(self, $?CLASS, '%!attribute_lookup', nqp::hash());
         nqp::bindattr(self, $?CLASS, '@!attributes', nqp::list());
+
+        nqp::settypefinalize(type, 1);
 
         self.add_attribute(type, Attribute.new(
             :name<$!wrapped-perl5-object>,
@@ -119,7 +151,8 @@ class Inline::Perl5::ClassHOW
 
     method find_method($type, $name) is raw {
         return if $name eq 'cstr';
-        Any.^find_method($name) // self.add_wrapper_method($type, $name);
+        return if $name eq 'DESTROY';
+        %!cache{$name} // Any.^find_method($name) // self.add_wrapper_method($type, $name);
     }
 
     my &find_best_dispatchee;
@@ -216,10 +249,10 @@ class Inline::Perl5::ClassHOW
             my int32 $retvals;
             my int32 $err;
             my int32 $type;
-            my $av = $ip5.p5_call_gv(
+            my $av = $ip5.p5_call_parent_gv(
                 $gv,
                 1,
-                SELF.wrapped-perl5-object,
+                $p5.unwrap-perl5-object(SELF),
                 $retvals,
                 $err,
                 $type,
@@ -232,10 +265,10 @@ class Inline::Perl5::ClassHOW
             my int32 $retvals;
             my int32 $err;
             my int32 $type;
-            my $av = $ip5.p5_scalar_call_gv(
+            my $av = $ip5.p5_scalar_call_parent_gv(
                 $gv,
                 1,
-                SELF.wrapped-perl5-object,
+                $p5.unwrap-perl5-object(SELF),
                 $retvals,
                 $err,
                 $type,
@@ -254,7 +287,7 @@ class Inline::Perl5::ClassHOW
             my int32 $type = 0;
             my $av = $ip5.p5_call_gv_two_args(
                 $gv,
-                SELF.wrapped-perl5-object,
+                $p5.unwrap-perl5-object(SELF),
                 $p5.p6_to_p5(arg),
                 $retvals,
                 $type,
@@ -270,7 +303,7 @@ class Inline::Perl5::ClassHOW
             my int32 $type = 0;
             my $av = $ip5.p5_scalar_call_gv_two_args(
                 $gv,
-                SELF.wrapped-perl5-object,
+                $p5.unwrap-perl5-object(SELF),
                 $p5.p6_to_p5(arg),
                 $retvals,
                 $type,

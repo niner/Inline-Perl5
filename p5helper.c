@@ -7,10 +7,12 @@
 static void xs_init (pTHX);
 EXTERN_C void boot_DynaLoader (pTHX_ CV* cv);
 EXTERN_C void boot_Socket (pTHX_ CV* cv);
+int p5_is_live_wrapped_p6_object(PerlInterpreter *my_perl, SV *obj);
 
 typedef struct {
     I32 key; /* to make sure it came from Inline */
     IV index;
+    I32 is_wrapper;
 } _perl6_magic;
 
 typedef struct {
@@ -28,6 +30,7 @@ typedef struct {
 
 XS(p5_call_p6_method);
 XS(p5_call_p6_extension_method);
+XS(p5_destroy_p5_object);
 XS(p5_call_p6_callable);
 XS(p5_hash_at_key);
 XS(p5_hash_assign_key);
@@ -40,6 +43,7 @@ EXTERN_C void xs_init(pTHX) {
     newXS("DynaLoader::boot_DynaLoader", boot_DynaLoader, file);
     newXS("Perl6::Object::call_method", p5_call_p6_method, file);
     newXS("Perl6::Object::call_extension_method", p5_call_p6_extension_method, file);
+    newXS("Perl6::Object::destroy", p5_destroy_p5_object, file);
     newXS("Perl6::Hash::FETCH", p5_hash_at_key, file);
     newXS("Perl6::Hash::STORE", p5_hash_assign_key, file);
     newXS("Perl6::Callable::call", p5_call_p6_callable, file);
@@ -276,6 +280,11 @@ SV *p5_sv_to_ref(PerlInterpreter *my_perl, SV *sv) {
     return newRV_noinc(sv);
 }
 
+int p5_sv_refcnt(PerlInterpreter *my_perl, SV *sv) {
+    PERL_SET_CONTEXT(my_perl);
+    return SvREFCNT(sv);
+}
+
 void p5_sv_refcnt_dec(PerlInterpreter *my_perl, SV *sv) {
     PERL_SET_CONTEXT(my_perl);
     SvREFCNT_dec(sv);
@@ -283,6 +292,14 @@ void p5_sv_refcnt_dec(PerlInterpreter *my_perl, SV *sv) {
 
 void p5_sv_refcnt_inc(PerlInterpreter *my_perl, SV *sv) {
     SvREFCNT_inc(sv);
+}
+
+void p5_sv_2mortal(PerlInterpreter *my_perl, SV *sv) {
+    sv_2mortal(sv);
+}
+
+SV *p5_new_mortal_reference(PerlInterpreter *my_perl, SV *sv) {
+    return newRV_inc(SvRV(sv));
 }
 
 SV *p5_int_to_sv(PerlInterpreter *my_perl, IV value) {
@@ -705,7 +722,96 @@ SV *p5_call_gv(PerlInterpreter *my_perl, GV *gv, int len, SV *args[], I32 *count
     }
 }
 
+SV *p5_call_parent_gv(PerlInterpreter *my_perl, GV *gv, int len, SV *args[], I32 *count, I32 *err, I32 *type) {
+    PERL_SET_CONTEXT(my_perl);
+    {
+        dSP;
+        int i;
+        SV * obj;
+        SV * retval = NULL;
+
+        ENTER;
+        SAVETMPS;
+
+        PUSHMARK(SP);
+
+        obj = len > 1 ? args[0] : (SV*) args;
+
+        if (len > 1) {
+            XPUSHs(obj);
+            for (i = 1; i < len; i++) {
+                if (args[i] != NULL) /* skip Nil which gets turned into NULL */
+                    XPUSHs(sv_2mortal(args[i]));
+            }
+        }
+        else if (len > 0)
+            if (args != NULL) /* skip Nil which gets turned into NULL */
+                XPUSHs(obj);
+
+        PUTBACK;
+
+        SV * const rv = sv_2mortal(newRV((SV*)GvCV(gv))); /* FIXME: can be done once */
+
+        *count = call_sv(rv, G_ARRAY | G_EVAL);
+        SPAGAIN;
+
+        handle_p5_error(err);
+        retval = pop_return_values(my_perl, sp, *count, type);
+        SPAGAIN;
+
+        SvREFCNT_dec(obj);
+
+        PUTBACK;
+        FREETMPS;
+        LEAVE;
+
+        return retval;
+    }
+}
+
 SV *p5_scalar_call_gv(PerlInterpreter *my_perl, GV *gv, int len, SV *args[], I32 *count, I32 *err, I32 *type) {
+    PERL_SET_CONTEXT(my_perl);
+    {
+        dSP;
+        int i;
+        SV * retval = NULL;
+
+        ENTER;
+        SAVETMPS;
+
+        PUSHMARK(SP);
+
+        if (len > 1) {
+            XPUSHs(args[0]);
+            for (i = 1; i < len; i++) {
+                if (args[i] != NULL) /* skip Nil which gets turned into NULL */
+                    XPUSHs(sv_2mortal(args[i]));
+            }
+        }
+        else if (len > 0)
+            if (args != NULL) /* skip Nil which gets turned into NULL */
+                XPUSHs((SV*)args);
+
+        PUTBACK;
+
+        SV * const rv = sv_2mortal(newRV((SV*)GvCV(gv))); /* FIXME: can be done once */
+
+        *count = call_sv(rv, G_SCALAR | G_EVAL);
+        SPAGAIN;
+
+        handle_p5_error(err);
+        retval = pop_return_values(my_perl, sp, *count, type);
+        SPAGAIN;
+
+        PUTBACK;
+        FREETMPS;
+        LEAVE;
+
+        return retval;
+    }
+}
+
+SV *p5_scalar_call_parent_gv(PerlInterpreter *my_perl, GV *gv, int len, SV *args[], I32 *count, I32 *err, I32 *type) {
     PERL_SET_CONTEXT(my_perl);
     {
         dSP;
@@ -758,8 +864,8 @@ SV *p5_call_gv_two_args(PerlInterpreter *my_perl, GV *gv, SV *arg, SV *arg2, I32
 
         PUSHMARK(SP);
 
-        XPUSHs((SV*)arg);
-        XPUSHs((SV*)arg2);
+        XPUSHs(sv_2mortal((SV*)arg));
+        XPUSHs(sv_2mortal((SV*)arg2));
 
         PUTBACK;
 
@@ -793,8 +899,8 @@ SV *p5_scalar_call_gv_two_args(PerlInterpreter *my_perl, GV *gv, SV *arg, SV *ar
 
         PUSHMARK(SP);
 
-        XPUSHs((SV*)arg);
-        XPUSHs((SV*)arg2);
+        XPUSHs(sv_2mortal((SV*)arg));
+        XPUSHs(sv_2mortal((SV*)arg2));
 
         PUTBACK;
 
@@ -867,7 +973,7 @@ SV *p5_call_method(PerlInterpreter *my_perl, SV *obj, I32 context, char *name, i
     }
 }
 
-SV *p5_call_parent_method(PerlInterpreter *my_perl, char *package, SV *obj, I32 context, char *name, int len, SV *args[], I32 *count, I32 *err, I32 *type) {
+SV *p5_call_parent_method(PerlInterpreter *my_perl, char *package, SV *parent_obj, I32 context, char *name, int len, SV *args[], I32 *count, I32 *err, I32 *type) {
     PERL_SET_CONTEXT(my_perl);
     {
         dSP;
@@ -878,13 +984,17 @@ SV *p5_call_parent_method(PerlInterpreter *my_perl, char *package, SV *obj, I32 
         ENTER;
         SAVETMPS;
 
-        HV * const pkg = package != NULL ? gv_stashpv(package, 0) : SvSTASH((SV*)SvRV(obj));
+        HV * const pkg = package != NULL ? gv_stashpv(package, 0) : SvSTASH((SV*)SvRV(parent_obj));
         GV * const gv = Perl_gv_fetchmethod_autoload(aTHX_ pkg, name, TRUE);
         if (gv && isGV(gv)) {
+            SV * obj;
+
             PUSHMARK(SP);
 
+            obj = len > 1 ? args[0] : (SV*) args;
+
             if (len > 1) {
-                XPUSHs(package != NULL ? sv_2mortal(args[0]) : args[0]);
+                XPUSHs(obj);
                 for (i = 1; i < len; i++) {
                     if (args[i] != NULL) /* skip Nil which gets turned into NULL */
                         XPUSHs(sv_2mortal(args[i]));
@@ -892,7 +1002,7 @@ SV *p5_call_parent_method(PerlInterpreter *my_perl, char *package, SV *obj, I32 
             }
             else if (len > 0)
                 if (args != NULL) /* skip Nil which gets turned into NULL */
-                    XPUSHs(package != NULL ? sv_2mortal((SV*)args) : (SV*)args);
+                    XPUSHs(obj);
 
             PUTBACK;
 
@@ -904,9 +1014,10 @@ SV *p5_call_parent_method(PerlInterpreter *my_perl, char *package, SV *obj, I32 
             handle_p5_error(err);
             retval = pop_return_values(my_perl, sp, *count, type);
             SPAGAIN;
-        }
-        else {
-            ERRSV = newSVpvf("Could not find method \"%s\" of \"%s\" object", name, HvNAME(pkg));
+
+            if (p5_is_live_wrapped_p6_object(my_perl, SvRV(obj))) {
+                SvREFCNT_dec(obj);
+            }
         }
 
         PUTBACK;
@@ -975,13 +1086,30 @@ SV *p5_call_code_ref(PerlInterpreter *my_perl, SV *code_ref, int len, SV *args[]
 
 int p5_free_perl6_obj(pTHX_ SV* obj, MAGIC *mg)
 {
-    if (mg) {
+    if (mg && ((_perl6_magic*) mg->mg_ptr)->index != -1) {
         _perl6_magic* const p6mg = (_perl6_magic*) mg->mg_ptr;
         /* need to be extra careful here as PL_modglobal could have been cleaned already */
         SV **cbs_entry = hv_fetchs(PL_modglobal, "Inline::Perl5 callbacks", 0);
         if (cbs_entry) {
             perl6_callbacks *cbs = (perl6_callbacks*)SvIV(*cbs_entry);
             cbs->free_p6_object(p6mg->index);
+        }
+    }
+    return 0;
+}
+
+int p5_free_wrapped_perl6_obj(pTHX_ SV* obj, MAGIC *mg)
+{
+    if (mg) {
+        _perl6_magic* const p6mg = (_perl6_magic*) mg->mg_ptr;
+        /* need to be extra careful here as PL_modglobal could have been cleaned already */
+        if (p6mg->index != 0) {
+            SV **cbs_entry = hv_fetchs(PL_modglobal, "Inline::Perl5 callbacks", 0);
+            if (cbs_entry) {
+                perl6_callbacks *cbs = (perl6_callbacks*)SvIV(*cbs_entry);
+                cbs->free_p6_object(p6mg->index);
+            }
+            p6mg->index = 0;
         }
     }
     return 0;
@@ -1012,6 +1140,17 @@ MGVTBL p5_inline_mg_vtbl = {
     0x0
 };
 
+MGVTBL p5_inline_wrapped_mg_vtbl = {
+    0x0,
+    0x0,
+    0x0,
+    0x0,
+    &p5_free_wrapped_perl6_obj,
+    0x0,
+    0x0,
+    0x0
+};
+
 MGVTBL p5_inline_hash_mg_vtbl = {
     0x0,
     0x0,
@@ -1037,20 +1176,32 @@ void p5_rebless_object(PerlInterpreter *my_perl, SV *obj, char *package, IV i) {
         /* set up magic */
         priv.key = PERL6_MAGIC_KEY;
         priv.index = i;
+        priv.is_wrapper = 0;
         sv_magicext(inst, inst, PERL_MAGIC_ext, &p5_inline_mg_vtbl, (char *) &priv, sizeof(priv));
     }
 }
 
-void p5_add_magic(PerlInterpreter *my_perl, SV *obj, IV i) {
+void p5_remove_magic(PerlInterpreter *my_perl, SV *obj) {
+    mg_free_type(obj, PERL_MAGIC_ext);
+}
+
+SV *p5_add_magic(PerlInterpreter *my_perl, SV *inst, IV i) {
     PERL_SET_CONTEXT(my_perl);
     {
-        SV * const inst = SvRV(obj);
-        _perl6_magic priv;
+        MAGIC * const mg = mg_find(inst, '~');
+        if (mg && mg->mg_ptr && ((_perl6_magic*)(mg->mg_ptr))->key == PERL6_MAGIC_KEY) {
+            ((_perl6_magic*)(mg->mg_ptr))->index = i;
+        }
+        else {
+            _perl6_magic priv;
 
-        /* set up magic */
-        priv.key = PERL6_MAGIC_KEY;
-        priv.index = i;
-        sv_magicext(inst, inst, PERL_MAGIC_ext, &p5_inline_mg_vtbl, (char *) &priv, sizeof(priv));
+            /* set up magic */
+            priv.key = PERL6_MAGIC_KEY;
+            priv.index = i;
+            priv.is_wrapper = 1;
+            sv_magicext(inst, inst, PERL_MAGIC_ext, &p5_inline_mg_vtbl, (char *) &priv, sizeof(priv));
+        }
+        return newRV_noinc(inst);
     }
 }
 
@@ -1072,6 +1223,7 @@ SV *p5_wrap_p6_object(PerlInterpreter *my_perl, IV i, SV *p5obj) {
         /* set up magic */
         priv.key = p5obj == NULL ? PERL6_MAGIC_KEY : PERL6_EXTENSION_MAGIC_KEY;
         priv.index = i;
+        priv.is_wrapper = 0;
         sv_magicext(inst, inst, PERL_MAGIC_ext, &p5_inline_mg_vtbl, (char *) &priv, sizeof(priv));
 
         return inst_ptr;
@@ -1111,6 +1263,7 @@ SV *p5_wrap_p6_callable(PerlInterpreter *my_perl, IV i, SV *p5obj) {
     /* set up magic */
     priv.key = PERL6_MAGIC_KEY;
     priv.index = i;
+    priv.is_wrapper = 0;
     sv_magic(inst, inst, PERL_MAGIC_ext, (char *) &priv, sizeof(priv));
     MAGIC * const mg = mg_find(inst, PERL_MAGIC_ext);
     mg->mg_virtual = &p5_inline_mg_vtbl;
@@ -1203,6 +1356,21 @@ int p5_is_wrapped_p6_object(PerlInterpreter *my_perl, SV *obj) {
     }
 }
 
+int p5_is_live_wrapped_p6_object(PerlInterpreter *my_perl, SV *obj) {
+    PERL_SET_CONTEXT(my_perl);
+    {
+        /* check for magic! */
+        MAGIC * const mg = mg_find(obj, '~');
+        return (
+            mg
+            && mg->mg_ptr
+            && ((_perl6_magic*)(mg->mg_ptr))->key == PERL6_MAGIC_KEY
+            && ((_perl6_magic*)(mg->mg_ptr))->index != -1
+            && ((_perl6_magic*)(mg->mg_ptr))->is_wrapper == 1
+        );
+    }
+}
+
 IV p5_unwrap_p6_object(PerlInterpreter *my_perl, SV *obj) {
     PERL_SET_CONTEXT(my_perl);
     {
@@ -1287,6 +1455,31 @@ XS(p5_call_p6_method) {
     declare_cbs;
     SV * retval = cbs->call_p6_method(p6mg->index, name_pv, GIMME_V == G_SCALAR, args_rv, &err);
     return post_callback(ax, sp, items, args_rv, err, retval);
+}
+
+XS(p5_destroy_p5_object) {
+    dXSARGS;
+    SV * obj = ST(0);
+    SV * const inst = SvRV(obj);
+    MAGIC * mg = mg_find(inst, '~');
+    int destroyed = 1;
+    if (mg) {
+        _perl6_magic* const p6mg = (_perl6_magic*) mg->mg_ptr;
+        /* need to be extra careful here as PL_modglobal could have been cleaned already */
+        if (p6mg->index != -1 && !PL_in_clean_objs) {
+            SV **cbs_entry = hv_fetchs(PL_modglobal, "Inline::Perl5 callbacks", 0);
+            if (cbs_entry) {
+                perl6_callbacks *cbs = (perl6_callbacks*)SvIV(*cbs_entry);
+                cbs->free_p6_object(p6mg->index);
+            }
+            p6mg->index = -1;
+            SvREFCNT_inc(inst); // resurrect it!
+            destroyed = 0;
+        }
+    }
+    sp -= items;
+    XPUSHs(newSViv(destroyed));
+    XSRETURN(1);
 }
 
 MAGIC *find_shadow_magic(SV *p6cb, SV *static_class, SV *obj) {

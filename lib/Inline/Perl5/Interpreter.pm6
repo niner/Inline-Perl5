@@ -82,6 +82,9 @@ class Inline::Perl5::Interpreter is repr('CPointer') {
     method p5_sv_to_hv(Pointer) is native($p5helper)
         returns Pointer { ... }
 
+    method p5_sv_refcnt(Pointer) is native($p5helper)
+        returns int32 { ... }
+
     method p5_sv_refcnt_dec(Pointer) is native($p5helper)
         { ... }
 
@@ -90,6 +93,9 @@ class Inline::Perl5::Interpreter is repr('CPointer') {
 
     method p5_sv_refcnt_inc(Pointer) is native($p5helper)
         { ... }
+
+    method p5_new_mortal_reference(Pointer) is native($p5helper)
+        returns Pointer { ... }
 
     method p5_int_to_sv(IV) is native($p5helper)
         returns Pointer { ... }
@@ -187,7 +193,13 @@ class Inline::Perl5::Interpreter is repr('CPointer') {
     method p5_call_gv(Pointer, int32, Pointer, int32 is rw, int32 is rw, int32 is rw) is native($p5helper)
         returns Pointer { ... }
 
+    method p5_call_parent_gv(Pointer, int32, Pointer, int32 is rw, int32 is rw, int32 is rw) is native($p5helper)
+        returns Pointer { ... }
+
     method p5_scalar_call_gv(Pointer, int32, Pointer, int32 is rw, int32 is rw, int32 is rw) is native($p5helper)
+        returns Pointer { ... }
+
+    method p5_scalar_call_parent_gv(Pointer, int32, Pointer, int32 is rw, int32 is rw, int32 is rw) is native($p5helper)
         returns Pointer { ... }
 
     method p5_call_gv_two_args(Pointer, Pointer, Pointer, int32 is rw, int32 is rw, int32 is rw) is native($p5helper)
@@ -214,8 +226,11 @@ class Inline::Perl5::Interpreter is repr('CPointer') {
     method p5_rebless_object(Pointer, Str, IV) is native($p5helper)
         { ... }
 
-    method p5_add_magic(Pointer, IV) is native($p5helper)
+    method p5_remove_magic(Pointer) is native($p5helper)
         { ... }
+
+    method p5_add_magic(Pointer, IV) is native($p5helper)
+        returns Pointer { ... }
 
     method p5_destruct_perl() is native($p5helper)
         { ... }
@@ -262,6 +277,9 @@ class Inline::Perl5::Interpreter is repr('CPointer') {
         returns Pointer { ... }
 
     method p5_is_wrapped_p6_object(Pointer) is native($p5helper)
+        returns int32 { ... }
+
+    method p5_is_live_wrapped_p6_object(Pointer) is native($p5helper)
         returns int32 { ... }
 
     method p5_unwrap_p6_object(Pointer) is native($p5helper)

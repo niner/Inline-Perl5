@@ -27,7 +27,7 @@ role Inline::Perl5::Extension[Str:D $package, $perl5] {
 
     method initialize-perl5-object($target) {
         $!target = $target;
-        $perl5.p6_to_p5(self, $!target.ptr);
+        $perl5.p6_to_p5(self, $!target.ptr); # for the side-effect of adding magic to the P5 object
         $perl5.sv_refcnt_dec($!target.ptr); # Was increased by p5_to_p6 but we must not keep $!target alive
         return self;
     }

@@ -69,7 +69,7 @@ class Inline::Perl5::Object {
     }
 
     method AT-KEY(Inline::Perl5::Object:D: Str() \key) is raw {
-        $!perl5.at-key($!ptr, key)
+        $!perl5.at-key($!perl5.p5_sv_rv($!ptr), key)
     }
 }
 
