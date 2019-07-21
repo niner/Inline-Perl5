@@ -5,13 +5,13 @@ class Inline::Language::ObjectKeeper {
     method keep(Any:D $value) returns Int {
         if $!last_free != -1 {
             my $index = $!last_free;
-            $!last_free = @!objects[$!last_free];
-            @!objects[$index] = $value;
-            return $index;
+            $!last_free = @!objects.AT-POS($!last_free);
+            @!objects.ASSIGN-POS($index, $value);
+            $index
         }
         else {
             @!objects.push($value);
-            return @!objects.end;
+            @!objects.end
         }
     }
 
@@ -19,8 +19,8 @@ class Inline::Language::ObjectKeeper {
         @!objects[$index];
     }
 
-    method free(Int $index) {
-        @!objects[$index] = $!last_free;
+    method free(Int $index --> Nil) {
+        @!objects.ASSIGN-POS($index, $!last_free);
         $!last_free = $index;
     }
 }
