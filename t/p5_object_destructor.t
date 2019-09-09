@@ -13,6 +13,7 @@ plan 20;
 {
 
 my $i;
+my @blobs;
 
 sub is($a, $b, $desc) {
     die $desc unless $a eqv $b;
@@ -27,7 +28,8 @@ until %*PERL5<%ObjWithDestructor::destructor_runs><1> {
         is $obj.test(), 1, 'obj survives birth' for ^5;
     }
 
-    for 1 .. 100 { Blob.allocate(10) }
+    for 1 .. 100 { Blob.allocate(4000) }
+    @blobs.push: Blob.allocate(4000) xx 100;
 
     use nqp;
     nqp::force_gc;
@@ -47,12 +49,13 @@ until %*PERL5<%ObjWithDestructor::destructor_runs><2> {
         is $obj.test(1), 1, 'obj survives birth' for ^5;
     }
 
-    for 1 .. 100 { Blob.allocate(10) }
+    for 1 .. 100 { Blob.allocate(4000) }
+    @blobs.push: Blob.allocate(4000) xx 100;
 
     use nqp;
     nqp::force_gc;
 
-    last if $i++ >= 10000;
+    last if $i++ >= 50000;
 }
 
 ok(%*PERL5<%ObjWithDestructor::destructor_runs><2>, 'at least one destructor ran after call with 1 arg');
@@ -67,12 +70,13 @@ until %*PERL5<%ObjWithDestructor::destructor_runs><3> {
         is $obj.test(1, 1), 1, 'obj survives birth' for ^5;
     }
 
-    for 1 .. 100 { Blob.allocate(10) }
+    for 1 .. 100 { Blob.allocate(4000) }
+    @blobs.push: Blob.allocate(4000) xx 100;
 
     use nqp;
     nqp::force_gc;
 
-    last if $i++ >= 10000;
+    last if $i++ >= 50000;
 }
 
 ok(%*PERL5<%ObjWithDestructor::destructor_runs><3>, 'at least one destructor ran after call with 2 args');
@@ -87,12 +91,13 @@ until %*PERL5<%ObjWithDestructor::destructor_runs><4> {
         is $obj.test(1, 1, 1), 1, 'obj survives birth' for ^5;
     }
 
-    for 1 .. 100 { Blob.allocate(10) }
+    for 1 .. 100 { Blob.allocate(4000) }
+    @blobs.push: Blob.allocate(4000) xx 100;
 
     use nqp;
     nqp::force_gc;
 
-    last if $i++ >= 10000;
+    last if $i++ >= 50000;
 }
 
 ok(%*PERL5<%ObjWithDestructor::destructor_runs><4>, 'at least one destructor ran after call with 3 args');
@@ -109,12 +114,13 @@ until %*PERL5<%ObjWithDestructor::destructor_runs><5> {
         is $foo.call_test(), 1, 'obj survives' for ^2;
     }
 
-    for 1 .. 100 { Blob.allocate(10) }
+    for 1 .. 100 { Blob.allocate(4000) }
+    @blobs.push: Blob.allocate(4000) xx 100;
 
     use nqp;
     nqp::force_gc;
 
-    last if $i++ >= 10000;
+    last if $i++ >= 50000;
 }
 
 ok(%*PERL5<%ObjWithDestructor::destructor_runs><5>, 'at least one destructor ran after nested subclass call');
@@ -129,12 +135,13 @@ until %*PERL5<%ObjWithDestructor::destructor_runs><6> {
         is $foo.test(1), 1, 'obj survives' for ^5;
     }
 
-    for 1 .. 100 { Blob.allocate(10) }
+    for 1 .. 100 { Blob.allocate(4000) }
+    @blobs.push: Blob.allocate(4000) xx 100;
 
     use nqp;
     nqp::force_gc;
 
-    last if $i++ >= 10000;
+    last if $i++ >= 50000;
 }
 
 ok(%*PERL5<%ObjWithDestructor::destructor_runs><6>, 'at least one destructor ran after nested subclass call with 1 arg');
@@ -149,12 +156,13 @@ until %*PERL5<%ObjWithDestructor::destructor_runs><7> {
         is $foo.call_test(1,2), 1, 'obj survives' for ^5;
     }
 
-    for 1 .. 100 { Blob.allocate(10) }
+    for 1 .. 100 { Blob.allocate(4000) }
+    @blobs.push: Blob.allocate(4000) xx 100;
 
     use nqp;
     nqp::force_gc;
 
-    last if $i++ >= 10000;
+    last if $i++ >= 50000;
 }
 
 ok(%*PERL5<%ObjWithDestructor::destructor_runs><7>, 'at least one destructor ran after nested subclass call with 2 args');
@@ -169,12 +177,13 @@ until %*PERL5<%ObjWithDestructor::destructor_runs><8> {
         is $foo.call_test(1,2,3), 1, 'obj survives' for ^5;
     }
 
-    for 1 .. 100 { Blob.allocate(10) }
+    for 1 .. 100 { Blob.allocate(4000) }
+    @blobs.push: Blob.allocate(4000) xx 100;
 
     use nqp;
     nqp::force_gc;
 
-    last if $i++ >= 10000;
+    last if $i++ >= 50000;
 }
 
 ok(%*PERL5<%ObjWithDestructor::destructor_runs><8>, 'at least one destructor ran after nested subclass call with 3 args');
@@ -192,12 +201,13 @@ ok($ObjWithDestructor::count < $i, 'at least one destructor ran after nested sub
             is $foo.call_test($param), 1, 'obj survives' for ^5;
         }
 
-        for 1 .. 100 { Blob.allocate(10) }
+        for 1 .. 100 { Blob.allocate(4000) }
+        @blobs.push: Blob.allocate(4000) xx 100;
 
         use nqp;
         nqp::force_gc;
 
-        last if $i++ >= 10000;
+        last if $i++ >= 50000;
     }
 
     ok(%*PERL5<%ObjWithDestructor::destructor_runs><9>, 'at least one destructor ran after nested subclass call with object arg');
@@ -213,12 +223,13 @@ ok($ObjWithDestructor::count < $i, 'at least one destructor ran after nested sub
             is $param.test, 1, 'obj passed as arg survived intact' for ^2;
         }
 
-        for 1 .. 100 { Blob.allocate(10) }
+        for 1 .. 100 { Blob.allocate(4000) }
+        @blobs.push: Blob.allocate(4000) xx 100;
 
         use nqp;
         nqp::force_gc;
 
-        last if $i++ >= 10000;
+        last if $i++ >= 50000;
     }
 
     ok(
