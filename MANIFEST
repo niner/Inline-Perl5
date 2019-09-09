@@ -56,6 +56,7 @@ t/lib/Data.pm
 t/lib/Foo.pm
 t/lib/HasInnerPackage.pm
 t/lib/LookForData.pm
+t/lib/ObjWithDestructor.pm
 t/lib/P5Import.pm
 t/lib/P5ModuleVersion.pm
 t/lib/Shadow.pm
@@ -71,6 +72,7 @@ t/modify_array.t
 t/modify_hash.t
 t/object_hash.t
 t/overload.t
+t/p5_object_destructor.t
 t/p5_to_p6.t
 t/p6_object_destructor.t
 t/p6_to_p5.t

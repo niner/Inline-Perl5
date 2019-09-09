@@ -1,8 +1,8 @@
 {
-    "name"           : "Inline::Perl5",
-    "version"       : "0.40",
+    "name"          : "Inline::Perl5",
+    "version"       : "0.41",
     "perl"          : "6.c",
-    "author"        : "github:niner",
+    "auth"          : "github:niner",
     "authors"       : [ "Stefan Seifert" ],
     "description"   : "Use Perl 5 code in a Perl 6 program",
     "depends"       : [ "LibraryMake" ],
