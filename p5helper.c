@@ -722,6 +722,20 @@ SV *p5_call_gv(PerlInterpreter *my_perl, GV *gv, int len, SV *args[], I32 *count
     }
 }
 
+void reset_wrapped_object(PerlInterpreter *my_perl, SV *obj) {
+    if (SvREFCNT(obj) == 1 && SvREFCNT(SvRV(obj)) == 1) {
+        MAGIC * mg = mg_find(SvRV(obj), '~');
+        _perl6_magic* const p6mg = (_perl6_magic*) mg->mg_ptr;
+        SV **cbs_entry = hv_fetchs(PL_modglobal, "Inline::Perl5 callbacks", 0);
+        if (cbs_entry) {
+            perl6_callbacks *cbs = (perl6_callbacks*)SvIV(*cbs_entry);
+            cbs->free_p6_object(p6mg->index);
+        }
+        p6mg->index = -1;
+        SvREFCNT_inc(SvRV(obj)); // keep it from dying
+    }
+}
+
 SV *p5_call_parent_gv(PerlInterpreter *my_perl, GV *gv, int len, SV *args[], I32 *count, I32 *err, I32 *type) {
     PERL_SET_CONTEXT(my_perl);
     {
@@ -759,6 +773,7 @@ SV *p5_call_parent_gv(PerlInterpreter *my_perl, GV *gv, int len, SV *args[], I32
         retval = pop_return_values(my_perl, sp, *count, type);
         SPAGAIN;
 
+        reset_wrapped_object(my_perl, obj);
         SvREFCNT_dec(obj);
 
         PUTBACK;
@@ -879,6 +894,8 @@ SV *p5_call_gv_two_args(PerlInterpreter *my_perl, GV *gv, SV *arg, SV *arg2, I32
             fprintf(stderr, "err: %d\n", *err);
         retval = pop_return_values(my_perl, sp, *count, type);
         SPAGAIN;
+
+        reset_wrapped_object(my_perl, arg);
 
         PUTBACK;
         FREETMPS;
@@ -1016,6 +1033,7 @@ SV *p5_call_parent_method(PerlInterpreter *my_perl, char *package, SV *parent_ob
             SPAGAIN;
 
             if (p5_is_live_wrapped_p6_object(my_perl, SvRV(obj))) {
+                reset_wrapped_object(my_perl, obj);
                 SvREFCNT_dec(obj);
             }
         }
