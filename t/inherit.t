@@ -4,11 +4,11 @@ use v6;
 use Test;
 
 BEGIN {
-    plan 14; # adjust the skip as well!
+    plan 15; # adjust the skip as well!
 
     EVAL 'use lib qw(t/lib);', :lang<Perl5>;
     unless EVAL 'eval { require Moose; 1};', :lang<Perl5> {
-        skip('Perl 5 Moose module not available', 14);
+        skip('Perl 5 Moose module not available', 15);
         exit;
     }
 }
@@ -44,7 +44,8 @@ class Baz is Foo {
 
 }
 
-is(Baz.new.test, 'Perl6!');
+my $baz = Baz.new;
+is($baz.test, 'Perl6!') for ^2;
 
 class Qux is Bar {
     method qux {
