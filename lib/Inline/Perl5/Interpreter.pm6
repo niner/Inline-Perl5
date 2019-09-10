@@ -88,6 +88,9 @@ class Inline::Perl5::Interpreter is repr('CPointer') {
     method p5_sv_refcnt_dec(Pointer) is native($p5helper)
         { ... }
 
+    method p5_sv_destroy(Pointer) is native($p5helper)
+        { ... }
+
     method p5_sv_2mortal(Pointer) is native($p5helper)
         { ... }
 
@@ -224,9 +227,6 @@ class Inline::Perl5::Interpreter is repr('CPointer') {
         returns Pointer { ... }
 
     method p5_rebless_object(Pointer, Str, IV) is native($p5helper)
-        { ... }
-
-    method p5_remove_magic(Pointer) is native($p5helper)
         { ... }
 
     method p5_add_magic(Pointer, IV) is native($p5helper)

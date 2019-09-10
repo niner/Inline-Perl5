@@ -37,8 +37,7 @@ class Inline::Perl5::ClassHOW
 
     my $destroyers := [
             my method DESTROY (\SELF:) {
-                SELF.^ip5.p5_remove_magic(SELF.wrapped-perl5-object);
-                SELF.^ip5.p5_sv_refcnt_dec(SELF.wrapped-perl5-object);
+                SELF.DESTROY
             },
         ].FLATTENABLE_LIST;
 
@@ -76,8 +75,12 @@ class Inline::Perl5::ClassHOW
             $p5.at-key(SELF.wrapped-perl5-object, key)
         }
         %!cache<DESTROY> := my method DESTROY(\SELF:) {
-            $ip5.p5_remove_magic(SELF.wrapped-perl5-object);
-            $ip5.p5_sv_refcnt_dec(SELF.wrapped-perl5-object);
+            my $obj = SELF.wrapped-perl5-object;
+            if $obj {
+                $ip5.p5_sv_destroy($obj);
+                use nqp;
+                nqp::bindattr(SELF, type, '$!wrapped-perl5-object', Pointer);
+            }
         }
         Metamodel::Primitives.install_method_cache(type, %!cache, :!authoritative);
 

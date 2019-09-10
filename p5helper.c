@@ -294,6 +294,12 @@ void p5_sv_refcnt_inc(PerlInterpreter *my_perl, SV *sv) {
     SvREFCNT_inc(sv);
 }
 
+void p5_sv_destroy(PerlInterpreter *my_perl, SV *sv) {
+    PERL_SET_CONTEXT(my_perl);
+    if (!PL_in_clean_objs && !PL_in_clean_all)
+        SvREFCNT_dec(sv); // don't bother during global deconstruction
+}
+
 void p5_sv_2mortal(PerlInterpreter *my_perl, SV *sv) {
     sv_2mortal(sv);
 }
@@ -1197,10 +1203,6 @@ void p5_rebless_object(PerlInterpreter *my_perl, SV *obj, char *package, IV i) {
         priv.is_wrapper = 0;
         sv_magicext(inst, inst, PERL_MAGIC_ext, &p5_inline_mg_vtbl, (char *) &priv, sizeof(priv));
     }
-}
-
-void p5_remove_magic(PerlInterpreter *my_perl, SV *obj) {
-    mg_free_type(obj, PERL_MAGIC_ext);
 }
 
 SV *p5_add_magic(PerlInterpreter *my_perl, SV *inst, IV i) {
