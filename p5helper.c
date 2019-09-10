@@ -602,7 +602,7 @@ SV *p5_call_package_method(PerlInterpreter *my_perl, char *package, char *name, 
         SAVETMPS;
 
         PUSHMARK(SP);
-        XPUSHs(newSVpv(package, 0));
+        XPUSHs(sv_2mortal(newSVpv(package, 0)));
         push_arguments(sp, len, args);
 
         *count = call_method(name, flags);
