@@ -18,6 +18,7 @@ has Inline::Perl5::Interpreter $!p5;
 has Bool $!external_p5 = False;
 has Bool $!scalar_context = False;
 has %!loaded_modules;
+has $!objects;
 
 my $default_perl5;
 
@@ -72,10 +73,8 @@ multi method p6_to_p5(Inline::Perl5::Extension $value) returns Pointer {
     self.p6_to_p5($value.unwrap-perl5-object());
 }
 
-my $objects = Inline::Language::ObjectKeeper.new; #FIXME not thread safe
-
 multi method p6_to_p5(Inline::Perl5::Extension $value, Pointer $target) returns Pointer {
-    my $index = $objects.keep($value);
+    my $index = $!objects.keep($value);
 
     $!p5.p5_wrap_p6_object(
         $index,
@@ -92,15 +91,11 @@ multi method p6_to_p5(Any:U $value) returns Pointer {
     $!p5.p5_undef();
 }
 
-sub free_p6_object(Int $index) {
-    $objects.free($index);
-}
-
 method unwrap-perl5-object($value) {
     my $o = $value.wrapped-perl5-object;
     $!p5.p5_is_live_wrapped_p6_object($o)
         ?? $!p5.p5_newRV_inc($o)
-        !! $!p5.p5_add_magic($o, $objects.keep($value))
+        !! $!p5.p5_add_magic($o, $!objects.keep($value))
 }
 
 multi method p6_to_p5(Any:D $value) {
@@ -110,11 +105,11 @@ multi method p6_to_p5(Any:D $value) {
             $!p5.p5_newRV_inc($o)
         }
         else {
-            $!p5.p5_add_magic($o, $objects.keep($value))
+            $!p5.p5_add_magic($o, $!objects.keep($value))
         }
     }
     else {
-        my $index = $objects.keep($value);
+        my $index = $!objects.keep($value);
 
         $!p5.p5_wrap_p6_object(
             $index,
@@ -123,7 +118,7 @@ multi method p6_to_p5(Any:D $value) {
     }
 }
 multi method p6_to_p5(Callable:D $value, Pointer $inst = Pointer) {
-    my $index = $objects.keep($value);
+    my $index = $!objects.keep($value);
 
     $!p5.p5_wrap_p6_callable(
         $index,
@@ -135,7 +130,7 @@ multi method p6_to_p5(Inline::Perl5::Callable:D $value) returns Pointer {
     $value.ptr;
 }
 multi method p6_to_p5(Hash:D $value) returns Pointer {
-    my $index = $objects.keep($value);
+    my $index = $!objects.keep($value);
 
     return $!p5.p5_wrap_p6_hash(
         $index,
@@ -163,7 +158,7 @@ multi method p6_to_p5(Positional:D $value) returns Pointer {
     $!p5.p5_newRV_inc($av);
 }
 multi method p6_to_p5(IO::Handle:D $value) returns Pointer {
-    my $index = $objects.keep($value);
+    my $index = $!objects.keep($value);
 
     $!p5.p5_wrap_p6_handle(
         $index,
@@ -171,7 +166,7 @@ multi method p6_to_p5(IO::Handle:D $value) returns Pointer {
     );
 }
 multi method p6_to_p5(Regex:D $value) {
-    my $index = $objects.keep($value);
+    my $index = $!objects.keep($value);
     my @svs := CArray[Pointer].new();
     @svs[0] = $!p5.p5_wrap_p6_object(
         $index,
@@ -300,7 +295,7 @@ multi method p5_to_p6_type(Pointer:D \value, Hash) {
 }
 
 multi method p5_to_p6_type(Pointer:D \value, Inline::Perl5::Hash) {
-    $objects.get($!p5.p5_unwrap_p6_hash(value));
+    $!objects.get($!p5.p5_unwrap_p6_hash(value));
 }
 
 multi method p5_to_p6_type(Pointer:D \value, Undef) {
@@ -323,7 +318,7 @@ multi method p5_to_p6_type(Pointer:D \value, Any) {
 
 multi method p5_to_p6_type(Pointer:D \value, Blessed) {
     if $!p5.p5_is_wrapped_p6_object(value) {
-        $objects.get($!p5.p5_unwrap_p6_object(value));
+        $!objects.get($!p5.p5_unwrap_p6_object(value));
     }
     else {
         $!p5.p5_sv_refcnt_inc(value);
@@ -896,12 +891,12 @@ method sv_refcnt_dec($obj) {
 }
 
 multi method rebless(Pointer $obj, Str $package, $p6obj) {
-    my $index = $objects.keep($p6obj);
+    my $index = $!objects.keep($p6obj);
     $!p5.p5_rebless_object($obj, $package, $index);
 }
 
 multi method rebless(Inline::Perl5::Object $obj, Str $package, $p6obj) {
-    my $index = $objects.keep($p6obj);
+    my $index = $!objects.keep($p6obj);
     $!p5.p5_rebless_object($obj.ptr, $package, $index);
 }
 
@@ -1071,8 +1066,10 @@ method init_data($data) {
 }
 
 method BUILD(*%args) {
+    $!objects = Inline::Language::ObjectKeeper.new;
+
     my &call_method = sub (Int $index, Str $name, Int $context, Pointer $args, Pointer $err) returns Pointer {
-        my $p6obj = $objects.get($index);
+        my $p6obj = $!objects.get($index);
         $!scalar_context = ?$context;
         CONTROL {
             when CX::Warn {
@@ -1091,7 +1088,7 @@ method BUILD(*%args) {
     &call_method does Inline::Perl5::Caller;
 
     my &call_callable = sub (Int $index, Pointer $args, Pointer $err) returns Pointer {
-        my $callable = $objects.get($index);
+        my $callable = $!objects.get($index);
         my @retvals = $callable(|self.p5_array_to_p6_array($args));
         return self.p6_to_p5(@retvals);
         CONTROL {
@@ -1109,7 +1106,7 @@ method BUILD(*%args) {
     }
 
     my &hash_at_key = sub (Int $index, Str $key) returns Pointer {
-        return self.p6_to_p5($objects.get($index).AT-KEY($key));
+        return self.p6_to_p5($!objects.get($index).AT-KEY($key));
         CONTROL {
             when CX::Warn {
                 note $_.gist;
@@ -1119,7 +1116,7 @@ method BUILD(*%args) {
     }
 
     my &hash_assign_key = sub (Int $index, Str $key, Pointer $value) {
-        $objects.get($index).ASSIGN-KEY($key, self.p5_to_p6($value));
+        $!objects.get($index).ASSIGN-KEY($key, self.p5_to_p6($value));
         Nil;
         CONTROL {
             when CX::Warn {
@@ -1141,7 +1138,7 @@ method BUILD(*%args) {
         Inline::Perl5::Interpreter::p5_init_callbacks(
             &call_method,
             &call_callable,
-            &free_p6_object,
+            -> $idx { $!objects.free($idx) },
             &hash_at_key,
             &hash_assign_key,
         );
@@ -1153,7 +1150,7 @@ method BUILD(*%args) {
             CArray[Str].new('', '-e', '0', '--', |@args, Str),
             &call_method,
             &call_callable,
-            &free_p6_object,
+            -> $idx { $!objects.free($idx) },
             &hash_at_key,
             &hash_assign_key,
         );
