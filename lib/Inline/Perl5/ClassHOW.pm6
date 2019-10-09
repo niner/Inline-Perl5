@@ -13,6 +13,7 @@ class Inline::Perl5::ClassHOW
     has $!p5;
     has $!ip5;
     has $!composed;
+    has %!gvs;
 
     my $archetypes := Metamodel::Archetypes.new(
         :nominal(1), :inheritable(1), :augmentable(1) );
@@ -35,6 +36,15 @@ class Inline::Perl5::ClassHOW
         $!ip5;
     }
 
+    method replace_ip5(\type, $ip5) {
+        $!ip5 = $ip5;
+        for %!gvs.kv -> $module, %methods {
+            for %methods.keys -> $name {
+                %methods{$name} = $!p5.look-up-method($module, $name);
+            }
+        }
+    }
+
     my $destroyers := [
             my method DESTROY (\SELF:) {
                 SELF.DESTROY
@@ -52,7 +62,6 @@ class Inline::Perl5::ClassHOW
             :authoritative, :call_accepts);
 
         my $p5 = $!p5;
-        my $ip5 = $!ip5;
         my $module = $!name;
 
         $p5.run: "
@@ -77,7 +86,7 @@ class Inline::Perl5::ClassHOW
         %!cache<DESTROY> := my method DESTROY(\SELF:) {
             my $obj = SELF.wrapped-perl5-object;
             if $obj {
-                $ip5.p5_sv_destroy($obj);
+                $!ip5.p5_sv_destroy($obj);
                 use nqp;
                 nqp::bindattr(SELF, type, '$!wrapped-perl5-object', Pointer);
             }
@@ -161,10 +170,10 @@ class Inline::Perl5::ClassHOW
     my &find_best_dispatchee;
     method add_wrapper_method($type, $name) is raw {
         my $p5 = $!p5;
-        my $ip5 = $!ip5;
         my $module = $!name;
 
-        my $gv := $!p5.look-up-method(self.name($type), $name);
+        my $gv = $!p5.look-up-method(self.name($type), $name);
+        (%!gvs{self.name($type)} ||= Hash.new){$name} := $gv;
 
         my $generic-proto := my proto method AUTOGEN(::T $: |) { * }
         my $proto := $generic-proto.instantiate_generic(%('T' => $type));
@@ -252,7 +261,7 @@ class Inline::Perl5::ClassHOW
             my int32 $retvals;
             my int32 $err;
             my int32 $type;
-            my $av = $ip5.p5_call_parent_gv(
+            my $av = $!ip5.p5_call_parent_gv(
                 $gv,
                 1,
                 $p5.unwrap-perl5-object(SELF),
@@ -268,7 +277,7 @@ class Inline::Perl5::ClassHOW
             my int32 $retvals;
             my int32 $err;
             my int32 $type;
-            my $av = $ip5.p5_scalar_call_parent_gv(
+            my $av = $!ip5.p5_scalar_call_parent_gv(
                 $gv,
                 1,
                 $p5.unwrap-perl5-object(SELF),
@@ -288,7 +297,7 @@ class Inline::Perl5::ClassHOW
             my int32 $retvals = 0;
             my int32 $err = 0;
             my int32 $type = 0;
-            my $av = $ip5.p5_call_gv_two_args(
+            my $av = $!ip5.p5_call_gv_two_args(
                 $gv,
                 $p5.unwrap-perl5-object(SELF),
                 $p5.p6_to_p5(arg),
@@ -304,7 +313,7 @@ class Inline::Perl5::ClassHOW
             my int32 $retvals = 0;
             my int32 $err = 0;
             my int32 $type = 0;
-            my $av = $ip5.p5_scalar_call_gv_two_args(
+            my $av = $!ip5.p5_scalar_call_gv_two_args(
                 $gv,
                 $p5.unwrap-perl5-object(SELF),
                 $p5.p6_to_p5(arg),

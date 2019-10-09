@@ -925,6 +925,9 @@ method !restore_modules() {
         self.call-simple-args('v6::load_module', $module);
         self.invoke($module, 'import', []);
     }
+    for %!loaded_modules.values -> $class {
+        $class.^replace_ip5($!p5);
+    }
 }
 
 method require(Str $module, Num $version?, Bool :$handle) {
