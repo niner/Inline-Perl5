@@ -18,6 +18,7 @@ has Inline::Perl5::Interpreter $!p5;
 has Bool $!external_p5 = False;
 has Bool $!scalar_context = False;
 has %!loaded_modules;
+has @!required_modules;
 has $!objects;
 
 my $default_perl5;
@@ -919,7 +920,16 @@ method import (Str $module, *@args) {
     return ($after ∖ ($before ∖ set @args)).keys;
 }
 
+method !restore_modules() {
+    for @!required_modules -> ($module, $version) {
+        self.call-simple-args('v6::load_module', $module);
+        self.invoke($module, 'import', []);
+    }
+}
+
 method require(Str $module, Num $version?, Bool :$handle) {
+    push @!required_modules, ($module, $version);
+
     # wrap the load_module call so exceptions can be translated to Perl 6
     my @packages = $version
         ?? self.call-simple-args('v6::load_module', $module, $version)
@@ -953,14 +963,16 @@ method require(Str $module, Num $version?, Bool :$handle) {
             if $*W {
                 my $block := {
                     self.BUILD;
+                    self!restore_modules;
                 };
                 $*W.add_object($block);
                 my $op := $*W.add_phaser(Mu, 'INIT', $block, class :: { method cuid { (^2**128).pick }});
             }
             my @symbols = self.import($module, @args.list).map({
                 my $name = $_;
+                my $function = "main::$name";
                 '&' ~ $name => sub (|args) {
-                    self.call-args("main::$name", args); # main:: because the sub got exported to main
+                    self.call-args($function, args); # main:: because the sub got exported to main
                 }
             });
             # Hack needed for rakudo versions post-lexical_module_load but before support for
