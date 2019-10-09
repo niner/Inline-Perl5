@@ -953,8 +953,8 @@ method require(Str $module, Num $version?, Bool :$handle) {
     my $class;
     for @packages.grep(*.defined).grep(/<-lower -[:]>/).grep(*.starts-with: $module) -> $package {
         my $symbol = ::($package);
-        next if $symbol.isa(Failure);
         next if $symbol.isa(Inline::Perl5::Extension);
+        $symbol.Bool if $symbol.isa(Failure); #disarm
         my $created := self!create_wrapper_class($package, $stash);
         $class := $created if $package eq $module;
     }
