@@ -192,32 +192,32 @@ class Inline::Perl5::ClassHOW
                 }
                 my $arity = nqp::captureposelems(capture);
                 add_to_cache(SELF,
-                    nqp::capturenamedshash(capture) || !nqp::captureposarg(capture, 0).defined
-                        ?? $arity < 2 || nqp::captureposarg(capture, 1) !=== Scalar
+                    nqp::capturenamedshash(capture) || nqp::captureposarg(capture, 0).defined.not
+                        ?? nqp::hllbool(nqp::islt_i($arity, 2)) || (nqp::eqaddr(nqp::captureposarg(capture, 1), Scalar)).not
                             ?? nqp::getattr(SELF, SELF.WHAT, '&!many-args')
                             !! nqp::getattr(SELF, SELF.WHAT, '&!scalar-many-args')
-                        !! $arity == 1
+                        !! nqp::hllbool(nqp::iseq_i($arity, 1))
                             ?? nqp::getattr(SELF, SELF.WHAT, '&!no-args')
-                            !! $arity == 2 && !(nqp::captureposarg(capture, 1) ~~ Pair)
-                                ?? nqp::captureposarg(capture, 1) === Scalar
+                            !! nqp::hllbool(nqp::iseq_i($arity, 2)) && nqp::captureposarg(capture, 1).isa(Pair).not
+                                ?? nqp::eqaddr(nqp::captureposarg(capture, 1), Scalar)
                                     ?? nqp::getattr(SELF, SELF.WHAT, '&!scalar-no-args')
                                     !! nqp::getattr(SELF, SELF.WHAT, '&!one-arg')
-                                !! $arity == 3 && nqp::captureposarg(capture, 1) === Scalar
+                                !! nqp::hllbool(nqp::iseq_i($arity, 3)) && nqp::eqaddr(nqp::captureposarg(capture, 1), Scalar)
                                     ?? nqp::getattr(SELF, SELF.WHAT, '&!scalar-one-arg')
-                                    !! nqp::captureposarg(capture, 1) === Scalar
+                                    !! nqp::eqaddr(nqp::captureposarg(capture, 1), Scalar)
                                         ?? nqp::getattr(SELF, SELF.WHAT, '&!scalar-many-args')
-                                        !! nqp::getattr(SELF, SELF.WHAT, '&!many-args')
+                                        !! nqp::getattr(SELF, SELF.WHAT, '&!many-args');
                 )
             }
             ROLE
         &find_best_dispatchee //= try EVAL q:to/ROLE/;
             -> \SELF, Mu \capture {
                 use nqp;
-                nqp::capturenamedshash(capture) || !nqp::captureposarg(capture, 0).defined
+                nqp::capturenamedshash(capture) || nqp::captureposarg(capture, 0).defined.not
                     ?? nqp::getattr(SELF, SELF.WHAT, '&!many-args')
                     !! nqp::captureposelems(capture) == 1
                         ?? nqp::getattr(SELF, SELF.WHAT, '&!no-args')
-                        !! nqp::captureposelems(capture) == 2 && !(nqp::captureposarg(capture, 1) ~~ Pair)
+                        !! nqp::captureposelems(capture) == 2 && nqp::captureposarg(capture, 1).isa(Pair).not
                             ?? nqp::getattr(SELF, SELF.WHAT, '&!one-arg')
                             !! nqp::getattr(SELF, SELF.WHAT, '&!many-args')
             }
@@ -230,8 +230,32 @@ class Inline::Perl5::ClassHOW
             has &!scalar-one-arg;
             has &!no-args;
             has &!scalar-no-args;
-            method find_best_dispatchee(Mu \capture) {
-                find_best_dispatchee(self, capture);
+            method find_best_dispatchee(\SELF: Mu \capture) {
+                use nqp;
+                my $arity = nqp::captureposelems(capture);
+                my \entry =
+                    nqp::capturenamedshash(capture) || nqp::captureposarg(capture, 0).defined.not
+                        ?? nqp::hllbool(nqp::islt_i($arity, 2)) || (nqp::eqaddr(nqp::captureposarg(capture, 1), Scalar)).not
+                            ?? nqp::getattr(SELF, SELF.WHAT, '&!many-args')
+                            !! nqp::getattr(SELF, SELF.WHAT, '&!scalar-many-args')
+                        !! nqp::hllbool(nqp::iseq_i($arity, 1))
+                            ?? nqp::getattr(SELF, SELF.WHAT, '&!no-args')
+                            !! nqp::hllbool(nqp::iseq_i($arity, 2)) && nqp::captureposarg(capture, 1).isa(Pair).not
+                                ?? nqp::eqaddr(nqp::captureposarg(capture, 1), Scalar)
+                                    ?? nqp::getattr(SELF, SELF.WHAT, '&!scalar-no-args')
+                                    !! nqp::getattr(SELF, SELF.WHAT, '&!one-arg')
+                                !! nqp::hllbool(nqp::iseq_i($arity, 3)) && nqp::eqaddr(nqp::captureposarg(capture, 1), Scalar)
+                                    ?? nqp::getattr(SELF, SELF.WHAT, '&!scalar-one-arg')
+                                    !! nqp::eqaddr(nqp::captureposarg(capture, 1), Scalar)
+                                        ?? nqp::getattr(SELF, SELF.WHAT, '&!scalar-many-args')
+                                        !! nqp::getattr(SELF, SELF.WHAT, '&!many-args');
+                nqp::scwbdisable();
+                nqp::bindattr(SELF, Routine, '$!dispatch_cache',
+                    nqp::multicacheadd(
+                        nqp::getattr(SELF, Routine, '$!dispatch_cache'),
+                        capture, entry));
+                nqp::scwbenable();
+                entry
             }
             method add_methods(&many-args, &scalar-many-args, &one-arg, &scalar-one-arg, &no-args, &scalar-no-args) {
                 &!many-args        := &many-args;
@@ -245,7 +269,7 @@ class Inline::Perl5::ClassHOW
 
         my $many-args := my sub many-args(Any $self, *@args, *%kwargs) {
             $self.defined
-                ?? $p5.invoke-parent($module, $self.wrapped-perl5-object, False, $name, [flat $self, |@args], %kwargs)
+                ?? $p5.invoke-parent($module, $self.wrapped-perl5-object, False, $name, List.new($self, @args.Slip).flat.Array, %kwargs)
                 !! $p5.invoke($self, $module, $name, |@args.list, |%kwargs)
         };
         $proto.add_dispatchee($many-args);
