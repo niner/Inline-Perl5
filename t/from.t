@@ -1,9 +1,9 @@
 #!/usr/bin/env perl6
 
 use v6;
+use lib <t/lib>;
 use Test;
 use Inline::Perl5;
-use lib <t/lib>;
 BEGIN EVAL 'use lib qw(t/lib);', :lang<Perl5>;
 
 use P5Import:from<Perl5> <tests 2>;
