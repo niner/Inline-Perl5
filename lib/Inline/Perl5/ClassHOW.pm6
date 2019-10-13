@@ -1,5 +1,14 @@
 use NativeCall;
-use MONKEY-SEE-NO-EVAL;
+
+my &find_best_dispatchee;
+BEGIN {
+    my $compunit = try $*REPO.need(CompUnit::DependencySpecification.new(:short-name<Inline::Perl5::FindBestDispatchee::Full>));
+    $compunit ||= try $*REPO.need(CompUnit::DependencySpecification.new(:short-name<Inline::Perl5::FindBestDispatchee::Medium>));
+    $compunit ||= $*REPO.need(CompUnit::DependencySpecification.new(:short-name<Inline::Perl5::FindBestDispatchee::Light>));
+    $! = Nil; # Avoid trying to serialize an exception
+    &find_best_dispatchee = $compunit.handle.globalish-package<Inline>.WHO<Perl5>.WHO<FindBestDispatchee>.WHO.values[0].WHO<&find_best_dispatchee>;
+    $compunit = Nil; # Avoid trying to serialize a VMContext
+}
 
 class Inline::Perl5::ClassHOW
     does Metamodel::AttributeContainer
@@ -167,7 +176,6 @@ class Inline::Perl5::ClassHOW
         %!cache{$name} // Any.^find_method($name) // self.add_wrapper_method($type, $name);
     }
 
-    my &find_best_dispatchee;
     method add_wrapper_method($type, $name) is raw {
         my $p5 = $!p5;
         my $module = $!name;
@@ -178,51 +186,6 @@ class Inline::Perl5::ClassHOW
         my $generic-proto := my proto method AUTOGEN(::T $: |) { * }
         my $proto := $generic-proto.instantiate_generic(%('T' => $type));
         $proto.set_name($name);
-        &find_best_dispatchee //= try EVAL q:to/ROLE/;
-            -> \SELF, Mu \capture {
-                use nqp;
-                sub add_to_cache(\SELF, \entry) {
-                    nqp::scwbdisable();
-                    nqp::bindattr(SELF, Routine, '$!dispatch_cache',
-                        nqp::multicacheadd(
-                            nqp::getattr(SELF, Routine, '$!dispatch_cache'),
-                            capture, entry));
-                    nqp::scwbenable();
-                    entry
-                }
-                my $arity = nqp::captureposelems(capture);
-                add_to_cache(SELF,
-                    nqp::capturenamedshash(capture) || nqp::captureposarg(capture, 0).defined.not
-                        ?? nqp::hllbool(nqp::islt_i($arity, 2)) || (nqp::eqaddr(nqp::captureposarg(capture, 1), Scalar)).not
-                            ?? nqp::getattr(SELF, SELF.WHAT, '&!many-args')
-                            !! nqp::getattr(SELF, SELF.WHAT, '&!scalar-many-args')
-                        !! nqp::hllbool(nqp::iseq_i($arity, 1))
-                            ?? nqp::getattr(SELF, SELF.WHAT, '&!no-args')
-                            !! nqp::hllbool(nqp::iseq_i($arity, 2)) && nqp::istype(nqp::captureposarg(capture, 1), Pair).not
-                                ?? nqp::eqaddr(nqp::captureposarg(capture, 1), Scalar)
-                                    ?? nqp::getattr(SELF, SELF.WHAT, '&!scalar-no-args')
-                                    !! nqp::getattr(SELF, SELF.WHAT, '&!one-arg')
-                                !! nqp::hllbool(nqp::iseq_i($arity, 3)) && nqp::eqaddr(nqp::captureposarg(capture, 1), Scalar)
-                                    ?? nqp::getattr(SELF, SELF.WHAT, '&!scalar-one-arg')
-                                    !! nqp::eqaddr(nqp::captureposarg(capture, 1), Scalar)
-                                        ?? nqp::getattr(SELF, SELF.WHAT, '&!scalar-many-args')
-                                        !! nqp::getattr(SELF, SELF.WHAT, '&!many-args')
-                )
-            }
-            ROLE
-        &find_best_dispatchee //= try EVAL q:to/ROLE/;
-            -> \SELF, Mu \capture {
-                use nqp;
-                nqp::capturenamedshash(capture) || nqp::captureposarg(capture, 0).defined.not
-                    ?? nqp::getattr(SELF, SELF.WHAT, '&!many-args')
-                    !! nqp::captureposelems(capture) == 1
-                        ?? nqp::getattr(SELF, SELF.WHAT, '&!no-args')
-                        !! nqp::captureposelems(capture) == 2 && nqp::captureposarg(capture, 1).isa(Pair).not
-                            ?? nqp::getattr(SELF, SELF.WHAT, '&!one-arg')
-                            !! nqp::getattr(SELF, SELF.WHAT, '&!many-args')
-            }
-            ROLE
-        &find_best_dispatchee //= -> \SELF, Mu \capture { use nqp; nqp::getattr(SELF, SELF.WHAT, '&!many-args') };
         $proto does role :: {
             has &!many-args;
             has &!scalar-many-args;
@@ -231,31 +194,7 @@ class Inline::Perl5::ClassHOW
             has &!no-args;
             has &!scalar-no-args;
             method find_best_dispatchee(\SELF: Mu \capture) {
-                use nqp;
-                my $arity = nqp::captureposelems(capture);
-                my \entry =
-                    nqp::capturenamedshash(capture) || nqp::captureposarg(capture, 0).defined.not
-                        ?? nqp::hllbool(nqp::islt_i($arity, 2)) || (nqp::eqaddr(nqp::captureposarg(capture, 1), Scalar)).not
-                            ?? nqp::getattr(SELF, SELF.WHAT, '&!many-args')
-                            !! nqp::getattr(SELF, SELF.WHAT, '&!scalar-many-args')
-                        !! nqp::hllbool(nqp::iseq_i($arity, 1))
-                            ?? nqp::getattr(SELF, SELF.WHAT, '&!no-args')
-                            !! nqp::hllbool(nqp::iseq_i($arity, 2)) && nqp::istype(nqp::captureposarg(capture, 1), Pair).not
-                                ?? nqp::eqaddr(nqp::captureposarg(capture, 1), Scalar)
-                                    ?? nqp::getattr(SELF, SELF.WHAT, '&!scalar-no-args')
-                                    !! nqp::getattr(SELF, SELF.WHAT, '&!one-arg')
-                                !! nqp::hllbool(nqp::iseq_i($arity, 3)) && nqp::eqaddr(nqp::captureposarg(capture, 1), Scalar)
-                                    ?? nqp::getattr(SELF, SELF.WHAT, '&!scalar-one-arg')
-                                    !! nqp::eqaddr(nqp::captureposarg(capture, 1), Scalar)
-                                        ?? nqp::getattr(SELF, SELF.WHAT, '&!scalar-many-args')
-                                        !! nqp::getattr(SELF, SELF.WHAT, '&!many-args');
-                nqp::scwbdisable();
-                nqp::bindattr(SELF, Routine, '$!dispatch_cache',
-                    nqp::multicacheadd(
-                        nqp::getattr(SELF, Routine, '$!dispatch_cache'),
-                        capture, entry));
-                nqp::scwbenable();
-                entry
+                find_best_dispatchee(SELF, capture)
             }
             method add_methods(&many-args, &scalar-many-args, &one-arg, &scalar-one-arg, &no-args, &scalar-no-args) {
                 &!many-args        := &many-args;
