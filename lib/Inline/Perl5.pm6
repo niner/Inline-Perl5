@@ -17,6 +17,7 @@ use Inline::Perl5::TypeGlob;
 has Inline::Perl5::Interpreter $!p5;
 has Bool $!external_p5 = False;
 has Bool $!scalar_context = False;
+has Bool $!default;
 has %!loaded_modules;
 has @!required_modules;
 has $!objects;
@@ -29,6 +30,13 @@ use NativeCall;
 my constant $p5helper = %?RESOURCES<libraries/p5helper>;
 sub p5_terminate() is native($p5helper) { ... }
 
+method interpreter() {
+    $!p5
+}
+
+method object_keeper() {
+    $!objects
+}
 
 multi method p6_to_p5(Int:D $value) returns Pointer {
     $!p5.p5_int_to_sv($value);
@@ -920,10 +928,10 @@ method import (Str $module, *@args) {
     return ($after ∖ ($before ∖ set @args)).keys;
 }
 
-method !restore_modules() {
-    for @!required_modules -> ($module, $version) {
+method restore_modules() {
+    for @!required_modules -> ($module, $version, @args) {
         self.call-simple-args('v6::load_module', $module);
-        self.invoke($module, 'import', []);
+        self.invoke($module, 'import', @args);
     }
     for %!loaded_modules.values -> $class {
         $class.^replace_ip5($!p5);
@@ -931,7 +939,8 @@ method !restore_modules() {
 }
 
 method require(Str $module, Num $version?, Bool :$handle) {
-    push @!required_modules, ($module, $version);
+    my @import_args;
+    push @!required_modules, ($module, $version, @import_args);
 
     # wrap the load_module call so exceptions can be translated to Perl 6
     my @packages = $version
@@ -942,10 +951,10 @@ method require(Str $module, Num $version?, Bool :$handle) {
 
     {
         my $module_symbol = ::($module);
-        if $module_symbol.isa(Failure) {
+        if $module_symbol.HOW.^isa(Metamodel::ClassHOW) and $module_symbol.^isa(Failure) {
             $module_symbol.Bool;
         }
-        elsif $module_symbol.isa(Inline::Perl5::Extension) {
+        elsif $module_symbol ~~ Inline::Perl5::Extension {
             # Wrapper package already created. Nothing left for us to do.
             return CompUnit::Handle.from-unit(Stash.new);
         }
@@ -956,17 +965,18 @@ method require(Str $module, Num $version?, Bool :$handle) {
     my $class;
     for @packages.grep(*.defined).grep(/<-lower -[:]>/).grep(*.starts-with: $module) -> $package {
         my $symbol = ::($package);
-        next if $symbol.isa(Inline::Perl5::Extension);
-        $symbol.Bool if $symbol.isa(Failure); #disarm
+        next if $symbol ~~ Inline::Perl5::Extension;
+        $symbol.Bool if $symbol.HOW.^isa(Metamodel::ClassHOW) and $symbol.^isa(Failure); #disarm
         my $created := self!create_wrapper_class($package, $stash);
         $class := $created if $package eq $module;
     }
 
     my &export := sub EXPORT(*@args) {
-            if $*W {
-                my $block := {
-                    self.BUILD;
-                    self!restore_modules;
+            @import_args = @args;
+            if $*W and $*W.is_precompilation_mode {
+                my $block := { # FIXME only add once per compilation unit!
+                    self.restore_interpreter;
+                    self.restore_modules;
                 };
                 $*W.add_object($block);
                 my $op := $*W.add_phaser(Mu, 'INIT', $block, class :: { method cuid { (^2**128).pick }});
@@ -1044,8 +1054,9 @@ method !create_wrapper_class(Str $module, Stash $stash) {
     if $first-time {
         # install subs like Test::More::ok
         for @$symbols -> $name {
+            my $full-name = "{$module}::$name";
             $class.WHO.BIND-KEY("&$name", sub (*@args) {
-                self.call("{$module}::$name", @args.list);
+                self.call($full-name, @args.list);
             });
         }
         for @$variables -> $name {
@@ -1075,7 +1086,7 @@ submethod DESTROY {
 
 
 method default_perl5 {
-    return $default_perl5 //= self.new();
+    return $default_perl5 //= self.new(:default);
 }
 
 method retrieve_scalar_context() {
@@ -1094,7 +1105,21 @@ method init_data($data) {
     self.call-simple-args('v6::init_data', $data);
 }
 
-method BUILD(*%args) {
+method BUILD(:$!default = False, Inline::Perl5::Interpreter :$!p5) {
+    self.initialize;
+}
+
+method restore_interpreter() {
+    if $!default and $default_perl5 {
+        $!p5 = $default_perl5.interpreter;
+        $!objects = $default_perl5.object_keeper; #TOOD may actually need to merge
+    }
+    else {
+        self.initialize(:reinitialize);
+    }
+}
+
+method initialize(Bool :$reinitialize) {
     $!objects = Inline::Language::ObjectKeeper.new;
 
     my &call_method = sub (Int $index, Str $name, Int $context, Pointer $args, Pointer $err) returns Pointer {
@@ -1155,15 +1180,18 @@ method BUILD(*%args) {
         }
     }
 
-    if ($*W and not $*W.is_precompilation_mode) { #FIXME don't know why it doesn't work with precomp
-        my $block := { self.init_data(CALLER::<$=finish>) if CALLER::<$=finish> };
+    if ($*W) {
+        my $block := {
+            my $ps := PseudoStash.new; # Can't just use CALLER:: due to rakudobug
+            self.init_data($ps.AT-KEY('CALLER').WHO.AT-KEY('$=finish'))
+                if $ps.AT-KEY('CALLER').WHO.AT-KEY('$=finish')
+        };
         $*W.add_object($block);
-        my $op := $*W.add_phaser(Mu, 'INIT', $block, class :: { method cuid { (^2**128).pick }});
+        my $op := $*W.add_phaser(Mu, 'ENTER', $block, class :: { method cuid { (^2**128).pick }});
     }
 
-    $!external_p5 = %args<p5>:exists;
-    if $!external_p5 {
-        $!p5 = %args<p5>;
+    if not $reinitialize and $!p5.defined {
+        $!external_p5 = True;
         Inline::Perl5::Interpreter::p5_init_callbacks(
             &call_method,
             &call_callable,

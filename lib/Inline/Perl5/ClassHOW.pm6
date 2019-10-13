@@ -86,7 +86,7 @@ class Inline::Perl5::ClassHOW
         %!cache<DESTROY> := my method DESTROY(\SELF:) {
             my $obj = SELF.wrapped-perl5-object;
             if $obj {
-                $!ip5.p5_sv_destroy($obj);
+                SELF.^mro.first({$_.HOW.^isa(Inline::Perl5::ClassHOW)}).^ip5.p5_sv_destroy($obj);
                 use nqp;
                 nqp::bindattr(SELF, type, '$!wrapped-perl5-object', Pointer);
             }
@@ -198,7 +198,7 @@ class Inline::Perl5::ClassHOW
                             !! nqp::getattr(SELF, SELF.WHAT, '&!scalar-many-args')
                         !! nqp::hllbool(nqp::iseq_i($arity, 1))
                             ?? nqp::getattr(SELF, SELF.WHAT, '&!no-args')
-                            !! nqp::hllbool(nqp::iseq_i($arity, 2)) && nqp::captureposarg(capture, 1).isa(Pair).not
+                            !! nqp::hllbool(nqp::iseq_i($arity, 2)) && nqp::istype(nqp::captureposarg(capture, 1), Pair).not
                                 ?? nqp::eqaddr(nqp::captureposarg(capture, 1), Scalar)
                                     ?? nqp::getattr(SELF, SELF.WHAT, '&!scalar-no-args')
                                     !! nqp::getattr(SELF, SELF.WHAT, '&!one-arg')
@@ -206,7 +206,7 @@ class Inline::Perl5::ClassHOW
                                     ?? nqp::getattr(SELF, SELF.WHAT, '&!scalar-one-arg')
                                     !! nqp::eqaddr(nqp::captureposarg(capture, 1), Scalar)
                                         ?? nqp::getattr(SELF, SELF.WHAT, '&!scalar-many-args')
-                                        !! nqp::getattr(SELF, SELF.WHAT, '&!many-args');
+                                        !! nqp::getattr(SELF, SELF.WHAT, '&!many-args')
                 )
             }
             ROLE
@@ -240,7 +240,7 @@ class Inline::Perl5::ClassHOW
                             !! nqp::getattr(SELF, SELF.WHAT, '&!scalar-many-args')
                         !! nqp::hllbool(nqp::iseq_i($arity, 1))
                             ?? nqp::getattr(SELF, SELF.WHAT, '&!no-args')
-                            !! nqp::hllbool(nqp::iseq_i($arity, 2)) && nqp::captureposarg(capture, 1).isa(Pair).not
+                            !! nqp::hllbool(nqp::iseq_i($arity, 2)) && nqp::istype(nqp::captureposarg(capture, 1), Pair).not
                                 ?? nqp::eqaddr(nqp::captureposarg(capture, 1), Scalar)
                                     ?? nqp::getattr(SELF, SELF.WHAT, '&!scalar-no-args')
                                     !! nqp::getattr(SELF, SELF.WHAT, '&!one-arg')
