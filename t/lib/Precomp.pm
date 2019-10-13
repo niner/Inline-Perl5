@@ -1,9 +1,13 @@
-use Data::Dumper:from<Perl5>;
-#use TestPrecomp;
+unit module Precomp;
 
-sub dumper() is export {
-    Dumper([1, 2])
-    #Data::Dumper.new([1, 2]);
+use Data::Dumper:from<Perl5>;
+
+our sub test-dumper() {
+    Dumper($[1, 2])
 }
 
-#vim: ft=perl6
+our sub test-class() {
+    Data::Dumper.new($[1, 2])
+}
+
+# vim: ft=perl6
