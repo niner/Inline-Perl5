@@ -973,13 +973,18 @@ method require(Str $module, Num $version?, Bool :$handle) {
 
     my &export := sub EXPORT(*@args) {
             @import_args = @args;
-            if $*W and $*W.is_precompilation_mode {
-                my $block := { # FIXME only add once per compilation unit!
-                    self.restore_interpreter;
-                    self.restore_modules;
-                };
-                $*W.add_object($block);
-                my $op := $*W.add_phaser(Mu, 'INIT', $block, class :: { method cuid { (^2**128).pick }});
+            if &p5_terminate.^find_method('CALL-ME') { # looks like old rakudo without necessary fixes
+                $*W.do_pragma(Any, 'precompilation', False, []);
+            }
+            else {
+                if $*W.is_precompilation_mode {
+                    my $block := { # FIXME only add once per compilation unit!
+                        self.restore_interpreter;
+                        self.restore_modules;
+                    };
+                    $*W.add_object($block);
+                    my $op := $*W.add_phaser(Mu, 'INIT', $block, class :: { method cuid { (^2**128).pick }});
+                }
             }
             my @symbols = self.import($module, @args.list).map({
                 my $name = $_;
