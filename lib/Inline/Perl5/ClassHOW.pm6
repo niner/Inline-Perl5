@@ -46,12 +46,24 @@ class Inline::Perl5::ClassHOW
     }
 
     method replace_ip5(\type, $ip5) {
+        return if $!ip5 === $ip5;
         $!ip5 = $ip5;
         for %!gvs.kv -> $module, %methods {
             for %methods.keys -> $name {
                 %methods{$name} = $!p5.look-up-method($module, $name);
             }
         }
+        self.install-perl5-destructor;
+    }
+
+    method install-perl5-destructor() {
+        $!p5.run: "
+            package $!name \{
+                my \$destroy;
+                BEGIN \{ \$destroy = \\&{$!name}::DESTROY; \};
+                {'sub DESTROY { $destroy->(@_) if Perl6::Object::destroy($_[0]) and $destroy and $destroy ne \&DESTROY; }'}
+            \}
+        ";
     }
 
     my $destroyers := [
@@ -73,13 +85,7 @@ class Inline::Perl5::ClassHOW
         my $p5 = $!p5;
         my $module = $!name;
 
-        $p5.run: "
-            package $module \{
-                my \$destroy;
-                BEGIN \{ \$destroy = \\&{$module}::DESTROY; \};
-                {'sub DESTROY { $destroy->(@_) if Perl6::Object::destroy($_[0]) and $destroy and $destroy ne \&DESTROY; }'}
-            \}
-        ";
+        self.install-perl5-destructor;
 
         # Steal methods of Any/Mu for our method cache.
         for flat Any.^method_table.pairs, Mu.^method_table.pairs {

@@ -1498,7 +1498,7 @@ XS(p5_destroy_p5_object) {
         }
     }
     sp -= items;
-    XPUSHs(newSViv(destroyed));
+    XPUSHs(newSViv(destroyed && !PL_in_clean_objs));
     XSRETURN(1);
 }
 
