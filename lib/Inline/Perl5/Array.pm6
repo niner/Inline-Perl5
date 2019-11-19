@@ -28,11 +28,11 @@ class Inline::Perl5::Array does Iterable does Positional {
     method Array() {
         my int32 $av_len = $!p5.p5_av_top_index($!av);
 
-        my $arr = [];
+        my @arr;
         loop (my int32 $i = 0; $i <= $av_len; $i = $i + 1) {
-            $arr.push($!ip5.p5_to_p6($!p5.p5_av_fetch($!av, $i)));
+            @arr.push($!ip5.p5_to_p6($!p5.p5_av_fetch($!av, $i)));
         }
-        $arr
+        @arr
     }
     method Capture() {
         self.Array.Capture

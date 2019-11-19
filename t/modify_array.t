@@ -3,7 +3,7 @@ use v6.c;
 use Test;
 use MONKEY-SEE-NO-EVAL;
 
-plan 32;
+plan 33;
 
 my &array-creator = EVAL q:to<PERL5>, :lang<Perl5>;
     sub {
@@ -69,5 +69,7 @@ $array.splice: 1, 1, [2, 3, 5, 6];
 is $array, [1, 2, 3, 5, 6, 4];
 
 $array.splice: 3, 0, $array.splice: 4, 1;
+
+ok(not EVAL("[1, 2]", :lang<Perl5>).perl.starts-with('$'), 'array not containerized');
 
 # vim: ft=perl6
