@@ -1107,7 +1107,7 @@ class X::Inline::Perl5::NoMultiplicity is Exception {
 }
 
 method init_data($data) {
-    self.call-simple-args('v6::init_data', $data);
+    self.call-simple-args('v6::init_data', $data.encode);
 }
 
 method BUILD(:$!default = False, Inline::Perl5::Interpreter :$!p5) {
@@ -1377,7 +1377,7 @@ sub init {
 sub init_data {
     my ($data) = @_;
     no strict;
-    open *{main::DATA}, '<', \$data;
+    open *{main::DATA}, '<:utf8', \$data;
 }
 
 sub uninit {
