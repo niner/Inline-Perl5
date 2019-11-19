@@ -3,7 +3,7 @@ use v6.c;
 use Test;
 use MONKEY-SEE-NO-EVAL;
 
-plan 31;
+plan 32;
 
 my &array-creator = EVAL q:to<PERL5>, :lang<Perl5>;
     sub {
@@ -34,6 +34,7 @@ my $array = array-creator(sub (@array) {
     is(@array[1], 2);
     @array[2] = 3;
     @array[3] = 4;
+    is(@array.Capture[1], 2);
 });
 
 is($array, [1, 2, 3, 4]);

@@ -34,6 +34,9 @@ class Inline::Perl5::Array does Iterable does Positional {
         }
         $arr
     }
+    method Capture() {
+        self.Array.Capture
+    }
     method iterator() {
         self.Array.iterator
     }
