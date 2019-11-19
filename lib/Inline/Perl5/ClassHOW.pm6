@@ -157,7 +157,13 @@ class Inline::Perl5::ClassHOW
 
     method method_table($type) is raw {
         use nqp;
-        my class NQPHash is repr('VMHash') { };
+        my class NQPHash is repr('VMHash') {
+            method Map() {
+                my \map = Map.new;
+                nqp::bindattr(map, Map, '$!storage', self);
+                map
+            }
+        };
         my Mu \result := nqp::create(NQPHash);
         for %!cache {
             nqp::bindkey(result, $_.key, nqp::decont($_.value));
@@ -168,6 +174,10 @@ class Inline::Perl5::ClassHOW
     method submethod_table($type) is raw {
         use nqp;
         nqp::hash()
+    }
+
+    method methods($type, :$local, :$excl, :$all) {
+        %!cache.values
     }
 
     method type_check(Mu $, Mu \check) {

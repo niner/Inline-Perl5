@@ -1,10 +1,10 @@
 use Test;
 use lib:from<Perl5> <t/lib>;
 BEGIN {
-    plan 21; # adjust the skip as well!
+    plan 23; # adjust the skip as well!
 
     unless EVAL 'eval { require Moose; 1};', :lang<Perl5> {
-        skip('Perl 5 Moose module not available', 21);
+        skip('Perl 5 Moose module not available', 23);
         exit;
     }
 }
@@ -36,6 +36,9 @@ is($p5obj.context(Scalar, Any, :named), 'scalar');
 
 is("$p5obj", 'overloaded string');
 is(+$p5obj, 42);
+
+ok $p5obj.^methods>>.name.Set<context>:exists;
+ok $p5obj.^method_table.Map<context>:exists;
 
 done-testing;
 
