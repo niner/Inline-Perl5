@@ -93,7 +93,12 @@ class Inline::Perl5::ClassHOW
         }
 
         %!cache<Str> := my method Str(\SELF:) {
-            SELF.^name ~ '(' ~ SELF.wrapped-perl5-object.gist ~ ')'
+            my $stringify = $p5.call('overload::Method', SELF, '""');
+            $stringify ?? $stringify(SELF) !! SELF.^name ~ '(' ~ SELF.wrapped-perl5-object.gist ~ ')'
+        }
+        %!cache<Numeric> := my method Numeric(\SELF:) {
+            my $numify = $p5.call('overload::Method', SELF, '0+');
+            $numify ?? $numify(SELF) !! SELF.^name ~ '(' ~ SELF.wrapped-perl5-object.gist ~ ')'
         }
         %!cache<AT-KEY> := my method AT-KEY(\SELF: Str() \key) {
             $p5.at-key(SELF.wrapped-perl5-object, key)

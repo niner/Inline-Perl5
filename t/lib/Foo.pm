@@ -1,4 +1,15 @@
 package Foo;
+use overload
+    '""' => sub {
+        my ($self) = @_;
+
+        return 'overloaded string';
+    },
+    "0+" => sub {
+        my ($self) = @_;
+
+        return 42;
+    };
 
 use Moose;
 
