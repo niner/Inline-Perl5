@@ -97,7 +97,8 @@ is not in the "main" namespace.
 ```
 
 Please note that since Perl 6 does not have the same concept of "context",
-Perl 5 functions are always called in list context.
+Perl 5 functions are by default called in list context. See "Invoking a
+method in scalar context" for how to get around that.
 
 ## Create a Perl 5 object / call a Perl 5 package method
 
@@ -120,7 +121,8 @@ Or using the low level methods:
 ```
 
 Please note that since Perl 6 does not have the same concept of "context",
-Perl 5 methods are always called in list context.
+Perl 5 methods are by default called in list context. See "Invoking a
+method in scalar context" for how to get around that.
 
 ## Invoke a method on a Perl 5 object
 
