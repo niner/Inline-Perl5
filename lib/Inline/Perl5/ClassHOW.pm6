@@ -60,8 +60,8 @@ class Inline::Perl5::ClassHOW
         $!p5.run: "
             package $!name \{
                 my \$destroy;
-                BEGIN \{ \$destroy = \\&{$!name}::DESTROY; \};
-                {'sub DESTROY { $destroy->(@_) if Perl6::Object::destroy($_[0]) and $destroy and $destroy ne \&DESTROY; }'}
+                BEGIN \{ \$destroy = defined(&{$!name}::DESTROY) ? \\&{$!name}::DESTROY : undef; \};
+                {'sub DESTROY { if (Perl6::Object::destroy($_[0]) and defined $destroy) { $destroy->(@_) } }'}
             \}
         ";
     }
