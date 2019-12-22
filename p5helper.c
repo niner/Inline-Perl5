@@ -1469,6 +1469,15 @@ XS(p5_call_p6_method) {
         return;
     }
     _perl6_magic* const p6mg = (_perl6_magic*)(mg->mg_ptr);
+    if (p6mg->index < 0) {
+        if (PL_in_clean_objs || PL_in_clean_all || 0 == strcmp(name_pv, "can")) {
+            XSRETURN_EMPTY;
+            return;
+        }
+        else {
+            croak("p5_call_p6_method %s on a reset object?", name_pv);
+        }
+    }
     SV *err = NULL;
     SV * const args_rv = newRV_noinc((SV *) args);
 
