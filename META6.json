@@ -1,12 +1,28 @@
 {
+    "meta-version": 1,
     "name"          : "Inline::Perl5",
     "version"       : "0.43",
     "perl"          : "6.c",
     "auth"          : "github:niner",
     "authors"       : [ "Stefan Seifert" ],
     "description"   : "Use Perl 5 code in a Perl 6 program",
-    "depends"       : [ "LibraryMake" ],
-    "test-depends"  : [ "File::Temp" ],
+    "depends" : {
+        "build": {
+            "requires": [
+                "Distribution::Builder::MakeFromJSON:ver<0.6+>",
+                {
+                    "from" : "bin",
+                    "name" : "perl"
+                }
+            ]
+        },
+        "runtime": {
+            "requires": [
+                "perl:from<native>"
+            ]
+        },
+	"test": [ "File::Temp" ]
+    },
     "provides"      : {
         "Inline::Perl5":                             "lib/Inline/Perl5.pm6",
         "Inline::Perl5::Array":                      "lib/Inline/Perl5/Array.pm6",
@@ -32,6 +48,17 @@
     "source-url"    : "git://github.com/niner/Inline-Perl5.git",
     "license"       : "Artistic-2.0",
     "support"       : {
-        "irc" : "irc://irc.freenode.org/#perl6"
+        "irc" : "irc://irc.freenode.org/#raku"
+    },
+    "builder": "Distribution::Builder::MakeFromJSON",
+    "build": {
+        "makefile-variables": {
+            "p5helper": {"resource": "libraries/p5helper"},
+            "perlopts": {
+                "run": [
+                    "perl", "-MExtUtils::Embed", "-e", "ccopts", "-e", "ldopts"
+                ]
+            }
+        }
     }
 }

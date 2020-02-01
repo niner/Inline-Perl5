@@ -1,6 +1,6 @@
 .PHONY: clean test
 CC = %CC%
-PERL6 = %perl6%
+PERL6 = %EXECUTABLE%
 
 all: %p5helper%
 clean:
