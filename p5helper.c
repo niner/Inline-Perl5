@@ -586,6 +586,52 @@ void p5_set_global(PerlInterpreter *my_perl, const char* name, SV *value) {
         croak("Setting global hash variable NYI");
 }
 
+I32 p5_compile_sv(PerlInterpreter *my_perl, SV *line, CV **cv) {
+    char *start = NULL;
+    char start_orig;
+    I32 floor;
+    OP *op;
+
+    ENTER;
+
+    floor = start_subparse(FALSE, 0);
+
+    if (PL_parser) {
+        start = strstr(PL_parser->bufptr, SvPVX(line) + 1);
+        start_orig = start[-1];
+        start[-1] = '{';
+        lex_read_to(start - 1);
+    }
+    else {
+        lex_start(line, NULL, 0);
+    }
+
+    op = parse_block(0);
+    I32 remainder = PL_parser->bufend - PL_parser->bufptr;
+
+    *cv = newATTRSUB(floor, NULL, NULL, NULL, op);
+
+    if (start)
+        start[-1] = start_orig;
+    else
+        remainder -= 2; /* not sure why but it fixes things */
+
+    LEAVE;
+
+    return remainder;
+}
+
+void p5_runops(PerlInterpreter *my_perl, CV *cv) {
+    dSP;
+    ENTER;
+    SAVETMPS;
+    PUSHMARK(sp);
+    call_sv((SV*)cv, G_DISCARD);
+    SPAGAIN;
+    FREETMPS;
+    LEAVE;
+}
+
 SV *p5_eval_pv(PerlInterpreter *my_perl, const char* p, I32 croak_on_error) {
     PERL_SET_CONTEXT(my_perl);
     {

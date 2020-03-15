@@ -41,7 +41,8 @@
         "Inline::Perl5::Interpreter":                "lib/Inline/Perl5/Interpreter.pm6",
         "Inline::Perl5::TypeGlob":                   "lib/Inline/Perl5/TypeGlob.pm6",
         "Inline::Perl5::Perl5Class":                 "lib/Inline/Perl5/Perl5Class.rakumod",
-        "Inline::Language::ObjectKeeper":            "lib/Inline/Language/ObjectKeeper.pm6"
+        "Inline::Language::ObjectKeeper":            "lib/Inline/Language/ObjectKeeper.pm6",
+        "v5-inline":                                 "lib/v5-inline.pm6"
     },
     "resources"      : [
         "libraries/p5helper"
