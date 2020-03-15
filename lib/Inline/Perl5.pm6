@@ -353,6 +353,17 @@ method handle_p5_exception() is hidden-from-backtrace {
     }
 }
 
+method compile-to-block-end($perl) {
+    my @optree := CArray[Pointer].new;
+    @optree[0] = Pointer;
+    my $end = $!p5.p5_compile_sv(self.p6_to_p5($perl), @optree);
+    $end, @optree[0]
+}
+
+method runops(Pointer $ops) {
+    $!p5.p5_runops($ops);
+}
+
 method run($perl) {
     my $res = $!p5.p5_eval_pv($perl, 0);
     self.handle_p5_exception();
@@ -1500,6 +1511,14 @@ sub run {
     my ($code) = @_;
     return $p6->run($code);
 }
+
+sub run_to_end {
+    my ($code) = @_;
+    $$code = substr($$code, 2);
+    my $pos = $p6->run_to_end($$code);
+    $$code = substr($$code, $pos + 1);
+}
+
 
 sub call {
     my ($name, @args) = @_;
