@@ -22,6 +22,7 @@ class Inline::Perl5::Interpreter is repr('CPointer') {
         &free_p6_object (IV),
         &hash_at_key (IV, Str --> Pointer),
         &hash_assign_key (IV, Str, Pointer),
+        &compile_to_end (Str, CArray[uint32] --> Pointer),
     ) is native($p5helper)
         returns Inline::Perl5::Interpreter { ... }
 
@@ -31,6 +32,7 @@ class Inline::Perl5::Interpreter is repr('CPointer') {
         &free_p6_object (IV),
         &hash_at_key (IV, Str --> Pointer),
         &hash_assign_key (IV, Str, Pointer),
+        &compile_to_end (Str, CArray[uint32] --> Pointer),
     ) is native($p5helper)
         { ... }
 
