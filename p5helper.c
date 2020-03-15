@@ -26,6 +26,7 @@ typedef struct {
     void (*free_p6_object)(IV);
     SV *(*hash_at_key)(IV, char *);
     SV *(*hash_assign_key)(IV, char *, SV *);
+    SV *(*compile_to_end)(char *, U32 *pos);
 } perl6_callbacks;
 
 XS(p5_call_p6_method);
@@ -69,6 +70,31 @@ size_t p5_size_of_nv() {
 
 static int inited = 0;
 
+static Perl_keyword_plugin_t next_keyword_plugin;
+static int raku_keyword_plugin(pTHX_ char *keyword_ptr, STRLEN keyword_len, OP **op_ptr) {
+    if (memEQs(keyword_ptr, keyword_len, "raku")) {
+        // read the whole source file
+        while (lex_next_chunk(0));
+
+        // move into the raku block
+        lex_read_space(0);
+        lex_read_to(PL_parser->bufptr + 1);
+
+        declare_cbs;
+        U32 pos;
+        char *bufptr = PL_parser->bufptr;
+        SV *code = cbs->compile_to_end(PL_parser->bufptr, &pos);
+        lex_read_to(bufptr + pos + 1);
+
+        *op_ptr = newUNOP(OP_ENTERSUB, 0, newSVOP(OP_CONST, 0, code));
+
+        return KEYWORD_PLUGIN_STMT;
+    }
+    else {
+        return next_keyword_plugin(aTHX_ keyword_ptr, keyword_len, op_ptr);
+    }
+}
+
 void p5_inline_perl6_xs_init(PerlInterpreter *my_perl) {
     char *file = __FILE__;
     newXS("Perl6::Object::call_method", p5_call_p6_method, file);
@@ -86,7 +112,8 @@ void p5_init_callbacks(
     SV  *(*call_p6_callable)(IV, SV *, SV **),
     void (*free_p6_object)(IV),
     SV  *(*hash_at_key)(IV, char *),
-    SV  *(*hash_assign_key)(IV, char *, SV *)
+    SV  *(*hash_assign_key)(IV, char *, SV *),
+    SV  *(*compile_to_end)(char *, U32 *)
 ) {
     perl6_callbacks *cbs = malloc(sizeof(perl6_callbacks));
     cbs->call_p6_method   = call_p6_method;
@@ -94,6 +121,7 @@ void p5_init_callbacks(
     cbs->free_p6_object   = free_p6_object;
     cbs->hash_at_key      = hash_at_key;
     cbs->hash_assign_key  = hash_assign_key;
+    cbs->compile_to_end   = compile_to_end;
     hv_stores(PL_modglobal, "Inline::Perl5 callbacks", newSViv((IV)cbs));
 }
 
@@ -107,7 +135,8 @@ PerlInterpreter *p5_init_perl(
     SV  *(*call_p6_callable)(IV, SV *, SV **),
     void (*free_p6_object)(IV),
     SV  *(*hash_at_key)(IV, char *),
-    SV  *(*hash_assign_key)(IV, char *, SV *)
+    SV  *(*hash_assign_key)(IV, char *, SV *),
+    SV  *(*compile_to_end)(char *, U32 *)
 ) {
     if (inited) {
 #ifndef MULTIPLICITY
@@ -134,8 +163,11 @@ PerlInterpreter *p5_init_perl(
         call_p6_callable,
         free_p6_object,
         hash_at_key,
-        hash_assign_key
+        hash_assign_key,
+        compile_to_end
     );
+
+    wrap_keyword_plugin(raku_keyword_plugin, &next_keyword_plugin);
 
     return my_perl;
 }
