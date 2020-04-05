@@ -1328,8 +1328,8 @@ SV *p5_wrap_p6_hash(
 
         PUSHMARK(SP);
 
-        XPUSHs(newSVpv("Perl6::Hash", 0));
-        XPUSHs(inst_ptr);
+        XPUSHs(sv_2mortal(newSVpv("Perl6::Hash", 0)));
+        XPUSHs(sv_2mortal(inst_ptr));
 
         PUTBACK;
 
