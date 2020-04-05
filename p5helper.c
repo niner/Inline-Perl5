@@ -645,10 +645,12 @@ SV *p5_call_inherited_package_method(PerlInterpreter *my_perl, char *package, ch
     {
         dSP;
         SV * retval = NULL;
-        HV * stash = gv_stashpvn(package, strlen(package), SVf_UTF8);
+        SV * package_sv = newSVpv(package, 0);
+        HV * stash = gv_stashsv(package_sv, SVf_UTF8);
         int flags = G_ARRAY | G_EVAL;
 
         if (stash == NULL) {
+            SvREFCNT_dec(package_sv);
             *type = -1; /* signal that a wrapper package needs to be created */
             return NULL;
         }
@@ -658,14 +660,12 @@ SV *p5_call_inherited_package_method(PerlInterpreter *my_perl, char *package, ch
 
         PUSHMARK(SP);
 
-        XPUSHs(newSVpv(package, 0));
+        XPUSHs(sv_2mortal(package_sv));
         push_arguments(sp, len, args);
 
-        {
-            GV * const gv = p5_look_up_package_method(my_perl, base_package, name);
-            SV * const rv = sv_2mortal(newRV((SV*)GvCV(gv)));
-            *count = call_sv(rv, flags);
-        }
+        GV * const gv = p5_look_up_package_method(my_perl, base_package, name);
+        SV * const rv = sv_2mortal(newRV_inc((SV*)GvCV(gv)));
+        *count = call_sv(rv, flags);
 
         SPAGAIN;
 
