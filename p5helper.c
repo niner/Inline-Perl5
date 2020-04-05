@@ -142,6 +142,13 @@ PerlInterpreter *p5_init_perl(
 
 void p5_destruct_perl(PerlInterpreter *my_perl) {
     PERL_SET_CONTEXT(my_perl);
+
+    SV **cbs_entry = hv_fetchs(PL_modglobal, "Inline::Perl5 callbacks", 0);
+    perl6_callbacks *cbs = NULL;
+    if (cbs_entry) {
+        cbs = (perl6_callbacks*)SvIV(*cbs_entry);
+    }
+
     PL_perl_destruct_level = 1;
 
     POPSTACK_TO(PL_mainstack);
@@ -150,6 +157,9 @@ void p5_destruct_perl(PerlInterpreter *my_perl) {
 
     perl_destruct(my_perl);
     perl_free(my_perl);
+
+    if (cbs)
+        free(cbs);
 
     if (--interpreters == 0 && terminate)
         PERL_SYS_TERM();
