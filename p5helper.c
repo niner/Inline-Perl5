@@ -1359,8 +1359,8 @@ SV *p5_wrap_p6_handle(PerlInterpreter *my_perl, IV i, SV *p5obj) {
 
         PUSHMARK(SP);
 
-        XPUSHs(newSVpv("Perl6::Handle", 0));
-        XPUSHs(handle);
+        XPUSHs(sv_2mortal(newSVpv("Perl6::Handle", 0)));
+        XPUSHs(sv_2mortal(handle));
 
         PUTBACK;
 
