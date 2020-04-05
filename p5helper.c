@@ -1272,6 +1272,8 @@ SV *p5_wrap_p6_callable(PerlInterpreter *my_perl, IV i, SV *p5obj) {
         SAVETMPS;
 
         PUSHMARK(SP);
+        XPUSHs(sv_2mortal(newSViv(i)));
+        PUTBACK;
         call_pv("Perl6::Callable::new", G_SCALAR);
         SPAGAIN;
 
@@ -1624,20 +1626,15 @@ XS(p5_hash_assign_key) {
 
 XS(p5_call_p6_callable) {
     dXSARGS;
-    SV * obj = ST(0);
+    SV * index = ST(0);
 
     AV *args = create_args_array(ax, items, 1);
 
-    if (!SvROK(obj))
-        croak("Tried to call a Perl 6 method on a non-object!?");
-    SV * const obj_deref = SvRV(obj);
-    MAGIC * const mg = mg_find(obj_deref, '~');
-    _perl6_magic* const p6mg = (_perl6_magic*)(mg->mg_ptr);
     SV *err = NULL;
     SV * const args_rv = newRV_noinc((SV *) args);
 
     declare_cbs;
-    SV * retval = cbs->call_p6_callable(p6mg->index, args_rv, &err);
+    SV * retval = cbs->call_p6_callable(SvIV(index), args_rv, &err);
     return post_callback(ax, sp, items, args_rv, err, retval);
 }
 

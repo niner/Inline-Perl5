@@ -1295,9 +1295,8 @@ sub DESTROY {
 package Perl6::Callable;
 
 sub new {
-    my $sub;
-    $sub = sub { Perl6::Callable::call($sub, @_) };
-    return $sub;
+    my ($index) = @_;
+    return sub { Perl6::Callable::call($index, @_) };
 }
 
 package Perl6::Handle;
