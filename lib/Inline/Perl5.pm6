@@ -10,7 +10,6 @@ use Inline::Perl5::ClassHOW;
 use Inline::Perl5::Extension;
 use Inline::Perl5::Hash;
 use Inline::Perl5::Object;
-use Inline::Perl5::Parent;
 use Inline::Perl5::Callable;
 use Inline::Perl5::TypeGlob;
 
@@ -74,9 +73,6 @@ multi method p6_to_p5(Capture:D $value where $value.elems == 1) returns Pointer 
 multi method p6_to_p5(Inline::Perl5::Object $value) returns Pointer {
     $!p5.p5_sv_refcnt_inc($value.ptr);
     $value.ptr;
-}
-multi method p6_to_p5(Inline::Perl5::Parent $value) returns Pointer {
-    self.p6_to_p5($value.unwrap-perl5-object());
 }
 multi method p6_to_p5(Inline::Perl5::Extension $value) returns Pointer {
     self.p6_to_p5($value.unwrap-perl5-object());
@@ -1226,7 +1222,6 @@ method initialize(Bool :$reinitialize) {
 
 # for backwards compatibility with documented interfaces
 OUR::<Perl5Attributes> := Inline::Perl5::Attributes;
-OUR::<Perl5Parent>     := Inline::Perl5::Parent;
 
 my Bool $inline_perl6_in_use = False;
 sub init_inline_perl6_new_callback(&inline_perl5_new (Inline::Perl5::Interpreter --> Pointer)) { ... };

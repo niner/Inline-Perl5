@@ -278,35 +278,6 @@ Perl 5 methods in your base class. However, it is not yet possible to directly
 write to the Perl 5 object's data, i.e. <code>$self->{foo} = 1;</code>. Read
 access however is possible, i.e. <code>my $foo = self<foo>;</code>.
 
-When <code>use</code> cannot be used to load the Perl 5 module, the
-Inline::Perl5::Perl5Parent role allows can be used for subclassing.
-Pass the Perl 5 package's name as parameter to the role. Pass the Inline::Perl5
-object as named parameter to your classes constructor when creating objects.
-
-```
-    $p5.run(q:heredoc/PERL5/);
-
-    package Foo;
-
-    sub test {
-        my ($self) = @_;
-
-        return $self->bar;
-    }
-
-    PERL5
-
-    class Bar does Inline::Perl5::Perl5Parent['Foo'] {
-        method bar {
-            return "Perl6";
-        }
-    }
-
-    use Inline::Perl5;
-    my $p5 = Inline::Perl5.new;
-    say Bar.new(perl5 => $p5).test;
-```
-
 ## Pass a scalar reference to Perl 5 code
 
 Simply pass a [`Capture`](https://docs.perl6.org/type/Capture) object containing
