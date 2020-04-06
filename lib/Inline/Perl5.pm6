@@ -1022,15 +1022,18 @@ method require(Str $module, Num $version?, Bool :$handle) {
 
 method !create_wrapper_class(Str $module, Stash $stash) {
     my $class;
-    my $first-time = True;
-    my $symbols = self.subs_in_module($module);
-    my $variables = self.variables_in_module($module);
+    my $first-time = False;
+    my $symbols;
+    my $variables;
+
     if %!loaded_modules{$module}:exists {
         $class := %!loaded_modules{$module};
-        $first-time = False;
     }
     else {
         my $p5 := self;
+        $first-time = True;
+        $symbols = self.subs_in_module($module);
+        $variables = self.variables_in_module($module);
 
         %!loaded_modules{$module} := $class :=
             Inline::Perl5::ClassHOW.new_type(name => $module, :p5(self), :ip5($!p5));
