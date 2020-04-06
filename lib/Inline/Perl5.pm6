@@ -359,7 +359,12 @@ multi method p5_to_p6(Pointer:D \value, \type) {
 
 method handle_p5_exception() is hidden-from-backtrace {
     if my $error = self.p5_to_p6($!p5.p5_err_sv()) {
-        die $error;
+        if $error ~~ Exception {
+            $error.rethrow;
+        }
+        else {
+            die $error;
+        }
     }
 }
 
