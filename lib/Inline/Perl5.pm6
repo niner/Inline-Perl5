@@ -90,24 +90,20 @@ method unwrap-perl5-object($value) {
         !! $!p5.p5_add_magic($o, $!objects.keep($value))
 }
 
-multi method p6_to_p5(Any:D $value) {
-    if $value.^mro.grep: {$_.HOW ~~ Inline::Perl5::ClassHOW} {
-        my $o = $value.wrapped-perl5-object;
-        if $!p5.p5_is_live_wrapped_p6_object($o) {
-            $!p5.p5_newRV_inc($o)
-        }
-        else {
-            $!p5.p5_add_magic($o, $!objects.keep($value))
-        }
-    }
-    else {
-        my $index = $!objects.keep($value);
+multi method p6_to_p5(Inline::Perl5::WrapperClass $value) {
+    my $o = $value.wrapped-perl5-object;
+    $!p5.p5_is_live_wrapped_p6_object($o)
+        ?? $!p5.p5_newRV_inc($o)
+        !! $!p5.p5_add_magic($o, $!objects.keep($value))
+}
 
-        $!p5.p5_wrap_p6_object(
-            $index,
-            Pointer,
-        )
-    }
+multi method p6_to_p5(Any:D $value) {
+    my $index = $!objects.keep($value);
+
+    $!p5.p5_wrap_p6_object(
+        $index,
+        Pointer,
+    )
 }
 multi method p6_to_p5(Callable:D $value, Pointer $inst = Pointer) {
     my $index = $!objects.keep($value);
@@ -317,11 +313,8 @@ multi method p5_to_p6_type(Pointer:D \value, Blessed) {
         my $stash-name = self.stash-name(value);
 
         my $class;
-        my $p5class;
-        use nqp;
         if %!loaded_modules{$stash-name}:exists {
             $class := %!loaded_modules{$stash-name};
-            $p5class := $class.^mro.list.first({nqp::istype($_.HOW, Inline::Perl5::ClassHOW)});
         }
         else {
             my $base_type := self.global('@' ~ $stash-name ~ '::ISA')[0];
@@ -332,22 +325,16 @@ multi method p5_to_p6_type(Pointer:D \value, Blessed) {
                 :p5(self),
                 :ip5($!p5),
             );
-            $p5class := $class;
             my $symbols = self.subs_in_module($stash-name);
             for @$symbols -> $name {
                 $class.^add_wrapper_method($name);
             }
             $class.^compose;
         }
-        if $p5class !=:= Nil {
-            my $obj = $!p5.p5_sv_rv(value);
-            $!p5.p5_sv_refcnt_inc($obj);
-            $!p5.p5_sv_refcnt_dec(value);
-            $class.bless(:wrapped-perl5-object($obj));
-        }
-        else {
-            Inline::Perl5::Object.new(perl5 => self, ptr => value)
-        }
+        my $obj = $!p5.p5_sv_rv(value);
+        $!p5.p5_sv_refcnt_inc($obj);
+        $!p5.p5_sv_refcnt_dec(value);
+        $class.bless(:wrapped-perl5-object($obj));
     }
 }
 

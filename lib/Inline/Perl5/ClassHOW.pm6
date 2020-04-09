@@ -10,6 +10,8 @@ BEGIN {
     $compunit = Nil; # Avoid trying to serialize a VMContext
 }
 
+role Inline::Perl5::WrapperClass { }
+
 class Inline::Perl5::ClassHOW
     does Metamodel::AttributeContainer
     does Metamodel::BaseType
@@ -25,6 +27,19 @@ class Inline::Perl5::ClassHOW
     has $!ip5;
     has $!composed;
     has %!gvs;
+
+    my class NQPArray is repr('VMArray') {
+        use nqp;
+        method push(Mu \value) { nqp::push(self, nqp::decont(value)) }
+        method pop() { nqp::pop(self) }
+        method unshift(Mu \value) { nqp::unshift(self, nqp::decont(value)) }
+        method shift() { nqp::shift(self) }
+        method list() {
+            my \list = List.new;
+            nqp::bindattr(list, List, '$!reified', self);
+            list
+        }
+    }
 
     my $archetypes := Metamodel::Archetypes.new(
         :nominal(1), :inheritable(1), :augmentable(1) );
@@ -55,6 +70,16 @@ class Inline::Perl5::ClassHOW
 
     method isa(\obj, \type) {
         obj =:= type
+    }
+
+    method does(\obj, \type) {
+        type =:= Inline::Perl5::WrapperClass;
+    }
+
+    method role_typecheck_list(\obj) {
+        my $list := NQPArray.CREATE;
+        $list.push: Inline::Perl5::WrapperClass;
+        $list
     }
 
     method ip5(\type) {
@@ -95,7 +120,7 @@ class Inline::Perl5::ClassHOW
     method compose(\type) {
         # Set up type checking with cache.
         Metamodel::Primitives.configure_type_checking(type,
-            self.mro(type).list,
+            (|self.mro(type).list, Inline::Perl5::WrapperClass),
             :authoritative, :call_accepts);
 
         my $p5 = $!p5;
@@ -171,8 +196,6 @@ class Inline::Perl5::ClassHOW
         nqp::bindattr(self, $?CLASS, '$!composed_repr', nqp::unbox_i(1));
         sink so self.add_wrapper_method(type, 'new'); # Module may not have a method 'new'
         $*W.add_object(type) if $*W;
-
-        Metamodel::Primitives.configure_type_checking(type, self.mro(type).list);
 
         type
     }
@@ -394,17 +417,6 @@ class Inline::Perl5::ClassHOW
     method mro(Mu \obj) {
         use nqp;
         unless @!mro {
-            my class NQPArray is repr('VMArray') {
-                method push(Mu \value) { nqp::push(self, nqp::decont(value)) }
-                method pop() { nqp::pop(self) }
-                method unshift(Mu \value) { nqp::unshift(self, nqp::decont(value)) }
-                method shift() { nqp::shift(self) }
-                method list() {
-                    my \list = List.new;
-                    nqp::bindattr(list, List, '$!reified', self);
-                    list
-                }
-            }
             nqp::bindattr(self, $?CLASS, '@!mro', nqp::create(NQPArray));
             nqp::bindpos(@!mro, 0, obj.WHAT);
             for $!base_type.HOW.mro($!base_type) {
