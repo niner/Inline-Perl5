@@ -8,12 +8,12 @@ $p5.run(q/
     use Test::More;
 
     sub test {
-        my ($perl6) = @_;
+        my ($raku) = @_;
         for (1 .. 100) {
-            my @retval = $perl6->test('Perl6');
-            is_deeply \@retval, ['Perl6'];
-            my @retval = $perl6->test('Perl', 6);
-            is_deeply \@retval, ['Perl', 6];
+            my @retval = $raku->test('Raku');
+            is_deeply \@retval, ['Raku'];
+            my @retval = $raku->test('Raku', 42);
+            is_deeply \@retval, ['Raku', 42];
         }
     };
 /);

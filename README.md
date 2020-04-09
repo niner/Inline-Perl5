@@ -17,13 +17,13 @@ Inline::Perl5
 
 # DESCRIPTION
 
-Module for executing Perl 5 code and accessing Perl 5 modules from Perl 6.
+Module for executing Perl 5 code and accessing Perl 5 modules from Raku.
 
 Supports Perl 5 modules including XS modules. Allows passing integers,
 strings, arrays, hashes, code references, file handles and objects between
-Perl 5 and Perl 6. Also supports calling methods on Perl 5 objects from
-Perl 6 and calling methods on Perl 6 objects from Perl 5 and subclass
-Perl 5 classes in Perl 6.
+Perl 5 and Raku. Also supports calling methods on Perl 5 objects from
+Raku and calling methods on Raku objects from Perl 5 and subclass
+Perl 5 classes in Raku.
 
 # HOW DO I?
 
@@ -37,7 +37,7 @@ automatically load Inline::Perl5 as long as it is installed:
     use Test::More:from<Perl5>;
 ```
 
-In Perl 6 the :ver adverb is used for requiring a minimum version of a loaded
+In Raku the :ver adverb is used for requiring a minimum version of a loaded
 module:
 
 ```
@@ -74,12 +74,12 @@ Just list the functions or groups you want to import
 ## Call a Perl 5 function
 
 Inline::Perl5 creates wrappers for loaded Perl 5 modules and their functions.
-They can be used as if they were Perl 6 modules:
+They can be used as if they were Raku modules:
 
 ```
     use Test::More:from<Perl5>;
     plan tests => 1;
-    ok 'yes', 'looks like a Perl 6 function';
+    ok 'yes', 'looks like a Raku function';
 ```
 
 In this example, the `plan` function exported by `Test::More` is called.
@@ -96,7 +96,7 @@ is not in the "main" namespace.
     $p5.call('Test::More::plan', tests => 1);
 ```
 
-Please note that since Perl 6 does not have the same concept of "context",
+Please note that since Raku does not have the same concept of "context",
 Perl 5 functions are by default called in list context. See "Invoking a
 method in scalar context" for how to get around that.
 
@@ -120,13 +120,13 @@ Or using the low level methods:
     my $dumper = $p5.invoke('Data::Dumper', 'new');
 ```
 
-Please note that since Perl 6 does not have the same concept of "context",
+Please note that since Raku does not have the same concept of "context",
 Perl 5 methods are by default called in list context. See "Invoking a
 method in scalar context" for how to get around that.
 
 ## Invoke a method on a Perl 5 object
 
-Once you have a Perl 5 object in a variable it will behave just like a Perl 6
+Once you have a Perl 5 object in a variable it will behave just like a Raku
 object.  You can call methods on it like on any other object.
 
 ```
@@ -138,7 +138,7 @@ object.  You can call methods on it like on any other object.
 
 ### Invoking a method in scalar context
 
-Please note that since Perl 6 does not have the same concept of "context",
+Please note that since Raku does not have the same concept of "context",
 Perl 5 methods are by default called in list context. If you need to call the
 method in scalar context, you can tell it so explicitly, by passing the
 `Scalar` type object as first argument:
@@ -158,7 +158,7 @@ performance in some cases.
 
 Most objects in Perl 5 are blessed hash references. Some of them don't even
 provide accessor methods but require you to just access the hash fields
-directly. This works the same in Perl 6:
+directly. This works the same in Raku:
 ```
     use Foo:from<Perl5>;
     my $foo = Foo.new;
@@ -167,7 +167,7 @@ directly. This works the same in Perl 6:
 
 ## Run arbitrary Perl 5 code
 
-Perl6's EVAL function supports multiple languages, just like the "use"
+Raku's EVAL function supports multiple languages, just like the "use"
 statement. It allows for execution of arbitrary Perl 5 code given as string:
 
 ```
@@ -191,10 +191,10 @@ method:
 Both "EVAL" and "run" return the value of the last statement in the EVAL'ed
 code.
 
-## Call a Perl 6 function from Perl 5
+## Call a Raku function from Perl 5
 
 Inline::Perl5 creates a Perl 5 package called "v6". This package contains
-a "call" function which allows for calling Perl 6 functions from Perl 5,
+a "call" function which allows for calling Raku functions from Perl 5,
 same as Inline::Perl5's "call" method. It takes the name of the function
 to call and passes on any additional arguments and returns the return value
 of the called Perl 5 function.
@@ -204,7 +204,7 @@ of the called Perl 5 function.
     my $p5 = Inline::Perl5.new;
 
     our sub foo($str) {
-        say "Perl6 says hello to $str";
+        say "Raku says hello to $str";
     };
 
     $p5.run(q:to/PERL5/);
@@ -212,9 +212,9 @@ of the called Perl 5 function.
     PERL5
 ```
 
-## Invoke a method on a Perl 6 object from Perl 5
+## Invoke a method on a Raku object from Perl 5
 
-Perl 6 objects passed to Perl 5 functions will behave just like any other
+Raku objects passed to Perl 5 functions will behave just like any other
 objects in Perl 5, so you can invoke methods using the -> operator.
 
 ```
@@ -223,24 +223,24 @@ objects in Perl 5, so you can invoke methods using the -> operator.
 
     $p5.run(q'
         sub test {
-            my ($perl6) = @_;
-            $perl6->hello;
+            my ($raku) = @_;
+            $raku->hello;
         }
     ');
 
     class Foo {
         method hello {
-            say "Hello Perl 6";
+            say "Hello Raku";
         }
     }
 
     $p5.call('test', Foo.new);
 ```
 
-## Run arbitrary Perl 6 code from Perl 5
+## Run arbitrary Raku code from Perl 5
 
 The "run" function in the automatically created "v6" package can be used to
-execute arbitrary Perl 6 code from Perl 5. It returns the value of the last
+execute arbitrary Raku code from Perl 5. It returns the value of the last
 evaluated expression in the executed code.
 
 ```
@@ -254,12 +254,12 @@ evaluated expression in the executed code.
 
 ## Inherit from a Perl 5 class
 
-Inline::Perl5 creates a corresponding Perl 6 class for each Perl 5 module
+Inline::Perl5 creates a corresponding Raku class for each Perl 5 module
 loaded via the <code>use Foo:from<Perl5></code> or <code>$p5.use('Foo')</code>
 mechanisms.
 
 You can subclass these automatically created classes as if they were original
-Perl 6 classes:
+Raku classes:
 
 ```
     use Data::Dumper:from<Perl5>;
@@ -298,7 +298,7 @@ object as named parameter to your classes constructor when creating objects.
 
     class Bar does Inline::Perl5::Perl5Parent['Foo'] {
         method bar {
-            return "Perl6";
+            return "Raku";
         }
     }
 
@@ -309,37 +309,37 @@ object as named parameter to your classes constructor when creating objects.
 
 ## Pass a scalar reference to Perl 5 code
 
-Simply pass a [`Capture`](https://docs.perl6.org/type/Capture) object containing
+Simply pass a [`Capture`](https://docs.raku.org/type/Capture) object containing
 the object you want to pass as a reference:
 
-```perl6
+```raku
     $p5obj.takes-a-scalar-ref-to-str: \("the string");
 ```
 
-`HASH` and `ARRAY` references are made automatically if the Perl 6 objects
+`HASH` and `ARRAY` references are made automatically if the Raku objects
 are [containerized](https://perl6advent.wordpress.com/2017/12/02/):
 
-```perl6
+```raku
     $p5obj.takes-an-array:      [<a b c>];
     $p5obj.takes-an-array-ref: $[<a b c>];
 ```
 
 `CODE` objects are passed by reference automatically:
 
-```perl6
+```raku
     $p5obj.takes-a-coderef: *.so;
 ```
 
 `Regex` objects are passed by reference automatically:
 
-```perl6
+```raku
     $p5obj.takes-a-regex: /foo/;
 ```
 
 ## Catch exceptions thrown by Perl 5 code
 
-Perl 5's exceptions (die) are translated to X::AdHoc exceptions in Perl 6 and
-can be caught like any other Perl 6 exceptions:
+Perl 5's exceptions (die) are translated to X::AdHoc exceptions in Raku and
+can be caught like any other Raku exceptions:
 
 ```
     {
@@ -352,9 +352,9 @@ can be caught like any other Perl 6 exceptions:
     }
 ```
 
-## Catch exceptions thrown by Perl 6 code in Perl 5
+## Catch exceptions thrown by Raku code in Perl 5
 
-Perl 6's exceptions (die) are translated to Perl 5 exceptions and
+Raku's exceptions (die) are translated to Perl 5 exceptions and
 can be caught like any other Perl 5 exceptions:
 
 ```
@@ -367,11 +367,11 @@ can be caught like any other Perl 5 exceptions:
     PERL5
 ```
 
-## Mix Perl 5 and Perl 6 code in the same file
+## Mix Perl 5 and Raku code in the same file
 
 Inline::Perl5 creates a virtual module called "v6-inline". By saying
 "use v6-inline;" in a Perl 5 module, you can declare that the rest of the file
-is written in Perl 6:
+is written in Raku:
 
 ```
     package Some::Perl5::Module;
@@ -386,7 +386,7 @@ is written in Perl 6:
 ```
 
 Note that this Perl 5 module obviously will only work when Inline::Perl5 is
-loaded, i.e. in a Perl 6 program or if you are using Inline::Perl6 in Perl 5.
+loaded, i.e. in a Raku program or if you are using Inline::Perl6 in Perl 5.
 This functionality is aimed at supporting Perl 5 frameworks (think Catalyst
 or DBIx::Class or Dancer or ...) that automatically load modules and of course
 expect these modules to be written in Perl 5.
@@ -402,7 +402,7 @@ you have to build it as:
     perlbrew install perl-stable -Duseshrplib
 
 (or, if you want to use more than one Inline::Perl5 interpeter safely, for
-instance from within Perl 6 threads, add the `-Dusemultiplicity` option as well)
+instance from within Raku threads, add the `-Dusemultiplicity` option as well)
 
 If you use plenv:
 
@@ -415,7 +415,7 @@ package already contains everything needed.
 
 Build Inline::Perl5 with
 
-    perl6 configure.pl6
+    raku configure.pl6
     make
 
 and test with
