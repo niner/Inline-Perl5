@@ -39,7 +39,7 @@ is(+$foo, 42);
 
 my $bar = $p5.invoke('Bar', 'new', 'a string!');
 isnt("$bar", 'a string!');
-like("$bar", /"Inline::Perl5::Object"\<\-?\d+\>/);
+like("$bar", /"Bar"/);
 isnt((try +$bar) // 0, 42);
 
 done-testing;

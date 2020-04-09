@@ -169,8 +169,8 @@ method return_2() {
 }
 
 multi trait_mod:<is>(Routine $declarand, :@p5attrs!) {
-    unless $declarand.does(Inline::Perl5::Perl5Attributes) {
-        $declarand does Inline::Perl5::Perl5Attributes;
+    unless $declarand.does(Inline::Perl5::Attributes) {
+        $declarand does Inline::Perl5::Attributes;
     }
     $declarand.attributes.append(@p5attrs);
 }

@@ -7,7 +7,6 @@ use Inline::Perl5::Array;
 use Inline::Perl5::Attributes;
 use Inline::Perl5::Caller;
 use Inline::Perl5::ClassHOW;
-use Inline::Perl5::Extension;
 use Inline::Perl5::Hash;
 use Inline::Perl5::Object;
 use Inline::Perl5::Callable;
@@ -73,18 +72,6 @@ multi method p6_to_p5(Capture:D $value where $value.elems == 1) returns Pointer 
 multi method p6_to_p5(Inline::Perl5::Object $value) returns Pointer {
     $!p5.p5_sv_refcnt_inc($value.ptr);
     $value.ptr;
-}
-multi method p6_to_p5(Inline::Perl5::Extension $value) returns Pointer {
-    self.p6_to_p5($value.unwrap-perl5-object());
-}
-
-multi method p6_to_p5(Inline::Perl5::Extension $value, Pointer $target) returns Pointer {
-    my $index = $!objects.keep($value);
-
-    $!p5.p5_wrap_p6_object(
-        $index,
-        $target,
-    );
 }
 multi method p6_to_p5(Pointer $value) returns Pointer {
     $value;
@@ -328,19 +315,35 @@ multi method p5_to_p6_type(Pointer:D \value, Blessed) {
     else {
         $!p5.p5_sv_refcnt_inc(value);
         my $stash-name = self.stash-name(value);
+
+        my $class;
+        my $p5class;
+        use nqp;
         if %!loaded_modules{$stash-name}:exists {
-            my $class := %!loaded_modules{$stash-name};
-            use nqp;
-            my $p5class := $class.^mro.list.first({nqp::istype($_.HOW, Inline::Perl5::ClassHOW)});
-            if $p5class !=:= Nil {
-                my $obj = $!p5.p5_sv_rv(value);
-                $!p5.p5_sv_refcnt_inc($obj);
-                $!p5.p5_sv_refcnt_dec(value);
-                nqp::p6bindattrinvres($class.CREATE, $p5class, '$!wrapped-perl5-object', $obj);
+            $class := %!loaded_modules{$stash-name};
+            $p5class := $class.^mro.list.first({nqp::istype($_.HOW, Inline::Perl5::ClassHOW)});
+        }
+        else {
+            my $base_type := self.global('@' ~ $stash-name ~ '::ISA')[0];
+            $base_type := $base_type ?? %!loaded_modules{$base_type} !! Any;
+            %!loaded_modules{$stash-name} := $class := Inline::Perl5::ClassHOW.new_type(
+                :name($stash-name),
+                :base_type($base_type),
+                :p5(self),
+                :ip5($!p5),
+            );
+            $p5class := $class;
+            my $symbols = self.subs_in_module($stash-name);
+            for @$symbols -> $name {
+                $class.^add_wrapper_method($name);
             }
-            else {
-                Inline::Perl5::Object.new(perl5 => self, ptr => value)
-            }
+            $class.^compose;
+        }
+        if $p5class !=:= Nil {
+            my $obj = $!p5.p5_sv_rv(value);
+            $!p5.p5_sv_refcnt_inc($obj);
+            $!p5.p5_sv_refcnt_dec(value);
+            $class.bless(:wrapped-perl5-object($obj));
         }
         else {
             Inline::Perl5::Object.new(perl5 => self, ptr => value)
@@ -843,12 +846,26 @@ PROCESS::<%PERL5> := class :: does Associative {
     }
 }.new;
 
+method add-to-loaded-modules($package, $class) {
+    %!loaded_modules{$package} := $class
+}
+
+method module-loaded($package) {
+    %!loaded_modules{$package}:exists
+}
+
+method loaded-module($package) {
+    %!loaded_modules{$package}
+}
+
 class Perl6Callbacks {
     has $.p5;
-    method create_extension($package, $code) {
-        my $p5 = $.p5;
-        EVAL "class GLOBAL::$package does Inline::Perl5::Extension['$package', \$p5] \{\n$code\n\}";
-        return;
+    method create_extension($package, $body) {
+        require Inline::Perl5::Perl5Class;
+
+        Inline::Perl5::Perl5Class::create-perl5-class($.p5, $package, $body);
+
+        Nil
     }
     method run($code) {
         return EVAL $code;
@@ -955,10 +972,6 @@ method require(Str $module, Num $version?, Bool :$handle) {
         if $module_symbol.HOW.^isa(Metamodel::ClassHOW) and $module_symbol.^isa(Failure) {
             $module_symbol.Bool;
         }
-        elsif $module_symbol ~~ Inline::Perl5::Extension {
-            # Wrapper package already created. Nothing left for us to do.
-            return CompUnit::Handle.from-unit(Stash.new);
-        }
     }
 
     my $stash := $handle ?? Stash.new !! ::GLOBAL.WHO;
@@ -966,7 +979,6 @@ method require(Str $module, Num $version?, Bool :$handle) {
     my $class;
     for @packages.grep(*.defined).grep(/<-lower -[:]>/).grep(*.starts-with: $module) -> $package {
         my $symbol = ::($package);
-        next if $symbol ~~ Inline::Perl5::Extension;
         $symbol.Bool if $symbol.HOW.^isa(Metamodel::ClassHOW) and $symbol.^isa(Failure); #disarm
         my $created := self!create_wrapper_class($package, $stash);
         $class := $created if $package eq $module;
@@ -1035,8 +1047,14 @@ method !create_wrapper_class(Str $module, Stash $stash) {
         $symbols = self.subs_in_module($module);
         $variables = self.variables_in_module($module);
 
-        %!loaded_modules{$module} := $class :=
-            Inline::Perl5::ClassHOW.new_type(name => $module, :p5(self), :ip5($!p5));
+        my $base_type := self.global('@' ~ $module ~ '::ISA')[0];
+        $base_type := $base_type ?? %!loaded_modules{$base_type} !! Any;
+        %!loaded_modules{$module} := $class := Inline::Perl5::ClassHOW.new_type(
+            :name($module),
+            :base_type($base_type),
+            :p5(self),
+            :ip5($!p5),
+        );
 
         # install methods
         for @$symbols -> $name {

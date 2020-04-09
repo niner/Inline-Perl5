@@ -30,15 +30,14 @@
         "Inline::Perl5::Callable":                   "lib/Inline/Perl5/Callable.pm6",
         "Inline::Perl5::Caller":                     "lib/Inline/Perl5/Caller.pm6",
         "Inline::Perl5::ClassHOW":                   "lib/Inline/Perl5/ClassHOW.pm6",
-        "Inline::Perl5::Extension":                  "lib/Inline/Perl5/Extension.pm6",
         "Inline::Perl5::FindBestDispatchee::Full":   "lib/Inline/Perl5/FindBestDispatchee/Full.pm6",
         "Inline::Perl5::FindBestDispatchee::Medium": "lib/Inline/Perl5/FindBestDispatchee/Medium.pm6",
         "Inline::Perl5::FindBestDispatchee::Light":  "lib/Inline/Perl5/FindBestDispatchee/Light.pm6",
         "Inline::Perl5::Hash":                       "lib/Inline/Perl5/Hash.pm6",
         "Inline::Perl5::Interpreter":                "lib/Inline/Perl5/Interpreter.pm6",
         "Inline::Perl5::Object":                     "lib/Inline/Perl5/Object.pm6",
-        "Inline::Perl5::Parent":                     "lib/Inline/Perl5/Parent.pm6",
         "Inline::Perl5::TypeGlob":                   "lib/Inline/Perl5/TypeGlob.pm6",
+        "Inline::Perl5::Perl5Class":                 "lib/Inline/Perl5/Perl5Class.rakumod",
         "Inline::Language::ObjectKeeper":            "lib/Inline/Language/ObjectKeeper.pm6"
     },
     "resources"      : [

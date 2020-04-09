@@ -50,9 +50,9 @@ my $bar = $p5.invoke('Bar', 'new');
 ok($bar.can('test'));
 ok($bar.can('sink'));
 ok($bar.can('Str'));
-ok($bar.can('Str')($bar));
-is($bar.can('test')(), 1);
-is($bar.can('not_existing'), Any);
+ok($bar.can('Str')[0]($bar));
+is($bar.can('test')[0]($bar), 1);
+is($bar.can('not_existing').elems, 0);
 
 done-testing;
 
