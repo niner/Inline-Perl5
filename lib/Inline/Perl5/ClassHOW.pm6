@@ -167,7 +167,6 @@ class Inline::Perl5::ClassHOW
             :type(Pointer),
             :package(type),
             :has_accessor(1),
-            :is_bound(1),
         )) unless any($!base_type.^mro.list.map({$_.HOW})) ~~ Inline::Perl5::ClassHOW;
 
         $!composed = True;
