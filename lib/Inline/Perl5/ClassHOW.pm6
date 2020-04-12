@@ -213,7 +213,16 @@ class Inline::Perl5::ClassHOW
             }
         );
         nqp::bindattr(self, $?CLASS, '$!composed_repr', nqp::unbox_i(1));
-        sink so self.add_wrapper_method(type, 'new'); # Module may not have a method 'new'
+        my $has_new = self.add_wrapper_method(type, 'new');
+        unless $has_new {
+            self.add_method(type, 'new', my method new(Any \SELF: *@a, *%h) {
+                my \obj_ref = $p5.interpreter.p5_new_blessed_hashref(SELF.^name);
+                my \obj = $p5.p5_sv_rv(obj_ref);
+                $p5.interpreter.p5_sv_refcnt_inc(obj);
+                $p5.interpreter.p5_sv_refcnt_dec(obj_ref);
+                SELF.bless(|@a, |%h, :wrapped-perl5-object(obj))
+            });
+        }
         $*W.add_object(type) if $*W;
 
         type

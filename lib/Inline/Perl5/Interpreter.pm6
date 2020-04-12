@@ -23,7 +23,7 @@ class Inline::Perl5::Interpreter is repr('CPointer') {
         &free_p6_object (IV),
         &hash_at_key (IV, Str --> Pointer),
         &hash_assign_key (IV, Str, Pointer),
-        &compile_to_end (Str, CArray[uint32] --> Pointer),
+        &compile_to_end (Str, Str, CArray[uint32] --> Pointer),
     ) is native($p5helper)
         returns Inline::Perl5::Interpreter { ... }
 
@@ -34,7 +34,7 @@ class Inline::Perl5::Interpreter is repr('CPointer') {
         &free_p6_object (IV),
         &hash_at_key (IV, Str --> Pointer),
         &hash_assign_key (IV, Str, Pointer),
-        &compile_to_end (Str, CArray[uint32] --> Pointer),
+        &compile_to_end (Str, Str, CArray[uint32] --> Pointer),
     ) is native($p5helper)
         { ... }
 
@@ -184,6 +184,9 @@ class Inline::Perl5::Interpreter is repr('CPointer') {
 
     method p5_hv_exists(Pointer, size_t, Blob) is native($p5helper)
         returns int32 { ... }
+
+    method p5_new_blessed_hashref(Str) is native($p5helper)
+        returns Pointer { ... }
 
     method p5_call_function(Str, int32, CArray[Pointer], int32 is rw, int32 is rw, int32 is rw) is native($p5helper)
         returns Pointer { ... }

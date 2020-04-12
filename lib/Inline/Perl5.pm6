@@ -1203,11 +1203,18 @@ method initialize(Bool :$reinitialize) {
         $!objects.get($index).ASSIGN-KEY($key, self.p5_to_p6($value))
     }
 
-    my &compile_to_end = sub (Str $code, CArray[uint32] $pos --> Pointer) {
+    my &compile_to_end = sub (Str $package, Str $code is copy, CArray[uint32] $pos --> Pointer) {
+        my $*P5 = self;
+        my $*IP5 = $!p5;
+        my $preamble = $package eq 'main' ?? '' !! "use Inline::Perl5::ClassHOW; unit perl5class GLOBAL::$package;\n";
+        my $preamble_len = $preamble.chars;
+        $code = "$preamble$code";
         CATCH {
             note $_;
         }
         use nqp;
+        require Inline::Perl5::Perl5Class;
+
         my $compiler = nqp::clone(nqp::getcomp(q<Raku>));
         my $*pos;
         my $g = $compiler.parsegrammar but role :: {
@@ -1243,8 +1250,21 @@ method initialize(Bool :$reinitialize) {
           nqp::getattr($compiled,ForeignCode,'$!do'),$eval_ctx
         );
 
-        $pos[0] = $*pos;
-        self.p6_to_p5($compiled)
+        $pos[0] = $*pos - $preamble_len;
+        self.p6_to_p5($package eq 'main' ?? $compiled !! -> {
+            my $class := $compiled();
+            self.add-to-loaded-modules($package, $class);
+
+            for $class.^methods(:local) -> $method {
+                next if $method.name eq 'DESTROY';
+                next if $method.name eq 'wrapped-perl5-object';
+
+                $method.does(Inline::Perl5::Attributes)
+                    ?? self.install_wrapper_method($package, $method.name, |$method.attributes)
+                    !! self.install_wrapper_method($package, $method.name);
+            }
+            Nil
+        })
     }
 
     if ($*W) {
