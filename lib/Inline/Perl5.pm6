@@ -1141,6 +1141,27 @@ method initialize(Bool :$reinitialize) {
     }
     &call_method does Inline::Perl5::Caller;
 
+    my &call_package_method = sub (Str $package, Str $name, Int $context, Pointer $args, Pointer $err) returns Pointer {
+        CONTROL {
+            when CX::Warn {
+                note $_.gist;
+                $_.resume;
+            }
+        }
+        CATCH {
+            default {
+                nativecast(CArray[Pointer], $err)[0] = self.p6_to_p5($_);
+                return Pointer;
+            }
+        }
+        my @args := self.p5_array_to_p6_array($args);
+
+        my %named = classify {$_.WHAT =:= Pair}, @args;
+        %named<False> //= [];
+        %named<True> //= [];
+        self.p6_to_p5(::($package)."$name"(|%named<False>, |%(%named<True>)));
+    }
+
     my &call_callable = sub (Int $index, Pointer $args, Pointer $err) returns Pointer {
         CONTROL {
             when CX::Warn {
@@ -1235,6 +1256,7 @@ method initialize(Bool :$reinitialize) {
         $!external_p5 = True;
         Inline::Perl5::Interpreter::p5_init_callbacks(
             &call_method,
+            &call_package_method,
             &call_callable,
             -> $idx { $!objects.free($idx) },
             &hash_at_key,
@@ -1248,6 +1270,7 @@ method initialize(Bool :$reinitialize) {
             @args.elems + 4,
             CArray[Str].new('', '-e', '0', '--', |@args, Str),
             &call_method,
+            &call_package_method,
             &call_callable,
             -> $idx { $!objects.free($idx) },
             &hash_at_key,

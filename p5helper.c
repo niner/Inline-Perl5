@@ -22,6 +22,7 @@ typedef struct {
 
 typedef struct {
     SV *(*call_p6_method)(IV, char *, I32, SV *, SV **);
+    SV *(*call_p6_package_method)(char *, char *, I32, SV *, SV **);
     SV *(*call_p6_callable)(IV, SV *, SV **);
     void (*free_p6_object)(IV);
     SV *(*hash_at_key)(IV, char *);
@@ -109,6 +110,7 @@ void p5_inline_perl6_xs_init(PerlInterpreter *my_perl) {
 
 void p5_init_callbacks(
     SV  *(*call_p6_method)(IV, char * , I32, SV *, SV **),
+    SV  *(*call_p6_package_method)(char *, char * , I32, SV *, SV **),
     SV  *(*call_p6_callable)(IV, SV *, SV **),
     void (*free_p6_object)(IV),
     SV  *(*hash_at_key)(IV, char *),
@@ -117,6 +119,7 @@ void p5_init_callbacks(
 ) {
     perl6_callbacks *cbs = malloc(sizeof(perl6_callbacks));
     cbs->call_p6_method   = call_p6_method;
+    cbs->call_p6_package_method = call_p6_package_method;
     cbs->call_p6_callable = call_p6_callable;
     cbs->free_p6_object   = free_p6_object;
     cbs->hash_at_key      = hash_at_key;
@@ -132,6 +135,7 @@ PerlInterpreter *p5_init_perl(
     int argc,
     char **argv,
     SV  *(*call_p6_method)(IV, char * , I32, SV *, SV **),
+    SV  *(*call_p6_package_method)(char *, char * , I32, SV *, SV **),
     SV  *(*call_p6_callable)(IV, SV *, SV **),
     void (*free_p6_object)(IV),
     SV  *(*hash_at_key)(IV, char *),
@@ -160,6 +164,7 @@ PerlInterpreter *p5_init_perl(
 
     p5_init_callbacks(
         call_p6_method,
+        call_p6_package_method,
         call_p6_callable,
         free_p6_object,
         hash_at_key,
@@ -1594,15 +1599,26 @@ XS(p5_call_p6_extension_method) {
     SV * static_class = ST(1);
     SV * name = ST(2);
     SV * obj = ST(3);
+    SV * err = NULL;
 
-    if (!SvROK(obj)) {
-        croak("Got a non-reference for obj in p5_call_p6_extension_method?!");
-    }
-    MAGIC * mg = find_shadow_magic(p6cb, static_class, obj);
     STRLEN len;
     char * const name_pv  = SvPV(name, len);
+
+    if (!SvROK(obj)) {
+        if (SvPOK(obj)) {
+            char * const package_pv  = SvPV(obj, len);
+            AV *args = create_args_array(ax, items, 4);
+            SV * const args_rv = newRV_noinc((SV *) args);
+            declare_cbs;
+            SV * retval = cbs->call_p6_package_method(package_pv, name_pv, GIMME_V == G_SCALAR, args_rv, &err);
+            return post_callback(ax, sp, items, args_rv, err, retval);
+        }
+        else {
+            croak("Got a non-reference for obj in p5_call_p6_extension_method?!");
+        }
+    }
+    MAGIC * mg = find_shadow_magic(p6cb, static_class, obj);
     _perl6_magic* const p6mg = (_perl6_magic*)(mg->mg_ptr);
-    SV *err = NULL;
 
     AV *args = create_args_array(ax, items, 4);
     SV * const args_rv = newRV_noinc((SV *) args);
