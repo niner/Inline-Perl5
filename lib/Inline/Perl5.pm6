@@ -1136,7 +1136,8 @@ method initialize(Bool :$reinitialize) {
                 return Pointer;
             }
         }
-        self.p6_to_p5($p6obj."$name"(|self.p5_array_to_p6_array($args)))
+        my @args := self.p5_array_to_p6_array($args);
+        self.p6_to_p5($p6obj."$name"(|@args.grep({$_ !~~ Pair}).list, |@args.grep(Pair).hash))
     }
     &call_method does Inline::Perl5::Caller;
 
