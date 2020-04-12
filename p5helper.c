@@ -1431,22 +1431,34 @@ AV *create_args_array(const I32 ax, I32 items, I32 num_fixed_args) {
 }
 
 void return_retval(const I32 ax, SV **sp, SV *retval) {
-    if (GIMME_V == G_VOID) {
+    if (retval == NULL || GIMME_V == G_VOID) {
         XSRETURN_EMPTY;
     }
     if (GIMME_V == G_ARRAY) {
-        AV* const av = (AV*)SvRV(retval);
-        I32 const len = av_len(av) + 1;
-        I32 i;
-        for (i = 0; i < len; i++) {
-            XPUSHs(sv_2mortal(av_shift(av)));
+        if (SvROK(retval) && SvTYPE(SvRV(retval)) == SVt_PVAV) {
+            AV* const av = (AV*)SvRV(retval);
+            I32 const len = av_len(av) + 1;
+            I32 i;
+            for (i = 0; i < len; i++) {
+                XPUSHs(sv_2mortal(av_shift(av)));
+            }
+            XSRETURN(len);
         }
-        XSRETURN(len);
+        else {
+            XPUSHs(retval);
+            XSRETURN(1);
+        }
     }
     else {
-        AV* const av = (AV*)SvRV(retval);
-        XPUSHs(sv_2mortal(av_shift(av)));
-        XSRETURN(1);
+        if (SvROK(retval) && SvTYPE(SvRV(retval)) == SVt_PVAV) {
+            AV* const av = (AV*)SvRV(retval);
+            XPUSHs(sv_2mortal(av_shift(av)));
+            XSRETURN(1);
+        }
+        else {
+            XPUSHs(retval);
+            XSRETURN(1);
+        }
     }
 }
 

@@ -1151,14 +1151,11 @@ method initialize(Bool :$reinitialize) {
                 return Pointer;
             }
         }
-        self.p6_to_p5(@ = $p6obj."$name"(|self.p5_array_to_p6_array($args)));
+        self.p6_to_p5($p6obj."$name"(|self.p5_array_to_p6_array($args)))
     }
     &call_method does Inline::Perl5::Caller;
 
     my &call_callable = sub (Int $index, Pointer $args, Pointer $err) returns Pointer {
-        my $callable = $!objects.get($index);
-        my @retvals = $callable(|self.p5_array_to_p6_array($args));
-        return self.p6_to_p5(@retvals);
         CONTROL {
             when CX::Warn {
                 note $_.gist;
@@ -1171,27 +1168,27 @@ method initialize(Bool :$reinitialize) {
                 return Pointer;
             }
         }
+        self.p6_to_p5($!objects.get($index)(|self.p5_array_to_p6_array($args)))
     }
 
     my &hash_at_key = sub (Int $index, Str $key) returns Pointer {
-        return self.p6_to_p5($!objects.get($index).AT-KEY($key));
         CONTROL {
             when CX::Warn {
                 note $_.gist;
                 $_.resume;
             }
         }
+        self.p6_to_p5($!objects.get($index).AT-KEY($key))
     }
 
-    my &hash_assign_key = sub (Int $index, Str $key, Pointer $value) {
-        $!objects.get($index).ASSIGN-KEY($key, self.p5_to_p6($value));
-        Nil;
+    my &hash_assign_key = sub (Int $index, Str $key, Pointer $value --> Nil) {
         CONTROL {
             when CX::Warn {
                 note $_.gist;
                 $_.resume;
             }
         }
+        $!objects.get($index).ASSIGN-KEY($key, self.p5_to_p6($value))
     }
 
     if ($*W) {
