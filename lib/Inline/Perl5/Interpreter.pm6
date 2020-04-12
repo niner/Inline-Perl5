@@ -18,6 +18,7 @@ class Inline::Perl5::Interpreter is repr('CPointer') {
         uint32,
         CArray[Str],
         &call_method (IV, Str, int32, Pointer, Pointer --> Pointer),
+        &call_package_method (Str, Str, int32, Pointer, Pointer --> Pointer),
         &call (IV, Pointer, Pointer --> Pointer),
         &free_p6_object (IV),
         &hash_at_key (IV, Str --> Pointer),
@@ -28,6 +29,7 @@ class Inline::Perl5::Interpreter is repr('CPointer') {
 
     our sub p5_init_callbacks(
         &call_method (IV, Str, int32, Pointer, Pointer --> Pointer),
+        &call_package_method (Str, Str, int32, Pointer, Pointer --> Pointer),
         &call (IV, Pointer, Pointer --> Pointer),
         &free_p6_object (IV),
         &hash_at_key (IV, Str --> Pointer),
