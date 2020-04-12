@@ -1,14 +1,26 @@
 package RakuBlock;
 use v5.10.0;
+
 my @arr;
-say "hello from perl5!";
+
 raku {
-    note "hello from raku";
+    has $.name;
+
+    method greet_me() {
+        "{self<greet>} $!name"
+    }
 }
-say "hello again from perl5";
-$arr[0];
-sub hello_from_perl5 {
-    "hello from perl5"
+
+$arr[0]; # declaration survived
+
+sub set_greet {
+    my ($self, $bar) = @_;
+
+    $self->{greet} = $bar;
+}
+
+sub get_me_a_foo {
+    RakuBlock->new(v6::named(name => "foo"))->name
 }
 
 1;

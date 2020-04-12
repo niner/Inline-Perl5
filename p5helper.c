@@ -27,7 +27,7 @@ typedef struct {
     void (*free_p6_object)(IV);
     SV *(*hash_at_key)(IV, char *);
     SV *(*hash_assign_key)(IV, char *, SV *);
-    SV *(*compile_to_end)(char *, U32 *pos);
+    SV *(*compile_to_end)(char *, char *, U32 *pos);
 } perl6_callbacks;
 
 XS(p5_call_p6_method);
@@ -84,7 +84,9 @@ static int raku_keyword_plugin(pTHX_ char *keyword_ptr, STRLEN keyword_len, OP *
         declare_cbs;
         U32 pos;
         char *bufptr = PL_parser->bufptr;
-        SV *code = cbs->compile_to_end(PL_parser->bufptr, &pos);
+        STRLEN len;
+        char *package_name = SvPV(PL_curstname, len);
+        SV *code = cbs->compile_to_end(package_name, PL_parser->bufptr, &pos);
         lex_read_to(bufptr + pos + 1);
 
         *op_ptr = newUNOP(OP_ENTERSUB, 0, newSVOP(OP_CONST, 0, code));
@@ -115,7 +117,7 @@ void p5_init_callbacks(
     void (*free_p6_object)(IV),
     SV  *(*hash_at_key)(IV, char *),
     SV  *(*hash_assign_key)(IV, char *, SV *),
-    SV  *(*compile_to_end)(char *, U32 *)
+    SV  *(*compile_to_end)(char *, char *, U32 *)
 ) {
     perl6_callbacks *cbs = malloc(sizeof(perl6_callbacks));
     cbs->call_p6_method   = call_p6_method;
@@ -140,7 +142,7 @@ PerlInterpreter *p5_init_perl(
     void (*free_p6_object)(IV),
     SV  *(*hash_at_key)(IV, char *),
     SV  *(*hash_assign_key)(IV, char *, SV *),
-    SV  *(*compile_to_end)(char *, U32 *)
+    SV  *(*compile_to_end)(char *, char *, U32 *)
 ) {
     if (inited) {
 #ifndef MULTIPLICITY
@@ -499,6 +501,15 @@ SV *p5_newRV_inc(PerlInterpreter *my_perl, SV *sv) {
 const char *p5_sv_reftype(PerlInterpreter *my_perl, SV *sv) {
     PERL_SET_CONTEXT(my_perl);
     return sv_reftype(SvRV(sv), 1);
+}
+
+SV *p5_new_blessed_hashref(PerlInterpreter *my_perl, char *package) {
+    PERL_SET_CONTEXT(my_perl);
+    HV * obj = newHV();
+    SV * const inst = newRV_noinc((SV*)obj);
+    HV *stash = gv_stashpv(package, GV_ADD);
+    (void)sv_bless(inst, stash);
+    return inst;
 }
 
 I32 p5_get_type(PerlInterpreter *my_perl, SV *sv) {
