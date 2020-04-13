@@ -34,7 +34,7 @@ $p5.run: q:heredoc/PERL5/;
 
 my $foo = $p5.invoke('Foo', 'new', 'a string!');
 is("$foo", 'a string!');
-unlike("$foo", /"Inline::Perl5::Object"\<\d+\>/);
+unlike("$foo", /"Foo"\<\d+\>/);
 is(+$foo, 42);
 
 my $bar = $p5.invoke('Bar', 'new', 'a string!');

@@ -8,7 +8,6 @@ use Inline::Perl5::Attributes;
 use Inline::Perl5::Caller;
 use Inline::Perl5::ClassHOW;
 use Inline::Perl5::Hash;
-use Inline::Perl5::Object;
 use Inline::Perl5::Callable;
 use Inline::Perl5::TypeGlob;
 
@@ -68,10 +67,6 @@ multi method p6_to_p5(blob8:D $value) returns Pointer {
 }
 multi method p6_to_p5(Capture:D $value where $value.elems == 1) returns Pointer {
     $!p5.p5_sv_to_ref(self.p6_to_p5($value[0]));
-}
-multi method p6_to_p5(Inline::Perl5::Object $value) returns Pointer {
-    $!p5.p5_sv_refcnt_inc($value.ptr);
-    $value.ptr;
 }
 multi method p6_to_p5(Pointer $value) returns Pointer {
     $value;
@@ -902,16 +897,6 @@ method init_callbacks {
 method sv_refcnt_dec($obj) {
     return unless $!p5; # Destructor may already have run. Destructors of individual P5 objects no longer work.
     $!p5.p5_sv_refcnt_dec($obj);
-}
-
-multi method rebless(Pointer $obj, Str $package, $p6obj) {
-    my $index = $!objects.keep($p6obj);
-    $!p5.p5_rebless_object($obj, $package, $index);
-}
-
-multi method rebless(Inline::Perl5::Object $obj, Str $package, $p6obj) {
-    my $index = $!objects.keep($p6obj);
-    $!p5.p5_rebless_object($obj.ptr, $package, $index);
 }
 
 method install_wrapper_method(Str:D $package, Str $name, *@attributes) {
