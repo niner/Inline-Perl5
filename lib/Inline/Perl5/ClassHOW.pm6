@@ -10,19 +10,36 @@ BEGIN {
     $compunit = Nil; # Avoid trying to serialize a VMContext
 }
 
+role Inline::Perl5::WrapperClass { }
+
 class Inline::Perl5::ClassHOW
     does Metamodel::AttributeContainer
     does Metamodel::BaseType
+    does Metamodel::BUILDPLAN
     does Metamodel::MultiMethodContainer
     does Metamodel::Naming
     does Metamodel::REPRComposeProtocol
     does Metamodel::Stashing
 {
     has %!cache;
+    has @!local_methods;
     has $!p5;
     has $!ip5;
     has $!composed;
     has %!gvs;
+
+    my class NQPArray is repr('VMArray') {
+        use nqp;
+        method push(Mu \value) { nqp::push(self, nqp::decont(value)) }
+        method pop() { nqp::pop(self) }
+        method unshift(Mu \value) { nqp::unshift(self, nqp::decont(value)) }
+        method shift() { nqp::shift(self) }
+        method list() {
+            my \list = List.new;
+            nqp::bindattr(list, List, '$!reified', self);
+            list
+        }
+    }
 
     my $archetypes := Metamodel::Archetypes.new(
         :nominal(1), :inheritable(1), :augmentable(1) );
@@ -32,13 +49,37 @@ class Inline::Perl5::ClassHOW
 
     submethod BUILD(:$!p5, :$!ip5) { }
 
-    method new_type(:$name, :$p5, :$ip5) is raw {
-        my $how = self.new(:$p5, :$ip5);
+    method new_type(:$name, :$base_type, :$p5, :$ip5) is raw {
+        my $how = self.new(:p5($p5 // $*P5), :ip5($ip5 // $*IP5));
         my $type := Metamodel::Primitives.create_type($how);
-        $how.set_base_type($type, Any);
+        $how.set_base_type($type, $base_type);
         $how.set_name($type, $name);
         $how.add_stash($type);
+        $how.init;
         $type
+    }
+    method base_type(\obj) {
+        $!base_type
+    }
+
+    method init() {
+        use nqp;
+        nqp::bindattr(self, $?CLASS, '%!attribute_lookup', nqp::hash());
+        nqp::bindattr(self, $?CLASS, '@!attributes', nqp::list());
+    }
+
+    method isa(\obj, \type) {
+        obj =:= type
+    }
+
+    method does(\obj, \type) {
+        type =:= Inline::Perl5::WrapperClass;
+    }
+
+    method role_typecheck_list(\obj) {
+        my $list := NQPArray.CREATE;
+        $list.push: Inline::Perl5::WrapperClass;
+        $list
     }
 
     method ip5(\type) {
@@ -61,7 +102,7 @@ class Inline::Perl5::ClassHOW
             package $!name \{
                 my \$destroy;
                 BEGIN \{ \$destroy = defined(&{$!name}::DESTROY) ? \\&{$!name}::DESTROY : undef; \};
-                {'sub DESTROY { if (Perl6::Object::destroy($_[0]) and defined $destroy) { $destroy->(@_) } }'}
+                {'sub DESTROY { if (Perl6::Object::destroy($_[0])) { if (defined $destroy) { $destroy->(@_) } else { $_[0]->SUPER::DESTROY } } }'}
             \}
         ";
     }
@@ -79,7 +120,7 @@ class Inline::Perl5::ClassHOW
     method compose(\type) {
         # Set up type checking with cache.
         Metamodel::Primitives.configure_type_checking(type,
-            [Any, Mu],
+            (|self.mro(type).list, Inline::Perl5::WrapperClass),
             :authoritative, :call_accepts);
 
         my $p5 = $!p5;
@@ -88,8 +129,10 @@ class Inline::Perl5::ClassHOW
         self.install-perl5-destructor;
 
         # Steal methods of Any/Mu for our method cache.
-        for flat Any.^method_table.pairs, Mu.^method_table.pairs {
-            %!cache{.key} //= .value;
+        unless $!base_type =:= Any {
+            for flat Any.^method_table.pairs, Mu.^method_table.pairs {
+                %!cache{.key} //= .value;
+            }
         }
 
         %!cache<Str> := my method Str(\SELF:) {
@@ -111,41 +154,81 @@ class Inline::Perl5::ClassHOW
                 nqp::bindattr(SELF, type, '$!wrapped-perl5-object', Pointer);
             }
         }
+        %!cache<new_shadow_of_p5_object> := my method new_shadow_of_p5_object(\SELF: \arg) {
+            arg
+        }
         Metamodel::Primitives.install_method_cache(type, %!cache, :!authoritative);
 
         use nqp;
-        nqp::bindattr(self, $?CLASS, '%!attribute_lookup', nqp::hash());
-        nqp::bindattr(self, $?CLASS, '@!attributes', nqp::list());
-
         nqp::settypefinalize(type, 1);
 
-        self.add_attribute(type, Attribute.new(
+        self.add_attribute(type, my $attr := Attribute.new(
             :name<$!wrapped-perl5-object>,
             :type(Pointer),
             :package(type),
             :has_accessor(1),
-        ));
+        )) unless any($!base_type.^mro.list.map({$_.HOW})) ~~ Inline::Perl5::ClassHOW;
 
         $!composed = True;
         my $compiler_services = $*W.get_compiler_services(Match.new) if $*W;
         self.compose_attributes(type, :$compiler_services);
-        Metamodel::Primitives.compose_type(
+
+        self.create_BUILDPLAN(type);
+
+        self.compose_type(
             type,
             {
-                attribute => [
-                    [type, [{:name<$!wrapped-perl5-object>, :type(Pointer)},], []],
-                ]
+                attribute => self.mro(type).map(-> \parent {
+                        parent,
+                        parent.HOW.attributes(parent, :local).map({
+                            (
+                                :name($_.name),
+                                :type($_.type =:= Mu ?? Any !! $_.type),
+                                :inlined($_.inlined),
+                                :auto_viv_container($_.auto_viv_container),
+                            ).Map
+                        }).List,
+                        [parent.^mro.list.elems > 1 ?? parent.^mro.list[1] !! Empty]
+                }).List,
             }
         );
         nqp::bindattr(self, $?CLASS, '$!composed_repr', nqp::unbox_i(1));
-        self.add_wrapper_method(type, 'new');
+        sink so self.add_wrapper_method(type, 'new'); # Module may not have a method 'new'
         $*W.add_object(type) if $*W;
 
         type
     }
+    method compose_type(Mu $type, $configuration) {
+        use nqp;
+        multi sub to_vm_types(@array) {
+            my Mu $list := nqp::list();
+            for @array {
+                nqp::push($list, to_vm_types($_));
+            }
+            $list
+        }
+        multi sub to_vm_types(%hash) {
+            my Mu $hash := nqp::hash();
+            for %hash.kv -> $k, \v {
+                if $k eq 'auto_viv_container' {
+                    nqp::bindkey($hash, $k, v);
+                }
+                else {
+                    nqp::bindkey($hash, $k, to_vm_types(v));
+                }
+            }
+            $hash
+        }
+        multi sub to_vm_types(Mu $other) {
+            nqp::decont($other)
+        }
+        nqp::composetype(nqp::decont($type), to_vm_types($configuration));
+        $type
+    }
 
     method add_method($type, $name, \meth) is raw {
         %!cache{$name} := meth;
+        push @!local_methods, meth;
         Metamodel::Primitives.install_method_cache($type, %!cache, :!authoritative)
             if $!composed;
         meth
@@ -177,11 +260,11 @@ class Inline::Perl5::ClassHOW
     }
 
     method methods($type, :$local, :$excl, :$all) {
-        %!cache.values
+        $local ?? @!local_methods !! %!cache.values
     }
 
-    method type_check(Mu $, Mu \check) {
-        for Any, Mu {
+    method type_check(Mu \type, Mu \check) {
+        for self.mro(type).list {
             return True if Metamodel::Primitives.is_type(check, $_);
         }
         return False;
@@ -194,14 +277,30 @@ class Inline::Perl5::ClassHOW
     method find_method($type, $name) is raw {
         return if $name eq 'cstr';
         return if $name eq 'DESTROY';
-        %!cache{$name} // Any.^find_method($name) // self.add_wrapper_method($type, $name);
+        # must not be AUTOLOADed and must not call into P5 before the object's fully constructed
+        if $name eq 'BUILD' or $name eq 'TWEAK' {
+            return %!cache<BUILD>;
+        }
+        %!cache{$name} // $!base_type.^find_method($name) // self.add_wrapper_method($type, $name);
+    }
+
+    method can($type, $name) {
+        my @meths;
+        for self.mro($type) {
+            my %mt := $_.HOW.method_table($_).Map;
+            if %mt{$name}:exists {
+                @meths.push: %mt{$name}
+            }
+        }
+        @meths
     }
 
     method add_wrapper_method($type, $name) is raw {
         my $p5 = $!p5;
         my $module = $!name;
 
-        my $gv = $!p5.look-up-method(self.name($type), $name);
+        my $gv = $!p5.look-up-method(self.name($type), $name)
+            or fail "Did not find method $name on $module";
         (%!gvs{self.name($type)} ||= Hash.new){$name} := $gv;
 
         my $generic-proto := my proto method AUTOGEN(::T $: |) { * }
@@ -314,41 +413,25 @@ class Inline::Perl5::ClassHOW
         self.add_method($type, $name, $proto)
     }
 
-    method BUILDPLAN($type) {
-        [].FLATTENABLE_LIST
-    }
-
-    method BUILDALLPLAN($type) {
-        []
-    }
-
-    method compose_attributes(\obj, :$compiler_services) {
-        use nqp;
-        for nqp::hllize(@!attributes) {
-            $_.compose(obj, :$compiler_services)
-        }
-    }
-
-    method mro(\obj) {
+    method mro(Mu \obj) {
         use nqp;
         unless @!mro {
-            my class NQPArray is repr('VMArray') {
-                method push(Mu \value) { nqp::push(self, nqp::decont(value)) }
-                method pop() { nqp::pop(self) }
-                method unshift(Mu \value) { nqp::unshift(self, nqp::decont(value)) }
-                method shift() { nqp::shift(self) }
-                method list() {
-                    my \list = List.new;
-                    nqp::bindattr(list, List, '$!reified', self);
-                    list
-                }
-            }
             nqp::bindattr(self, $?CLASS, '@!mro', nqp::create(NQPArray));
-            nqp::bindpos(@!mro, 0, nqp::decont(obj));
+            nqp::bindpos(@!mro, 0, obj.WHAT);
             for $!base_type.HOW.mro($!base_type) {
                 nqp::push(@!mro, nqp::decont($_));
             }
         }
         @!mro
+    }
+
+    method lang-rev-before(\type, $rev) {
+        1
+    }
+}
+
+my package EXPORTHOW {
+    package DECLARE {
+        constant perl5class = Inline::Perl5::ClassHOW;
     }
 }

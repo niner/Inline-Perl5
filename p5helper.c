@@ -510,11 +510,15 @@ SV *p5_get_global(PerlInterpreter *my_perl, const char* name) {
     if (name[0] == '$')
         return get_sv(&name[1], 0);
 
-    if (name[0] == '@')
-        return sv_2mortal(newRV_inc((SV *)get_av(&name[1], 0)));
+    if (name[0] == '@') {
+        AV *av = get_av(&name[1], 0);
+        return av ? sv_2mortal(newRV_inc((SV *)av)) : NULL;
+    }
 
-    if (name[0] == '%')
-        return sv_2mortal(newRV_inc((SV *)get_hv(&name[1], 0)));
+    if (name[0] == '%') {
+        HV *hv = get_hv(&name[1], 0);
+        return hv ? sv_2mortal(newRV_inc((SV *)hv)) : NULL;
+    }
 
     return NULL;
 }
@@ -633,7 +637,7 @@ GV *p5_look_up_package_method(PerlInterpreter *my_perl, char *module, char *name
     PERL_SET_CONTEXT(my_perl);
     {
         HV * const pkg = gv_stashpvn(module, strlen(module), 0);
-        GV * const gv = gv_fetchmeth_pvn(pkg, name, strlen(name), -1, SVf_UTF8);
+        GV * const gv = gv_fetchmeth_pvn_autoload(pkg, name, strlen(name), -1, SVf_UTF8);
         if (gv && isGV(gv))
             return gv;
         return NULL;
@@ -780,7 +784,7 @@ SV *p5_call_parent_gv(PerlInterpreter *my_perl, GV *gv, int len, SV *args[], I32
 
         PUTBACK;
 
-        SV * const rv = sv_2mortal(newRV((SV*)GvCV(gv))); /* FIXME: can be done once */
+        SV * const rv = GvCV(gv) ? sv_2mortal(newRV((SV*)GvCV(gv))) : (SV*)gv; /* FIXME: can be done once */
 
         *count = call_sv(rv, G_ARRAY | G_EVAL);
         SPAGAIN;
@@ -896,7 +900,8 @@ SV *p5_call_gv_two_args(PerlInterpreter *my_perl, GV *gv, SV *arg, SV *arg2, I32
         PUSHMARK(SP);
 
         XPUSHs(sv_2mortal((SV*)arg));
-        XPUSHs(sv_2mortal((SV*)arg2));
+        if (arg2 != NULL)
+            XPUSHs(sv_2mortal((SV*)arg2));
 
         PUTBACK;
 
@@ -933,7 +938,8 @@ SV *p5_scalar_call_gv_two_args(PerlInterpreter *my_perl, GV *gv, SV *arg, SV *ar
         PUSHMARK(SP);
 
         XPUSHs(sv_2mortal((SV*)arg));
-        XPUSHs(sv_2mortal((SV*)arg2));
+        if (arg2 != NULL)
+            XPUSHs(sv_2mortal((SV*)arg2));
 
         PUTBACK;
 
@@ -1425,22 +1431,34 @@ AV *create_args_array(const I32 ax, I32 items, I32 num_fixed_args) {
 }
 
 void return_retval(const I32 ax, SV **sp, SV *retval) {
-    if (GIMME_V == G_VOID) {
+    if (retval == NULL || GIMME_V == G_VOID) {
         XSRETURN_EMPTY;
     }
     if (GIMME_V == G_ARRAY) {
-        AV* const av = (AV*)SvRV(retval);
-        I32 const len = av_len(av) + 1;
-        I32 i;
-        for (i = 0; i < len; i++) {
-            XPUSHs(sv_2mortal(av_shift(av)));
+        if (SvROK(retval) && SvTYPE(SvRV(retval)) == SVt_PVAV) {
+            AV* const av = (AV*)SvRV(retval);
+            I32 const len = av_len(av) + 1;
+            I32 i;
+            for (i = 0; i < len; i++) {
+                XPUSHs(sv_2mortal(av_shift(av)));
+            }
+            XSRETURN(len);
         }
-        XSRETURN(len);
+        else {
+            XPUSHs(retval);
+            XSRETURN(1);
+        }
     }
     else {
-        AV* const av = (AV*)SvRV(retval);
-        XPUSHs(sv_2mortal(av_shift(av)));
-        XSRETURN(1);
+        if (SvROK(retval) && SvTYPE(SvRV(retval)) == SVt_PVAV) {
+            AV* const av = (AV*)SvRV(retval);
+            XPUSHs(sv_2mortal(av_shift(av)));
+            XSRETURN(1);
+        }
+        else {
+            XPUSHs(retval);
+            XSRETURN(1);
+        }
     }
 }
 

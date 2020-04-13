@@ -17,8 +17,8 @@ $p5.run(q:heredoc/PERL5/);
     }
     PERL5
 
-is($p5.invoke('Foo', 'foo'), 'autoload');
-is($p5.invoke('Foo', 'new').bar, 'autoload');
+is($p5.invoke('Foo', 'foo'), 'autoload', 'AUTOLOAD for package method');
+is($p5.invoke('Foo', 'new').bar, 'autoload', 'AUTOLOAD for method');
 
 done-testing;
 

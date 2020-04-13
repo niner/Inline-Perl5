@@ -7,10 +7,8 @@ use Inline::Perl5::Array;
 use Inline::Perl5::Attributes;
 use Inline::Perl5::Caller;
 use Inline::Perl5::ClassHOW;
-use Inline::Perl5::Extension;
 use Inline::Perl5::Hash;
 use Inline::Perl5::Object;
-use Inline::Perl5::Parent;
 use Inline::Perl5::Callable;
 use Inline::Perl5::TypeGlob;
 
@@ -75,21 +73,6 @@ multi method p6_to_p5(Inline::Perl5::Object $value) returns Pointer {
     $!p5.p5_sv_refcnt_inc($value.ptr);
     $value.ptr;
 }
-multi method p6_to_p5(Inline::Perl5::Parent $value) returns Pointer {
-    self.p6_to_p5($value.unwrap-perl5-object());
-}
-multi method p6_to_p5(Inline::Perl5::Extension $value) returns Pointer {
-    self.p6_to_p5($value.unwrap-perl5-object());
-}
-
-multi method p6_to_p5(Inline::Perl5::Extension $value, Pointer $target) returns Pointer {
-    my $index = $!objects.keep($value);
-
-    $!p5.p5_wrap_p6_object(
-        $index,
-        $target,
-    );
-}
 multi method p6_to_p5(Pointer $value) returns Pointer {
     $value;
 }
@@ -107,24 +90,20 @@ method unwrap-perl5-object($value) {
         !! $!p5.p5_add_magic($o, $!objects.keep($value))
 }
 
-multi method p6_to_p5(Any:D $value) {
-    if $value.^mro.grep: {$_.HOW ~~ Inline::Perl5::ClassHOW} {
-        my $o = $value.wrapped-perl5-object;
-        if $!p5.p5_is_live_wrapped_p6_object($o) {
-            $!p5.p5_newRV_inc($o)
-        }
-        else {
-            $!p5.p5_add_magic($o, $!objects.keep($value))
-        }
-    }
-    else {
-        my $index = $!objects.keep($value);
+multi method p6_to_p5(Inline::Perl5::WrapperClass $value) {
+    my $o = $value.wrapped-perl5-object;
+    $!p5.p5_is_live_wrapped_p6_object($o)
+        ?? $!p5.p5_newRV_inc($o)
+        !! $!p5.p5_add_magic($o, $!objects.keep($value))
+}
 
-        $!p5.p5_wrap_p6_object(
-            $index,
-            Pointer,
-        )
-    }
+multi method p6_to_p5(Any:D $value) {
+    my $index = $!objects.keep($value);
+
+    $!p5.p5_wrap_p6_object(
+        $index,
+        Pointer,
+    )
 }
 multi method p6_to_p5(Callable:D $value, Pointer $inst = Pointer) {
     my $index = $!objects.keep($value);
@@ -332,23 +311,30 @@ multi method p5_to_p6_type(Pointer:D \value, Blessed) {
     else {
         $!p5.p5_sv_refcnt_inc(value);
         my $stash-name = self.stash-name(value);
+
+        my $class;
         if %!loaded_modules{$stash-name}:exists {
-            my $class := %!loaded_modules{$stash-name};
-            use nqp;
-            my $p5class := $class.^mro.list.first({nqp::istype($_.HOW, Inline::Perl5::ClassHOW)});
-            if $p5class !=:= Nil {
-                my $obj = $!p5.p5_sv_rv(value);
-                $!p5.p5_sv_refcnt_inc($obj);
-                $!p5.p5_sv_refcnt_dec(value);
-                nqp::p6bindattrinvres($class.CREATE, $p5class, '$!wrapped-perl5-object', $obj);
-            }
-            else {
-                Inline::Perl5::Object.new(perl5 => self, ptr => value)
-            }
+            $class := %!loaded_modules{$stash-name};
         }
         else {
-            Inline::Perl5::Object.new(perl5 => self, ptr => value)
+            my $base_type := self.global('@' ~ $stash-name ~ '::ISA')[0];
+            $base_type := $base_type ?? %!loaded_modules{$base_type} !! Any;
+            %!loaded_modules{$stash-name} := $class := Inline::Perl5::ClassHOW.new_type(
+                :name($stash-name),
+                :base_type($base_type),
+                :p5(self),
+                :ip5($!p5),
+            );
+            my $symbols = self.subs_in_module($stash-name);
+            for @$symbols -> $name {
+                $class.^add_wrapper_method($name);
+            }
+            $class.^compose;
         }
+        my $obj = $!p5.p5_sv_rv(value);
+        $!p5.p5_sv_refcnt_inc($obj);
+        $!p5.p5_sv_refcnt_dec(value);
+        $class.bless(:wrapped-perl5-object($obj));
     }
 }
 
@@ -363,7 +349,12 @@ multi method p5_to_p6(Pointer:D \value, \type) {
 
 method handle_p5_exception() is hidden-from-backtrace {
     if my $error = self.p5_to_p6($!p5.p5_err_sv()) {
-        die $error;
+        if $error ~~ Exception {
+            $error.rethrow;
+        }
+        else {
+            die $error;
+        }
     }
 }
 
@@ -842,12 +833,26 @@ PROCESS::<%PERL5> := class :: does Associative {
     }
 }.new;
 
+method add-to-loaded-modules($package, $class) {
+    %!loaded_modules{$package} := $class
+}
+
+method module-loaded($package) {
+    %!loaded_modules{$package}:exists
+}
+
+method loaded-module($package) {
+    %!loaded_modules{$package}
+}
+
 class Perl6Callbacks {
     has $.p5;
-    method create_extension($package, $code) {
-        my $p5 = $.p5;
-        EVAL "class GLOBAL::$package does Inline::Perl5::Extension['$package', \$p5] \{\n$code\n\}";
-        return;
+    method create_extension($package, $body) {
+        require Inline::Perl5::Perl5Class;
+
+        Inline::Perl5::Perl5Class::create-perl5-class($.p5, $package, $body);
+
+        Nil
     }
     method run($code) {
         return EVAL $code;
@@ -954,10 +959,6 @@ method require(Str $module, Num $version?, Bool :$handle) {
         if $module_symbol.HOW.^isa(Metamodel::ClassHOW) and $module_symbol.^isa(Failure) {
             $module_symbol.Bool;
         }
-        elsif $module_symbol ~~ Inline::Perl5::Extension {
-            # Wrapper package already created. Nothing left for us to do.
-            return CompUnit::Handle.from-unit(Stash.new);
-        }
     }
 
     my $stash := $handle ?? Stash.new !! ::GLOBAL.WHO;
@@ -965,7 +966,6 @@ method require(Str $module, Num $version?, Bool :$handle) {
     my $class;
     for @packages.grep(*.defined).grep(/<-lower -[:]>/).grep(*.starts-with: $module) -> $package {
         my $symbol = ::($package);
-        next if $symbol ~~ Inline::Perl5::Extension;
         $symbol.Bool if $symbol.HOW.^isa(Metamodel::ClassHOW) and $symbol.^isa(Failure); #disarm
         my $created := self!create_wrapper_class($package, $stash);
         $class := $created if $package eq $module;
@@ -1021,18 +1021,27 @@ method require(Str $module, Num $version?, Bool :$handle) {
 
 method !create_wrapper_class(Str $module, Stash $stash) {
     my $class;
-    my $first-time = True;
-    my $symbols = self.subs_in_module($module);
-    my $variables = self.variables_in_module($module);
+    my $first-time = False;
+    my $symbols;
+    my $variables;
+
     if %!loaded_modules{$module}:exists {
         $class := %!loaded_modules{$module};
-        $first-time = False;
     }
     else {
         my $p5 := self;
+        $first-time = True;
+        $symbols = self.subs_in_module($module);
+        $variables = self.variables_in_module($module);
 
-        %!loaded_modules{$module} := $class :=
-            Inline::Perl5::ClassHOW.new_type(name => $module, :p5(self), :ip5($!p5));
+        my $base_type := self.global('@' ~ $module ~ '::ISA')[0];
+        $base_type := $base_type ?? %!loaded_modules{$base_type} !! Any;
+        %!loaded_modules{$module} := $class := Inline::Perl5::ClassHOW.new_type(
+            :name($module),
+            :base_type($base_type),
+            :p5(self),
+            :ip5($!p5),
+        );
 
         # install methods
         for @$symbols -> $name {
@@ -1142,14 +1151,11 @@ method initialize(Bool :$reinitialize) {
                 return Pointer;
             }
         }
-        self.p6_to_p5(@ = $p6obj."$name"(|self.p5_array_to_p6_array($args)));
+        self.p6_to_p5($p6obj."$name"(|self.p5_array_to_p6_array($args)))
     }
     &call_method does Inline::Perl5::Caller;
 
     my &call_callable = sub (Int $index, Pointer $args, Pointer $err) returns Pointer {
-        my $callable = $!objects.get($index);
-        my @retvals = $callable(|self.p5_array_to_p6_array($args));
-        return self.p6_to_p5(@retvals);
         CONTROL {
             when CX::Warn {
                 note $_.gist;
@@ -1162,27 +1168,27 @@ method initialize(Bool :$reinitialize) {
                 return Pointer;
             }
         }
+        self.p6_to_p5($!objects.get($index)(|self.p5_array_to_p6_array($args)))
     }
 
     my &hash_at_key = sub (Int $index, Str $key) returns Pointer {
-        return self.p6_to_p5($!objects.get($index).AT-KEY($key));
         CONTROL {
             when CX::Warn {
                 note $_.gist;
                 $_.resume;
             }
         }
+        self.p6_to_p5($!objects.get($index).AT-KEY($key))
     }
 
-    my &hash_assign_key = sub (Int $index, Str $key, Pointer $value) {
-        $!objects.get($index).ASSIGN-KEY($key, self.p5_to_p6($value));
-        Nil;
+    my &hash_assign_key = sub (Int $index, Str $key, Pointer $value --> Nil) {
         CONTROL {
             when CX::Warn {
                 note $_.gist;
                 $_.resume;
             }
         }
+        $!objects.get($index).ASSIGN-KEY($key, self.p5_to_p6($value))
     }
 
     if ($*W) {
@@ -1226,7 +1232,6 @@ method initialize(Bool :$reinitialize) {
 
 # for backwards compatibility with documented interfaces
 OUR::<Perl5Attributes> := Inline::Perl5::Attributes;
-OUR::<Perl5Parent>     := Inline::Perl5::Parent;
 
 my Bool $inline_perl6_in_use = False;
 sub init_inline_perl6_new_callback(&inline_perl5_new (Inline::Perl5::Interpreter --> Pointer)) { ... };

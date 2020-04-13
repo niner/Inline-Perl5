@@ -5,8 +5,8 @@ use Test;
 use Inline::Perl5;
 
 use lib:from<Perl5> <t/lib>;
-use TestV6:from<Perl5>;
-use TestV6Sub:from<Perl5>;
+use Foo::Bar::TestV6:from<Perl5>;
+use Foo::Bar::TestV6Sub:from<Perl5>;
 
 is(Foo::Bar::TestV6::greet('world'), 'hello world', 'greet works');
 is(Foo::Bar::TestV6.new('nice').set_name('world').hello, 'hello nice world', 'hello works');
