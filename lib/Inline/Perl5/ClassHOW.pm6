@@ -151,7 +151,7 @@ class Inline::Perl5::ClassHOW
             if $obj {
                 SELF.^mro.first({$_.HOW.^isa(Inline::Perl5::ClassHOW)}).^ip5.p5_sv_destroy($obj);
                 use nqp;
-                nqp::bindattr(SELF, type, '$!wrapped-perl5-object', Pointer);
+                nqp::bindattr(SELF, SELF.^mro.grep({$_.HOW.^isa(Inline::Perl5::ClassHOW)}).tail, '$!wrapped-perl5-object', Pointer);
             }
         }
         %!cache<new_shadow_of_p5_object> := my method new_shadow_of_p5_object(\SELF: \arg) {
