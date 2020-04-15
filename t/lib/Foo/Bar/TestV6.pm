@@ -52,6 +52,10 @@ sub get_foo_indirect {
     return $self->fetch_foo;
 }
 
+sub first {
+    return "first!";
+}
+
 sub context {
     return wantarray ? 'array' : 'scalar';
 }

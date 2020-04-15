@@ -312,19 +312,7 @@ multi method p5_to_p6_type(Pointer:D \value, Blessed) {
             $class := %!loaded_modules{$stash-name};
         }
         else {
-            my $base_type := self.global('@' ~ $stash-name ~ '::ISA')[0];
-            $base_type := $base_type ?? %!loaded_modules{$base_type} !! Any;
-            %!loaded_modules{$stash-name} := $class := Inline::Perl5::ClassHOW.new_type(
-                :name($stash-name),
-                :base_type($base_type),
-                :p5(self),
-                :ip5($!p5),
-            );
-            my $symbols = self.subs_in_module($stash-name);
-            for @$symbols -> $name {
-                $class.^add_wrapper_method($name);
-            }
-            $class.^compose;
+            $class := self.create_wrapper_class($stash-name);
         }
         my $obj = $!p5.p5_sv_rv(value);
         $!p5.p5_sv_refcnt_inc($obj);
@@ -489,12 +477,17 @@ multi method invoke(Any:U $package, Str $base_package, Str $function, *@args, *%
     );
     if $type == -1 {
         # need to create the P5 wrapper package
+        my @methods = $package.^methods(:local)
+            .map(*.name)
+            .grep(/^\w+$/)
+            .grep({$_ ne 'DESTROY' and $_ ne 'isa' and $_ ne 'can'})
+            .unique;
         self.run: "
             package {$package.^name} \{
                 our @ISA = qw(Perl6::Object $base_package);
                 sub DESTROY \{ \$_[0]->{$base_package}::DESTROY; \}
                 {
-                    join "\n", $package.^methods.map(*.name).grep(/^\w+$/).grep({$_ ne 'DESTROY' and $_ ne 'isa' and $_ ne 'can'}).unique.map: -> $name {
+                    join "\n", @methods.map: -> $name {
                         qq[sub $name \{
                             Perl6::Object::call_method('$name', \@_);
                         \}]
@@ -535,12 +528,8 @@ multi method invoke(Pointer $obj, Str $function) {
     self.unpack_return_values($av, $retvals, $type);
 }
 
-multi method look-up-method(Str $module, Str $name) {
-    $!p5.p5_look_up_package_method($module, $name)
-}
-
-multi method look-up-method(Pointer $obj, Str $name) {
-    $!p5.p5_look_up_method($obj, $name)
+method look-up-method(Str $module, Str $name, Bool $local) {
+    $!p5.p5_look_up_package_method($module, $name, $local.Int)
 }
 
 method stash-name(Pointer $obj) {
@@ -952,7 +941,7 @@ method require(Str $module, Num $version?, Bool :$handle) {
     for @packages.grep(*.defined).grep(/<-lower -[:]>/).grep(*.starts-with: $module) -> $package {
         my $symbol = ::($package);
         $symbol.Bool if $symbol.HOW.^isa(Metamodel::ClassHOW) and $symbol.^isa(Failure); #disarm
-        my $created := self!create_wrapper_class($package, $stash);
+        my $created := self!import_wrapper_class($package, $stash);
         $class := $created if $package eq $module;
     }
 
@@ -1004,7 +993,37 @@ method require(Str $module, Num $version?, Bool :$handle) {
     }).with-export(&export);
 }
 
-method !create_wrapper_class(Str $module, Stash $stash) {
+method create_wrapper_class(Str $module, $symbols = self.subs_in_module($module)) {
+    my $parents = self.global('@' ~ $module ~ '::ISA');
+    my @parents = [];
+    if $parents {
+        for $parents.keys {
+            my $parent = $parents[$_];
+            @parents[$_] := (%!loaded_modules{$parent}:exists)
+                    ?? %!loaded_modules{$parent}
+                    !! self.create_wrapper_class($parent);
+        }
+    }
+    @parents[@parents.elems] := Any;
+    @parents[@parents.elems] := Mu;
+    %!loaded_modules{$module} := my $class := Inline::Perl5::ClassHOW.new_type(
+        :name($module),
+        :@parents,
+        :p5(self),
+        :ip5($!p5),
+    );
+
+    # install methods
+    for @$symbols -> $name {
+        $class.^add_wrapper_method($name);
+    }
+
+    $class.^compose;
+
+    $class
+}
+
+method !import_wrapper_class(Str $module, Stash $stash) {
     my $class;
     my $first-time = False;
     my $symbols;
@@ -1016,24 +1035,10 @@ method !create_wrapper_class(Str $module, Stash $stash) {
     else {
         my $p5 := self;
         $first-time = True;
-        $symbols = self.subs_in_module($module);
         $variables = self.variables_in_module($module);
+        $symbols = self.subs_in_module($module);
 
-        my $base_type := self.global('@' ~ $module ~ '::ISA')[0];
-        $base_type := $base_type ?? %!loaded_modules{$base_type} !! Any;
-        %!loaded_modules{$module} := $class := Inline::Perl5::ClassHOW.new_type(
-            :name($module),
-            :base_type($base_type),
-            :p5(self),
-            :ip5($!p5),
-        );
-
-        # install methods
-        for @$symbols -> $name {
-            $class.^add_wrapper_method($name);
-        }
-
-        $class.^compose;
+        $class := self.create_wrapper_class($module, $symbols)
     }
 
     # register the new class by its name

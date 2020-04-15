@@ -14,7 +14,8 @@ role Inline::Perl5::WrapperClass { }
 
 class Inline::Perl5::ClassHOW
     does Metamodel::AttributeContainer
-    does Metamodel::BaseType
+    does Metamodel::MultipleInheritance
+    does Metamodel::C3MRO
     does Metamodel::BUILDPLAN
     does Metamodel::MultiMethodContainer
     does Metamodel::Naming
@@ -49,23 +50,31 @@ class Inline::Perl5::ClassHOW
 
     submethod BUILD(:$!p5, :$!ip5) { }
 
-    method new_type(:$name, :$base_type, :$p5, :$ip5) is raw {
+    method new_type(:$name, :@parents, :$p5, :$ip5) is raw {
         my $how = self.new(:p5($p5 // $*P5), :ip5($ip5 // $*IP5));
         my $type := Metamodel::Primitives.create_type($how);
-        $how.set_base_type($type, $base_type);
         $how.set_name($type, $name);
         $how.add_stash($type);
         $how.init;
+        use nqp;
+        $how.add_parent($type, nqp::decont($_)) for @parents;
+        Metamodel::Primitives.configure_type_checking($type,
+            (Any, Mu, Inline::Perl5::WrapperClass),
+            :authoritative, :call_accepts);
         $type
-    }
-    method base_type(\obj) {
-        $!base_type
     }
 
     method init() {
         use nqp;
         nqp::bindattr(self, $?CLASS, '%!attribute_lookup', nqp::hash());
+        nqp::bindattr(self, $?CLASS, '%!mro', nqp::hash());
         nqp::bindattr(self, $?CLASS, '@!attributes', nqp::list());
+        nqp::bindattr(self, $?CLASS, '@!parents', nqp::list());
+        nqp::bindattr(self, $?CLASS, '@!hides', nqp::list());
+    }
+
+    method is_composed(Mu \obj) {
+        $!composed
     }
 
     method isa(\obj, \type) {
@@ -91,7 +100,7 @@ class Inline::Perl5::ClassHOW
         $!ip5 = $ip5;
         for %!gvs.kv -> $module, %methods {
             for %methods.keys -> $name {
-                %methods{$name} = $!p5.look-up-method($module, $name);
+                %methods{$name} = $!p5.look-up-method($module, $name, False);
             }
         }
         self.install-perl5-destructor;
@@ -101,6 +110,7 @@ class Inline::Perl5::ClassHOW
         $!p5.run: "
             package $!name \{
                 my \$destroy;
+                no warnings 'redefine';
                 BEGIN \{ \$destroy = defined(&{$!name}::DESTROY) ? \\&{$!name}::DESTROY : undef; \};
                 {'sub DESTROY { if (Perl6::Object::destroy($_[0])) { if (defined $destroy) { $destroy->(@_) } else { $_[0]->SUPER::DESTROY } } }'}
             \}
@@ -117,7 +127,12 @@ class Inline::Perl5::ClassHOW
         $destroyers
     }
 
-    method compose(\type) {
+    method compose(Mu \type) {
+        use nqp;
+        unless nqp::elems(@!parents) {
+            nqp::push(@!parents, Any);
+        }
+        self.compute_mro(type);
         # Set up type checking with cache.
         Metamodel::Primitives.configure_type_checking(type,
             (|self.mro(type).list, Inline::Perl5::WrapperClass),
@@ -129,9 +144,14 @@ class Inline::Perl5::ClassHOW
         self.install-perl5-destructor;
 
         # Steal methods of Any/Mu for our method cache.
-        unless $!base_type =:= Any {
+        if @!parents[0] =:= Any {
             for flat Any.^method_table.pairs, Mu.^method_table.pairs {
                 %!cache{.key} //= .value;
+            }
+        }
+        else {
+            for <BUILDALL bless can defined isa sink WHICH WHERE WHY ACCEPTS> {
+                %!cache{$_} := Mu.^method_table{$_};
             }
         }
 
@@ -167,7 +187,7 @@ class Inline::Perl5::ClassHOW
             :type(Pointer),
             :package(type),
             :has_accessor(1),
-        )) unless any($!base_type.^mro.list.map({$_.HOW})) ~~ Inline::Perl5::ClassHOW;
+        )) unless any(@!parents[0].^mro.list.map({$_.HOW})) ~~ Inline::Perl5::ClassHOW;
 
         $!composed = True;
         my $compiler_services = $*W.get_compiler_services(Match.new) if $*W;
@@ -281,7 +301,17 @@ class Inline::Perl5::ClassHOW
         if $name eq 'BUILD' or $name eq 'TWEAK' {
             return %!cache<BUILD>;
         }
-        %!cache{$name} // $!base_type.^find_method($name) // self.add_wrapper_method($type, $name);
+        %!cache{$name} // self.add_wrapper_method($type, $name, :local) // do {
+            for self.mro($type) {
+                my $meths := $_.^method_table.Map;
+                if $meths{$name}:exists {
+                    my $meth := $meths{$name};
+                    %!cache{$name} := $meth;
+                    return $meth
+                }
+            }
+            Nil
+        }
     }
 
     method can($type, $name) {
@@ -295,11 +325,12 @@ class Inline::Perl5::ClassHOW
         @meths
     }
 
-    method add_wrapper_method($type, $name) is raw {
+    method add_wrapper_method(Mu $type, $name, Bool :$local = False) is raw {
+        return if $name eq 'wrapped-perl5-object';
         my $p5 = $!p5;
         my $module = $!name;
 
-        my $gv = $!p5.look-up-method(self.name($type), $name)
+        my $gv = $!p5.look-up-method(self.name($type), $name, $local)
             or fail "Did not find method $name on $module";
         (%!gvs{self.name($type)} ||= Hash.new){$name} := $gv;
 
@@ -413,19 +444,7 @@ class Inline::Perl5::ClassHOW
         self.add_method($type, $name, $proto)
     }
 
-    method mro(Mu \obj) {
-        use nqp;
-        unless @!mro {
-            nqp::bindattr(self, $?CLASS, '@!mro', nqp::create(NQPArray));
-            nqp::bindpos(@!mro, 0, obj.WHAT);
-            for $!base_type.HOW.mro($!base_type) {
-                nqp::push(@!mro, nqp::decont($_));
-            }
-        }
-        @!mro
-    }
-
-    method lang-rev-before(\type, $rev) {
+    method lang-rev-before(Mu \type, $rev) {
         1
     }
 }

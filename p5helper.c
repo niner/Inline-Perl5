@@ -633,11 +633,16 @@ SV *p5_call_package_method(PerlInterpreter *my_perl, char *package, char *name, 
     }
 }
 
-GV *p5_look_up_package_method(PerlInterpreter *my_perl, char *module, char *name) {
+GV *p5_look_up_package_method(PerlInterpreter *my_perl, char *module, char *name, I32 local) {
     PERL_SET_CONTEXT(my_perl);
     {
         HV * const pkg = gv_stashpvn(module, strlen(module), 0);
-        GV * const gv = gv_fetchmeth_pvn_autoload(pkg, name, strlen(name), -1, SVf_UTF8);
+        GV * gv = gv_fetchmeth_pvn_autoload(pkg, name, strlen(name), -1, SVf_UTF8);
+        if (gv && local) {
+            GV * const super_gv = gv_fetchmeth_pvn_autoload(pkg, name, strlen(name), -1, SVf_UTF8 | GV_SUPER);
+            if (super_gv && (super_gv == gv || GvCV(super_gv) == GvCV(gv)))
+                gv = NULL;
+        }
         if (gv && isGV(gv))
             return gv;
         return NULL;
@@ -667,7 +672,7 @@ SV *p5_call_inherited_package_method(PerlInterpreter *my_perl, char *package, ch
         XPUSHs(sv_2mortal(package_sv));
         push_arguments(sp, len, args);
 
-        GV * const gv = p5_look_up_package_method(my_perl, base_package, name);
+        GV * const gv = p5_look_up_package_method(my_perl, base_package, name, 0);
         SV * const rv = sv_2mortal(newRV_inc((SV*)GvCV(gv)));
         *count = call_sv(rv, flags);
 
@@ -681,17 +686,6 @@ SV *p5_call_inherited_package_method(PerlInterpreter *my_perl, char *package, ch
         LEAVE;
 
         return retval;
-    }
-}
-
-GV *p5_look_up_method(PerlInterpreter *my_perl, SV *obj, char *name) {
-    PERL_SET_CONTEXT(my_perl);
-    {
-        HV * const pkg = SvSTASH((SV*)SvRV(obj));
-        GV * const gv = Perl_gv_fetchmethod_autoload(aTHX_ pkg, name, TRUE);
-        if (gv && isGV(gv))
-            return gv;
-        return NULL;
     }
 }
 

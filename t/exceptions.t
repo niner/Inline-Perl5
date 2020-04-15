@@ -71,9 +71,10 @@ my $p5 = Inline::Perl5.new();
     $foo.non_existing;
     CATCH {
         ok 1, 'survived P5 missing method';
-        when X::AdHoc {
-            ok $_.isa('X::AdHoc'), 'got an exception from method call';
-            ok $_.Str().index('Could not find method "non_existing" of "Foo" object') == 0, 'exception message found from method call';
+        when X::Method::NotFound {
+            ok $_.Str().starts-with("No such method 'non_existing' for invocant of type 'Foo'"),
+                'exception message found from method call'
+                or diag qq[Got "$_" ($_.gist()) instead];
         }
     }
 }

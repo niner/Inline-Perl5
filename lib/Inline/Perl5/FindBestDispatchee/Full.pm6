@@ -4,7 +4,7 @@ our sub find_best_dispatchee(\SELF, Mu \capture) is export {
     use nqp;
     my $arity = nqp::captureposelems(capture);
     my \entry =
-        nqp::capturenamedshash(capture) || nqp::captureposarg(capture, 0).defined.not
+        nqp::capturenamedshash(capture) || nqp::not_i(nqp::isconcrete(nqp::captureposarg(capture, 0)))
             ?? nqp::hllbool(nqp::islt_i($arity, 2)) || (nqp::eqaddr(nqp::captureposarg(capture, 1), Scalar)).not
                 ?? nqp::getattr(SELF, SELF.WHAT, '&!many-args')
                 !! nqp::getattr(SELF, SELF.WHAT, '&!scalar-many-args')
