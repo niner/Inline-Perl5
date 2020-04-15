@@ -1506,7 +1506,14 @@ XS(p5_destroy_p5_object) {
     if (mg) {
         _perl6_magic* const p6mg = (_perl6_magic*) mg->mg_ptr;
         /* need to be extra careful here as PL_modglobal could have been cleaned already */
-        if (p6mg->index != -1 && !PL_in_clean_objs) {
+        if (
+            (      p6mg->key == PERL6_MAGIC_KEY
+                || p6mg->key == PERL6_HASH_MAGIC_KEY
+                || p6mg->key == PERL6_EXTENSION_MAGIC_KEY
+            )
+            && p6mg->index != -1
+            && !PL_in_clean_objs
+        ) {
             SV **cbs_entry = hv_fetchs(PL_modglobal, "Inline::Perl5 callbacks", 0);
             if (cbs_entry) {
                 perl6_callbacks *cbs = (perl6_callbacks*)SvIV(*cbs_entry);
