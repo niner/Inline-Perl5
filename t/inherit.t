@@ -20,12 +20,12 @@ is(Foo.new(foo => 'custom').foo, 'custom');
 
 class P6Bar is Foo {
     method bar {
-        return "Perl6";
+        return "Raku";
     }
 
 }
 
-is(P6Bar.new.test, 'Perl6');
+is(P6Bar.new.test, 'Raku');
 is(P6Bar.new.test_inherited, 'Perl5');
 is(P6Bar.new.foo, 'Moose!');
 is(P6Bar.new(foo => 'custom').foo, 'custom');
@@ -39,22 +39,22 @@ is(P6Bar.new.split, 'split', 'print method not interfering with inheritance');
 
 class Baz is Foo {
     method bar {
-        return "Perl6!";
+        return "Raku!";
     }
 
 }
 
 my $baz = Baz.new;
-is($baz.test, 'Perl6!') for ^2;
+is($baz.test, 'Raku!') for ^2;
 
 class Qux is Bar {
     method qux {
-        return "Perl6!!";
+        return "Raku!!";
     }
 
 }
 
-is(Qux.new.test, 'Perl6!!');
+is(Qux.new.test, 'Raku!!');
 
 # vim: ft=perl6
 

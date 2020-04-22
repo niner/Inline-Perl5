@@ -44,7 +44,7 @@ sub test_int_retvals {
 }
 
 sub test_str_retval {
-    return "Hello Perl 6!";
+    return "Hello Raku!";
 }
 
 sub test_mixed_retvals {
@@ -118,7 +118,7 @@ else {
     say "    got: {@retvals} ({@retvals.elems} elems)";
     say "    expected: 3, 1, 2";
 }
-if ($p5.call('test_str_retval') eq 'Hello Perl 6!') {
+if ($p5.call('test_str_retval') eq 'Hello Raku!') {
     say "ok 6 - return one string";
 }
 else {
@@ -163,10 +163,10 @@ else {
 }
 
 if ($p5.call('test_foo', 'main', $p5.call('Foo::new', 'Foo', 6)) == 6) {
-    say "ok 12 - Passing Perl 5 objects back from Perl 6";
+    say "ok 12 - Passing Perl 5 objects back from Raku";
 }
 else {
-    say "not ok 12 - Passing Perl 5 objects back from Perl 6";
+    say "not ok 12 - Passing Perl 5 objects back from Raku";
 }
 
 $p5.DESTROY;

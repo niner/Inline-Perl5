@@ -921,12 +921,12 @@ method require(Str $module, Num $version?, Bool :$handle) {
     my @import_args;
     push @!required_modules, ($module, $version, @import_args);
 
-    # wrap the load_module call so exceptions can be translated to Perl 6
+    # wrap the load_module call so exceptions can be translated to Raku
     my @packages = $version
         ?? self.call-simple-args('v6::load_module', $module, $version)
         !! self.call-simple-args('v6::load_module', $module);
 
-    return unless self eq $default_perl5; # Only create Perl 6 packages for the primary interpreter to avoid confusion
+    return unless self eq $default_perl5; # Only create Raku packages for the primary interpreter to avoid confusion
 
     {
         my $module_symbol = ::($module);
@@ -1237,7 +1237,7 @@ our sub init_inline_perl6_callback(Str $path) {
 }
 
 END {
-    # Perl 6 does not guarantee that DESTROY methods are called at program exit.
+    # Raku does not guarantee that DESTROY methods are called at program exit.
     # Make sure at least the first Perl 5 interpreter is correctly shut down and thus can e.g.
     # flush its output buffers. This should at least fix the vast majority of use cases.
     # People who really do use multiple Perl 5 interpreters are probably experienced enough
