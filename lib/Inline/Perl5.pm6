@@ -344,8 +344,10 @@ method handle_p5_exception() is hidden-from-backtrace {
 method compile-to-block-end($perl) {
     my @optree := CArray[Pointer].new;
     @optree[0] = Pointer;
-    my $end = $!p5.p5_compile_sv(self.p6_to_p5($perl), @optree);
-    $end, @optree[0]
+    my @stash := CArray[Pointer].new;
+    @stash[0] = Pointer;
+    my $end = $!p5.p5_compile_sv(self.p6_to_p5($perl), @optree, @stash);
+    $end, @optree[0], self.p5_to_p6(@stash[0])
 }
 
 method runops(Pointer $ops) {
@@ -671,6 +673,37 @@ method invoke-args(Pointer $obj, Str $function, Capture $args) {
     my $av = $!p5.p5_call_method(
         $obj,
         0,
+        $function,
+        $j,
+        nativecast(Pointer, @svs),
+        $retvals,
+        $err,
+        $type,
+    );
+    self.handle_p5_exception() if $err;
+    self.unpack_return_values($av, $retvals, $type);
+}
+
+method call-gv-args(Pointer $function, Capture $args) {
+    my @svs := CArray[Pointer].new();
+    my Int $j = 0;
+    for $args.list {
+        if $_.WHAT =:= Pair {
+            @svs[$j++] = self.p6_to_p5($_.key);
+            @svs[$j++] = self.p6_to_p5($_.value);
+        }
+        else {
+            @svs[$j++] = self.p6_to_p5($_);
+        }
+    }
+    for $args.hash {
+        @svs[$j++] = self.p6_to_p5($_.key);
+        @svs[$j++] = self.p6_to_p5($_.value);
+    }
+    my int32 $retvals;
+    my int32 $err;
+    my int32 $type;
+    my $av = $!p5.p5_call_gv(
         $function,
         $j,
         nativecast(Pointer, @svs),

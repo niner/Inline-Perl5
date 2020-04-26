@@ -5,9 +5,23 @@ sub EXPORT(|) {
     my role Perl5Slang {
         method p5code {
             my $pos  = self.pos;
-            my ($remainder, $optree) = Inline::Perl5.default_perl5.compile-to-block-end(
+            my $p5 = Inline::Perl5.default_perl5;
+            my ($remainder, $optree, $stash) = $p5.compile-to-block-end(
                     '{' ~ substr(self.target, $pos)
                 );
+
+            my @pads := $*W.context.blocks;
+            my $pad := @pads[*-2];
+            for $stash.pairs {
+                my $name = '&' ~ $_.key;
+                my $gv = $_.value;
+                my $sub := sub (|args) {
+                    $p5.call-gv-args($gv.gv, args)
+                };
+                $*PACKAGE.WHO.BIND-KEY($name, $sub);
+                $ = $*W.install_lexical_symbol($pad, $name, $sub);
+            }
+
             $remainder++;
             $*P5CODE = $optree;
             self.'!cursor_pass'(self.target.chars - $remainder);

@@ -1,5 +1,5 @@
 BEGIN {
-    say "1..7";
+    say "1..8";
 }
 {
     use v5-inline;
@@ -29,6 +29,6 @@ if True {
     $*OUT.flush;
 }
 
-#say give_me_a_string() eq "a string"
-#    ?? "ok 8 - sub in v5-inline block found"
-#    !! "not ok 8 - sub in v5-inline block not found";
+say give_me_a_string() eq "a string"
+    ?? "ok 8 - sub in v5-inline block found"
+    !! "not ok 8 - sub in v5-inline block not found";

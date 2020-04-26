@@ -586,7 +586,8 @@ void p5_set_global(PerlInterpreter *my_perl, const char* name, SV *value) {
         croak("Setting global hash variable NYI");
 }
 
-I32 p5_compile_sv(PerlInterpreter *my_perl, SV *line, CV **cv) {
+I32 p5_compile_sv(PerlInterpreter *my_perl, SV *line, CV **cv, SV **stash) {
+    PERL_SET_CONTEXT(my_perl);
     char *start = NULL;
     char start_orig;
     I32 floor;
@@ -606,7 +607,28 @@ I32 p5_compile_sv(PerlInterpreter *my_perl, SV *line, CV **cv) {
         lex_start(line, NULL, 0);
     }
 
+    HV *new_stash = newHV();
+    HV *cur_stash = PL_curstash;
+    PL_curstash = new_stash;
+
     op = parse_block(0);
+
+    PL_curstash = cur_stash;
+    HE *he;
+    while ((he = hv_iternext(new_stash))) {
+        SV *key = hv_iterkeysv(he);
+        SV *val = hv_iterval(new_stash, he);
+
+        /* Put the entry into the actual target stash */
+        hv_store_ent(PL_curstash, key, SvREFCNT_inc(val), HeHASH(he));
+
+        if (   0 == strcmp(SvPV_nolen(key), "BEGIN")
+            || 0 == strcmp(SvPV_nolen(key), "END")
+            || 0 == strcmp(SvPV_nolen(key), "__ANON__"))
+            hv_delete_ent(new_stash, key, G_DISCARD, HeHASH(he));
+    }
+    *stash = sv_2mortal(newRV_noinc((SV*)new_stash));
+
     I32 remainder = PL_parser->bufend - PL_parser->bufptr;
 
     *cv = newATTRSUB(floor, NULL, NULL, NULL, op);
