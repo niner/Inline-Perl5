@@ -1,7 +1,7 @@
 {
     "meta-version": 1,
     "name"          : "Inline::Perl5",
-    "version"       : "0.47",
+    "version"       : "0.48",
     "perl"          : "6.c",
     "auth"          : "github:niner",
     "authors"       : [ "Stefan Seifert" ],
