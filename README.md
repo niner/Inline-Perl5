@@ -29,7 +29,7 @@ Perl 5 classes in Raku.
 
 ## Load a Perl 5 module
 
-Perl 6' use statement allows you to load modules from other languages as well.
+Raku's use statement allows you to load modules from other languages as well.
 Inline::Perl5 registers as a handler for the Perl5 language. Rakudo will
 automatically load Inline::Perl5 as long as it is installed:
 
