@@ -5,7 +5,7 @@ use Inline::Perl5;
 
 use Test;
 
-my $p5 = Inline::Perl5.new;
+my $p5 = Inline::Perl5.default_perl5;
 
 $p5.run(q:heredoc/PERL5/);
     package Foo;
