@@ -1084,7 +1084,7 @@ SV *p5_call_method(PerlInterpreter *my_perl, SV *obj, I32 context, char *name, i
         SAVETMPS;
 
         HV * const pkg = SvSTASH((SV*)SvRV(obj));
-        GV * const gv = Perl_gv_fetchmethod_autoload(aTHX_ pkg, name, TRUE);
+        GV * const gv = gv_fetchmethod_autoload(pkg, name, TRUE);
         if (gv && isGV(gv)) {
             PUSHMARK(SP);
 
@@ -1134,7 +1134,7 @@ SV *p5_call_parent_method(PerlInterpreter *my_perl, char *package, SV *parent_ob
         SAVETMPS;
 
         HV * const pkg = package != NULL ? gv_stashpv(package, 0) : SvSTASH((SV*)SvRV(parent_obj));
-        GV * const gv = Perl_gv_fetchmethod_autoload(aTHX_ pkg, name, TRUE);
+        GV * const gv = gv_fetchmethod_autoload(pkg, name, TRUE);
         if (gv && isGV(gv)) {
             SV * obj;
 
