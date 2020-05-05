@@ -8,7 +8,7 @@ sub MAIN(:$test, :$install is copy) {
 }
 
 sub configure() {
-    run('perl', '-e', 'use v5.18;')
+    run('perl', '-e', 'use v5.20;')
         or die "\nPerl 5 version requirement not met\n";
 
     run('perl', '-MFilter::Simple', '-e', '')

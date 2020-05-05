@@ -30,6 +30,20 @@ typedef struct {
     SV *(*compile_to_end)(char *, char *, U32 *pos);
 } perl6_callbacks;
 
+#ifndef wrap_keyword_plugin
+void wrap_keyword_plugin(pTHX_ Perl_keyword_plugin_t new_plugin, Perl_keyword_plugin_t *old_plugin_p)
+{
+    dVAR;
+
+    PERL_UNUSED_CONTEXT;
+    if (*old_plugin_p) return;
+    if (!*old_plugin_p) {
+        *old_plugin_p = PL_keyword_plugin;
+        PL_keyword_plugin = new_plugin;
+    }
+}
+#endif
+
 XS(p5_call_p6_method);
 XS(p5_call_p6_extension_method);
 XS(p5_destroy_p5_object);

@@ -393,7 +393,7 @@ expect these modules to be written in Perl 5.
 
 # BUILDING
 
-The oldest perl version supported is 5.18.0.
+The oldest perl version supported is 5.20.0.
 
 You will need a perl 5 built with the -fPIC option (position independent
 code). Most distributions build their Perl 5 that way. When you use perlbrew,
