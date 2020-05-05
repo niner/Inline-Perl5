@@ -789,7 +789,7 @@ SV *p5_call_inherited_package_method(PerlInterpreter *my_perl, char *package, ch
         push_arguments(sp, len, args);
 
         GV * const gv = p5_look_up_package_method(my_perl, base_package, name, 0);
-        SV * const rv = sv_2mortal(newRV_inc((SV*)GvCV(gv)));
+        SV * const rv = GvCV(gv) ? sv_2mortal(newRV_inc((SV*)GvCV(gv))) : (SV*)gv;
         *count = call_sv(rv, flags);
 
         SPAGAIN;
@@ -835,7 +835,7 @@ SV *p5_call_gv(PerlInterpreter *my_perl, GV *gv, int len, SV *args[], I32 *count
 
         PUTBACK;
 
-        SV * const rv = sv_2mortal(newRV((SV*)GvCV(gv))); /* FIXME: can be done once */
+        SV * const rv = GvCV(gv) ? sv_2mortal(newRV_inc((SV*)GvCV(gv))) : (SV*)gv;
 
         *count = call_sv(rv, G_ARRAY | G_EVAL);
         SPAGAIN;
@@ -939,7 +939,7 @@ SV *p5_scalar_call_gv(PerlInterpreter *my_perl, GV *gv, int len, SV *args[], I32
 
         PUTBACK;
 
-        SV * const rv = sv_2mortal(newRV((SV*)GvCV(gv))); /* FIXME: can be done once */
+        SV * const rv = GvCV(gv) ? sv_2mortal(newRV_inc((SV*)GvCV(gv))) : (SV*)gv;
 
         *count = call_sv(rv, G_SCALAR | G_EVAL);
         SPAGAIN;
@@ -981,7 +981,7 @@ SV *p5_scalar_call_parent_gv(PerlInterpreter *my_perl, GV *gv, int len, SV *args
 
         PUTBACK;
 
-        SV * const rv = sv_2mortal(newRV((SV*)GvCV(gv))); /* FIXME: can be done once */
+        SV * const rv = GvCV(gv) ? sv_2mortal(newRV_inc((SV*)GvCV(gv))) : (SV*)gv;
 
         *count = call_sv(rv, G_SCALAR | G_EVAL);
         SPAGAIN;
@@ -1015,7 +1015,7 @@ SV *p5_call_gv_two_args(PerlInterpreter *my_perl, GV *gv, SV *arg, SV *arg2, I32
 
         PUTBACK;
 
-        SV * const rv = sv_2mortal(newRV((SV*)GvCV(gv)));
+        SV * const rv = GvCV(gv) ? sv_2mortal(newRV_inc((SV*)GvCV(gv))) : (SV*)gv;
 
         *count = call_sv(rv, G_ARRAY | G_EVAL);
         SPAGAIN;
@@ -1053,7 +1053,7 @@ SV *p5_scalar_call_gv_two_args(PerlInterpreter *my_perl, GV *gv, SV *arg, SV *ar
 
         PUTBACK;
 
-        SV * const rv = sv_2mortal(newRV((SV*)GvCV(gv)));
+        SV * const rv = GvCV(gv) ? sv_2mortal(newRV_inc((SV*)GvCV(gv))) : (SV*)gv;
 
         *count = call_sv(rv, G_SCALAR | G_EVAL);
         SPAGAIN;
@@ -1101,7 +1101,7 @@ SV *p5_call_method(PerlInterpreter *my_perl, SV *obj, I32 context, char *name, i
 
             PUTBACK;
 
-            SV * const rv = sv_2mortal(newRV((SV*)GvCV(gv)));
+            SV * const rv = GvCV(gv) ? sv_2mortal(newRV_inc((SV*)GvCV(gv))) : (SV*)gv;
 
             *count = call_sv(rv, flags);
             SPAGAIN;
@@ -1155,7 +1155,7 @@ SV *p5_call_parent_method(PerlInterpreter *my_perl, char *package, SV *parent_ob
 
             PUTBACK;
 
-            SV * const rv = sv_2mortal(newRV((SV*)GvCV(gv)));
+            SV * const rv = GvCV(gv) ? sv_2mortal(newRV_inc((SV*)GvCV(gv))) : (SV*)gv;
 
             *count = call_sv(rv, flags);
             SPAGAIN;

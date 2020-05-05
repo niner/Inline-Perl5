@@ -57,6 +57,7 @@ t/lib/Data.pm
 t/lib/Foo.pm
 t/lib/Foo/Bar/TestV6.pm
 t/lib/Foo/Bar/TestV6Sub.pm
+t/lib/HasAutoload.pm
 t/lib/HasInnerPackage.pm
 t/lib/LookForData.pm
 t/lib/ObjWithDestructor.pm
