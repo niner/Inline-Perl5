@@ -244,7 +244,7 @@ U32 p5_sv_utf8(PerlInterpreter *my_perl, SV* sv) {
         char * const pv  = SvPV(sv, len);
         STRLEN i;
         for (i = 0; i < len; i++)
-            if (pv[i] < 0) // signed char!
+            if ((signed char) pv[i] < 0) // signed char!
                 return 0;
         return 1;
     }
