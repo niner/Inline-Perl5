@@ -31,7 +31,7 @@ typedef struct {
 } perl6_callbacks;
 
 #ifndef wrap_keyword_plugin
-void wrap_keyword_plugin(pTHX_ Perl_keyword_plugin_t new_plugin, Perl_keyword_plugin_t *old_plugin_p)
+void Perl_wrap_keyword_plugin(pTHX_ Perl_keyword_plugin_t new_plugin, Perl_keyword_plugin_t *old_plugin_p)
 {
     dVAR;
 
@@ -42,6 +42,7 @@ void wrap_keyword_plugin(pTHX_ Perl_keyword_plugin_t new_plugin, Perl_keyword_pl
         PL_keyword_plugin = new_plugin;
     }
 }
+#define wrap_keyword_plugin(new_plugin, old_plugin_p) Perl_wrap_keyword_plugin(aTHX_ new_plugin, old_plugin_p)
 #endif
 
 XS(p5_call_p6_method);
