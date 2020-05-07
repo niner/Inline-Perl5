@@ -1259,7 +1259,9 @@ method initialize(Bool :$reinitialize) {
         use nqp;
         require Inline::Perl5::Perl5Class;
 
-        my $compiler = nqp::clone(nqp::getcomp(q<Raku>));
+        my $current-compiler := nqp::getcomp('Raku');
+        $current-compiler := nqp::getcomp('perl6') if nqp::isnull($current-compiler);
+        my $compiler := nqp::clone($current-compiler);
         my $*pos;
         my $g = $compiler.parsegrammar but role :: {
             token end_block_and_comp_unit { "}" .* }
@@ -1288,7 +1290,7 @@ method initialize(Bool :$reinitialize) {
             :outer_ctx($eval_ctx),
             :global(GLOBAL),
             :mast_frames(mast_frames),
-            :language_version(nqp::getcomp('Raku').language_version);
+            :language_version($current-compiler.language_version);
 
         nqp::forceouterctx(
           nqp::getattr($compiled,ForeignCode,'$!do'),$eval_ctx

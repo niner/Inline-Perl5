@@ -34,7 +34,7 @@ until %*PERL5<%ObjWithDestructor::destructor_runs><1> {
     use nqp;
     nqp::force_gc;
 
-    last if $i++ >= 10;
+    last if $i++ >= 50000;
 }
 
 ok(%*PERL5<%ObjWithDestructor::destructor_runs><1>, 'at least one destructor ran');

@@ -67,7 +67,8 @@ class Inline::Perl5::ClassHOW
     method init() {
         use nqp;
         nqp::bindattr(self, $?CLASS, '%!attribute_lookup', nqp::hash());
-        nqp::bindattr(self, $?CLASS, '%!mro', nqp::hash());
+        nqp::bindattr(self, $?CLASS, '%!mro', nqp::hash()) if '%!mro' (elem) $?CLASS.^attributes>>.name;
+        nqp::bindattr(self, $?CLASS, '@!mro', nqp::list()) if '@!mro' (elem) $?CLASS.^attributes>>.name;
         nqp::bindattr(self, $?CLASS, '@!attributes', nqp::list());
         nqp::bindattr(self, $?CLASS, '@!parents', nqp::list());
         nqp::bindattr(self, $?CLASS, '@!hides', nqp::list());
@@ -187,6 +188,16 @@ class Inline::Perl5::ClassHOW
             :type(Pointer),
             :package(type),
             :has_accessor(1),
+            :container_initializer{
+                my \container = Scalar.CREATE;
+                nqp::bindattr(
+                    container,
+                    Scalar,
+                    '$!descriptor',
+                    ContainerDescriptor.new(:of(Any), :name<$!wrapped-perl5-object>, :default(Any), :dynamic(0)),
+                );
+                container
+            },
         )) unless any(@!parents[0].^mro.list.map({$_.HOW})) ~~ Inline::Perl5::ClassHOW;
 
         $!composed = True;
@@ -206,7 +217,7 @@ class Inline::Perl5::ClassHOW
                                 :type($_.type =:= Mu ?? Any !! $_.type),
                                 :inlined($_.inlined),
                                 :auto_viv_container($_.auto_viv_container),
-                            ).Map
+                            ).Hash
                         }).List,
                         [parent.^mro.list.elems > 1 ?? parent.^mro.list[1] !! Empty]
                 }).List,

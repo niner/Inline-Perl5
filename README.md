@@ -393,6 +393,7 @@ expect these modules to be written in Perl 5.
 
 # BUILDING
 
+The oldest rakudo version supported is 2019.03.1.
 The oldest perl version supported is 5.20.0.
 
 You will need a perl 5 built with the -fPIC option (position independent

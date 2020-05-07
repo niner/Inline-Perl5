@@ -11,6 +11,6 @@ manifest:
 %p5helper%: p5helper.c
 	$(CC) -Wall p5helper.c %perlopts% -shared -o "%p5helper%" -fPIC -g
 test: all
-	prove -e "$(PERL6) -Ilib" t
+	prove -e "$(PERL6) -I." t
 install: all
 	$(PERL6) configure.pl6 --install
