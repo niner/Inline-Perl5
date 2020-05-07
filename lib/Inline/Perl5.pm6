@@ -1297,7 +1297,7 @@ method initialize(Bool :$reinitialize) {
         );
 
         $pos[0] = $*pos - $preamble_len;
-        self.p6_to_p5($package eq 'main' ?? $compiled !! -> {
+        self.p6_to_p5($package eq 'main' ?? -> --> Nil { $compiled() } !! -> {
             my $class := $compiled();
             self.add-to-loaded-modules($package, $class);
 
