@@ -71,6 +71,7 @@ t/lib/TestPerl5Package.pm
 t/lib/TestPerl5Package/Sub.pm
 t/lib/TestV6Directly.pm
 t/lib/UseExport.pm
+t/lib/UseRakuBlock.pm6
 t/meta_model.t
 t/modify_array.t
 t/modify_hash.t
@@ -82,6 +83,7 @@ t/p6_object_destructor.t
 t/p6_to_p5.t
 t/perl5package.t
 t/precomp.t
+t/precompiled_raku_block.t
 t/raku_block.t
 t/shadow.t
 t/stringify.t

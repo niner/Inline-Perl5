@@ -11,6 +11,25 @@ BEGIN {
 }
 
 role Inline::Perl5::WrapperClass { }
+role Inline::Perl5::WrapperMethod {
+    has &!many-args;
+    has &!scalar-many-args;
+    has &!one-arg;
+    has &!scalar-one-arg;
+    has &!no-args;
+    has &!scalar-no-args;
+    method find_best_dispatchee(\SELF: Mu \capture) {
+        find_best_dispatchee(SELF, capture)
+    }
+    method add_methods(&many-args, &scalar-many-args, &one-arg, &scalar-one-arg, &no-args, &scalar-no-args) {
+        &!many-args        := &many-args;
+        &!scalar-many-args := &scalar-many-args;
+        &!one-arg          := &one-arg;
+        &!scalar-one-arg   := &scalar-one-arg;
+        &!no-args          := &no-args;
+        &!scalar-no-args   := &scalar-no-args;
+    }
+}
 
 class Inline::Perl5::ClassHOW
     does Metamodel::AttributeContainer
@@ -357,25 +376,7 @@ class Inline::Perl5::ClassHOW
         my $generic-proto := my proto method AUTOGEN(::T $: |) { * }
         my $proto := $generic-proto.instantiate_generic(%('T' => $type));
         $proto.set_name($name);
-        $proto does role :: {
-            has &!many-args;
-            has &!scalar-many-args;
-            has &!one-arg;
-            has &!scalar-one-arg;
-            has &!no-args;
-            has &!scalar-no-args;
-            method find_best_dispatchee(\SELF: Mu \capture) {
-                find_best_dispatchee(SELF, capture)
-            }
-            method add_methods(&many-args, &scalar-many-args, &one-arg, &scalar-one-arg, &no-args, &scalar-no-args) {
-                &!many-args        := &many-args;
-                &!scalar-many-args := &scalar-many-args;
-                &!one-arg          := &one-arg;
-                &!scalar-one-arg   := &scalar-one-arg;
-                &!no-args          := &no-args;
-                &!scalar-no-args   := &scalar-no-args;
-            }
-        }
+        $proto does Inline::Perl5::WrapperMethod;
 
         my $many-args := my sub many-args(Any $self, *@args, *%kwargs) {
             $self.defined

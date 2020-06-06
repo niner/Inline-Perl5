@@ -904,7 +904,12 @@ class Perl6Callbacks {
         my %named = classify {$_.WHAT =:= Pair}, @args;
         %named<False> //= [];
         %named<True> //= [];
-        return ::($package)."$name"(|%named<False>, |%(%named<True>));
+        my $class := ::($package);
+        if $class.HOW.^isa(Metamodel::ClassHOW) and $class.^isa(Failure) {
+            fail "No such symbol '$package'" unless $!p5.module-loaded($package);
+            $class := $!p5.loaded-module($package);
+        }
+        return $class."$name"(|%named<False>, |%(%named<True>));
         CONTROL {
             when CX::Warn {
                 note $_.gist;
@@ -1167,6 +1172,27 @@ method restore_interpreter() {
     }
 }
 
+has %!raku_blocks;
+method add-raku-block($package, $code, $pos) {
+    %!raku_blocks{$package}{$code} = {
+        :$pos,
+        :code(-> {
+            my $class := %!raku_blocks{$package}{$code}<class>;
+            for $class.^methods(:local) -> $method {
+                next if $method.name eq 'DESTROY';
+                next if $method.name eq 'wrapped-perl5-object';
+                next if $method ~~ Inline::Perl5::WrapperMethod;
+
+                $method.does(Inline::Perl5::Attributes)
+                    ?? self.install_wrapper_method($package, $method.name, |$method.attributes)
+                    !! self.install_wrapper_method($package, $method.name);
+            }
+
+            Nil
+        }),
+    };
+}
+
 method initialize(Bool :$reinitialize) {
     $!objects = Inline::Language::ObjectKeeper.new;
 
@@ -1208,7 +1234,13 @@ method initialize(Bool :$reinitialize) {
         my %named = classify {$_.WHAT =:= Pair}, @args;
         %named<False> //= [];
         %named<True> //= [];
-        self.p6_to_p5(::($package)."$name"(|%named<False>, |%(%named<True>)));
+        my $class := ::($package);
+        if $class.HOW.^isa(Metamodel::ClassHOW) and $class.^isa(Failure) {
+            $class.so;
+            fail "No such symbol '$package'" unless %!loaded_modules{$package}:exists;
+            $class := %!loaded_modules{$package};
+        }
+        self.p6_to_p5($class."$name"(|%named<False>, |%(%named<True>)));
     }
 
     my &call_callable = sub (Int $index, Pointer $args, Pointer $err) returns Pointer {
@@ -1247,59 +1279,55 @@ method initialize(Bool :$reinitialize) {
         $!objects.get($index).ASSIGN-KEY($key, self.p5_to_p6($value))
     }
 
-    my &compile_to_end = sub (Str $package, Str $code is copy, CArray[uint32] $pos --> Pointer) {
+    sub lenient-raku-compiler() {
+        use nqp;
+        my $current-compiler := nqp::getcomp('Raku');
+        $current-compiler := nqp::getcomp('perl6') if nqp::isnull($current-compiler);
+        my $compiler := nqp::clone($current-compiler);
+        $compiler.parsegrammar(
+            $compiler.parsegrammar but role :: {
+                token end_block_and_comp_unit { "}" .* }
+                method typed_panic($type_str, *%opts) {
+                    if $type_str eq "X::Syntax::Confused" and substr(self.orig, self.MATCH.pos, 1) eq q<}> {
+                        $*pos = self.MATCH.pos;
+                        return self.end_block_and_comp_unit;
+                    };
+                    $*W.throw(self.MATCH(), nqp::split("::", $type_str), |%opts);
+                }
+            }
+        );
+        $compiler
+    }
+
+    my &compile_to_end = sub (Str $package, Str $code is copy, CArray[uint32] $pos) {
         my $*P5 = self;
         my $*IP5 = $!p5;
         my $preamble = $package eq 'main' ?? '' !! "use Inline::Perl5::ClassHOW; unit perl5class GLOBAL::$package;\n";
         my $preamble_len = $preamble.chars;
         $code = "$preamble$code";
-        CATCH {
-            note $_;
+        if $reinitialize {
+            $pos[0] = %!raku_blocks{$package}{$code}<pos>;
+            return self.p6_to_p5(%!raku_blocks{$package}{$code}<code>);
         }
-        use nqp;
-        require Inline::Perl5::Perl5Class;
-
-        my $current-compiler := nqp::getcomp('Raku');
-        $current-compiler := nqp::getcomp('perl6') if nqp::isnull($current-compiler);
-        my $compiler := nqp::clone($current-compiler);
-        my $*pos;
-        my $g = $compiler.parsegrammar but role :: {
-            token end_block_and_comp_unit { "}" .* }
-            method typed_panic($type_str, *%opts) {
-                if $type_str eq "X::Syntax::Confused" and substr(self.orig, self.MATCH.pos, 1) eq q<}> {
-                    $*pos = self.MATCH.pos;
-                    return self.end_block_and_comp_unit;
-                };
-                $*W.throw(self.MATCH(), nqp::split("::", $type_str), |%opts);
+        CONTROL {
+            when CX::Warn {
+                note $_.gist;
+                $_.resume;
             }
-        };
-        $compiler.parsegrammar($g);
+        }
 
-        my $context := CALLER::;
-        my $eval_ctx := nqp::getattr(nqp::decont($context), PseudoStash, '$!ctx');
-        my \mast_frames := nqp::hash();
-        my $*CTXSAVE; # make sure we don't use the EVAL's MAIN context for the
-                      # currently compiling compilation unit
+        my $*CTXSAVE; # make sure we don't use the EVAL's MAIN context for the currently compiling compilation unit
+        my $*pos;
+        my $compiler := lenient-raku-compiler;
+        my $compiled := $compiler.compile($code, :need_result(1));
 
-        my $LANG := $context<%?LANG>:exists
-                        ?? $context<%?LANG>
-                        !! (CALLERS::<%?LANG>:exists ?? CALLERS::<%?LANG> !! Nil);
+        self.add-raku-block($package, $code, $pos[0] = $*pos - $preamble_len);
 
-        my $compiled := $compiler.compile:
-            $code,
-            :outer_ctx($eval_ctx),
-            :global(GLOBAL),
-            :mast_frames(mast_frames),
-            :language_version($current-compiler.language_version);
-
-        nqp::forceouterctx(
-          nqp::getattr($compiled,ForeignCode,'$!do'),$eval_ctx
-        );
-
-        $pos[0] = $*pos - $preamble_len;
         self.p6_to_p5($package eq 'main' ?? -> --> Nil { $compiled() } !! -> {
-            my $class := $compiled();
+            %!raku_blocks{$package}{$code}<class> := my $class := $compiled();
             self.add-to-loaded-modules($package, $class);
+
+            my $symbols = self.subs_in_module($package);
 
             for $class.^methods(:local) -> $method {
                 next if $method.name eq 'DESTROY';
@@ -1309,6 +1337,13 @@ method initialize(Bool :$reinitialize) {
                     ?? self.install_wrapper_method($package, $method.name, |$method.attributes)
                     !! self.install_wrapper_method($package, $method.name);
             }
+
+            for @$symbols -> $name {
+                next if $name eq 'DESTROY';
+                next if $name eq 'wrapped-perl5-object';
+                $class.^add_wrapper_method($name);
+            }
+
             Nil
         })
     }

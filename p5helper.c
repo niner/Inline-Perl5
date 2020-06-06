@@ -104,7 +104,7 @@ static int raku_keyword_plugin(pTHX_ char *keyword_ptr, STRLEN keyword_len, OP *
         SV *code = cbs->compile_to_end(package_name, PL_parser->bufptr, &pos);
         lex_read_to(bufptr + pos + 1);
 
-        *op_ptr = newUNOP(OP_ENTERSUB, 0, newSVOP(OP_CONST, 0, code));
+        *op_ptr = code ? newUNOP(OP_ENTERSUB, 0, newSVOP(OP_CONST, 0, code)) : NULL;
 
         return KEYWORD_PLUGIN_STMT;
     }
