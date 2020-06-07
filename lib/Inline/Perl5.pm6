@@ -906,6 +906,7 @@ class Perl6Callbacks {
         %named<True> //= [];
         my $class := ::($package);
         if $class.HOW.^isa(Metamodel::ClassHOW) and $class.^isa(Failure) {
+            $class.so; # defuse the Failure
             fail "No such symbol '$package'" unless $!p5.module-loaded($package);
             $class := $!p5.loaded-module($package);
         }
@@ -1236,7 +1237,7 @@ method initialize(Bool :$reinitialize) {
         %named<True> //= [];
         my $class := ::($package);
         if $class.HOW.^isa(Metamodel::ClassHOW) and $class.^isa(Failure) {
-            $class.so;
+            $class.so; # defuse the Failure
             fail "No such symbol '$package'" unless %!loaded_modules{$package}:exists;
             $class := %!loaded_modules{$package};
         }
