@@ -1,8 +1,11 @@
 use v6;
 use lib 't/lib';
+use Test;
+BEGIN plan :skip-all('Precompiling raku blocks requires more recent rakudo version');
+    if $*PERL.compiler.name eq 'rakudo'
+    and $*PERL.compiler.version before v2020.05.1.261.g.169.f.63.d.90;
 use Inline::Perl5::ClassHOW;
 use UseRakuBlock;
-use Test;
 
 ok UseRakuBlock.new(:name<foo>);
 ok UseRakuBlock.new(:name<foo>).^mro[1].HOW.^isa(Inline::Perl5::ClassHOW);

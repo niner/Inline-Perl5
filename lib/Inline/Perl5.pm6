@@ -21,6 +21,11 @@ has $!objects;
 
 my $default_perl5;
 
+my constant $broken-rakudo = (
+    $*PERL.compiler.name eq 'rakudo'
+    and $*PERL.compiler.version before v2020.05.1.261.g.169.f.63.d.90
+);
+
 # I'd like to call this from Inline::Perl5::Interpreter
 # But it raises an error in the END { ... } call
 use NativeCall;
@@ -1320,11 +1325,18 @@ method initialize(Bool :$reinitialize) {
         my $*CTXSAVE; # make sure we don't use the EVAL's MAIN context for the currently compiling compilation unit
         my $*pos;
         my $compiler := lenient-raku-compiler;
-        my $compiled := $compiler.compile($code, :need_result(1));
+
+        use nqp;
+        my $context := CORE::; # workaround for rakudo versions that won't give a result without outer_ctx
+        my $outer_ctx := $broken-rakudo ?? nqp::getattr($context, PseudoStash, '$!ctx') !! Nil;
+        my $compiled := $compiler.compile($code, :need_result($package eq 'main' ?? 0 !! 1), :$outer_ctx);
+        nqp::forceouterctx(
+            nqp::getattr($compiled, ForeignCode, '$!do'), $outer_ctx
+        ) if $outer_ctx;
 
         self.add-raku-block($package, $code, $pos[0] = $*pos - $preamble_len);
 
-        self.p6_to_p5($package eq 'main' ?? -> --> Nil { $compiled() } !! -> {
+        self.p6_to_p5($package eq 'main' ?? $compiled !! -> {
             %!raku_blocks{$package}{$code}<class> := my $class := $compiled();
             self.add-to-loaded-modules($package, $class);
 
