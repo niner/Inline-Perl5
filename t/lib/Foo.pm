@@ -19,6 +19,12 @@ has foo => (
     default => 'Moose!',
 );
 
+sub BUILD {
+    my ($self) = @_;
+
+    return $self;
+}
+
 sub test {
     my ($self) = @_;
 

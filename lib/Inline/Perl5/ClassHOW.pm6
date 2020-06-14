@@ -338,7 +338,7 @@ class Inline::Perl5::ClassHOW
         return if $name eq 'DESTROY';
         # must not be AUTOLOADed and must not call into P5 before the object's fully constructed
         if $name eq 'BUILD' or $name eq 'TWEAK' {
-            return %!cache<BUILD>;
+            return %!cache{$name};
         }
         %!cache{$name} // self.add_wrapper_method($type, $name, :local) // do {
             for self.mro($type) {
@@ -365,7 +365,7 @@ class Inline::Perl5::ClassHOW
     }
 
     method add_wrapper_method(Mu $type, $name, Bool :$local = False) is raw {
-        return if $name eq 'wrapped-perl5-object';
+        return if $name eq 'BUILD' | 'TWEAK' | 'wrapped-perl5-object';
         my $p5 = $!p5;
         my $module = $!name;
 
