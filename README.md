@@ -413,9 +413,15 @@ If you use plenv:
     plenv install 5.24.0 -Duseshrplib
 
 If you use the perl that comes with a Linux distribution, you may need to
-install a separate package containing the perl library. E.g. on Debian
-this is called libperl-dev, on Fedora perl-libs. On openSUSE, the perl
-package already contains everything needed.
+install a separate package containing the perl library. Consult the table below
+or the distribution documentation for details.
+
+| Distribution             | Package name |
+| -------------------------|--------------|
+| Fedora/Red Hat/CentOs    | perl-libs    |
+| Debian/Ubuntu/Linux Mint | libperl-dev  |
+| openSUSE                 | perl         |
+| Arch Linux/Manjaro       | perl         |
 
 Build Inline::Perl5 with
 
