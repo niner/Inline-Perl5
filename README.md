@@ -25,6 +25,9 @@ Perl 5 and Raku. Also supports calling methods on Perl 5 objects from
 Raku and calling methods on Raku objects from Perl 5 and subclass
 Perl 5 classes in Raku.
 
+Note that installing Inline::Perl5 requires the Perl 5 library to be installed.
+See the BUILDING section for more information.
+
 # HOW DO I?
 
 ## Load a Perl 5 module
