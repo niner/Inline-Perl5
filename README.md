@@ -25,6 +25,9 @@ Perl 5 and Raku. Also supports calling methods on Perl 5 objects from
 Raku and calling methods on Raku objects from Perl 5 and subclass
 Perl 5 classes in Raku.
 
+Note that installing Inline::Perl5 requires the Perl 5 library to be installed.
+See the BUILDING section for more information.
+
 # HOW DO I?
 
 ## Load a Perl 5 module
@@ -410,9 +413,15 @@ If you use plenv:
     plenv install 5.24.0 -Duseshrplib
 
 If you use the perl that comes with a Linux distribution, you may need to
-install a separate package containing the perl library. E.g. on Debian
-this is called libperl-dev, on Fedora perl-libs. On openSUSE, the perl
-package already contains everything needed.
+install a separate package containing the perl library. Consult the table below
+or the distribution documentation for details.
+
+| Distribution             | Package name |
+| -------------------------|--------------|
+| Fedora/Red Hat/CentOs    | perl-libs    |
+| Debian/Ubuntu/Linux Mint | libperl-dev  |
+| openSUSE                 | perl         |
+| Arch Linux/Manjaro       | perl         |
 
 Build Inline::Perl5 with
 
