@@ -948,11 +948,11 @@ method install_wrapper_method(Str:D $package, Str $name, *@attributes) {
 }
 
 method subs_in_module(Str $module) {
-    return self.run('[ grep { *{"' ~ $module ~ '::$_"}{CODE} } keys %' ~ $module ~ ':: ]');
+    return self.run('[ grep { defined *{"' ~ $module ~ '::$_"}{CODE} } keys %' ~ $module ~ ':: ]');
 }
 
 method variables_in_module(Str $module) {
-    return self.run('[ grep { *{"' ~ $module ~ '::$_"}{SCALAR} } keys %' ~ $module ~ ':: ]');
+    self.call-simple-args('v6::variables_in_module', $module)
 }
 
 method import (Str $module, *@args) {
@@ -1593,6 +1593,19 @@ sub load_module {
 
     v6::load_module_impl(@_);
     return map { substr $_, 2 } $list_packages->('::');
+}
+
+sub variables_in_module {
+    my ($module) = @_;
+
+    my @variables;
+    no strict 'refs';
+    while (my ($key, $val) = each(%{*{"$module\::"}})) {
+        next if $key =~ /::\z/; # packages
+        local(*ENTRY) = $val;
+        push @variables, $key if defined $val && defined *ENTRY{SCALAR};
+    }
+    @variables
 }
 
 sub run {
