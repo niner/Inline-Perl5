@@ -12,6 +12,9 @@ use Encode:from<Perl5> <encode>;
 
 use UseExport; # also loads Encode
 
+use NonC3MRO:from<Perl5>; # would break with C3 MRO
+use WithC3MRO:from<Perl5>; # explicitly requests C3 MRO
+
 eval-dies-ok "use P5ModuleVersion:from<Perl5>:ver<2.1>;";
 
 is(P5Import::p5_ok(1), 1);
@@ -27,6 +30,9 @@ for 1, 2 {
 is($i, 0, '"next" did not get overwritten by import');
 
 is encode('utf8', 'foo'), 'foo';
+
+is(NonC3MRO.^mro.list.map(*.^name).Str, 'NonC3MRO C A Any Mu B D');
+is(WithC3MRO.^mro.list.map(*.^name).Str, 'WithC3MRO K1 K2 K3 X U V W Y Any Mu');
 
 done-testing;
 

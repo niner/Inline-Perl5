@@ -54,6 +54,8 @@ class Inline::Perl5::ClassHOW
         method pop() { nqp::pop(self) }
         method unshift(Mu \value) { nqp::unshift(self, nqp::decont(value)) }
         method shift() { nqp::shift(self) }
+        method elems() { nqp::elems(self) }
+        method AT-POS(int $i) { nqp::atpos(self, $i) }
         method list() {
             my \list = List.new;
             nqp::bindattr(list, List, '$!reified', self);
@@ -147,12 +149,50 @@ class Inline::Perl5::ClassHOW
         $destroyers
     }
 
+    method compute_dfs_mro(\type) {
+        use nqp;
+
+        my $mro := NQPArray.new;
+
+        $mro.push: type;
+        for nqp::hllize(@!parents) {
+            MRO: for $_.^mro {
+                my int $i = 0;
+                my int $end = $mro.elems;
+                while $i < $end {
+                    next MRO if $mro.AT-POS($i++) =:= $_;
+                }
+                $mro.push: $_;
+            }
+        }
+
+        nqp::bindattr(self, $?CLASS, '@!mro', $mro) if '@!mro' (elem) $?CLASS.^attributes>>.name;
+        nqp::bindattr(self, $?CLASS, '%!mro', nqp::hash(
+            'all', nqp::hash(
+                'all',      $mro,
+                'no_roles', $mro,
+            ),
+            'unhidden' , nqp::hash(
+                'all',      $mro,
+                'no_roles', $mro,
+            ),
+        )) if '%!mro' (elem) $?CLASS.^attributes>>.name;
+    }
+
     method compose(Mu \type) {
         use nqp;
         unless nqp::elems(@!parents) {
             nqp::push(@!parents, Any);
         }
-        self.compute_mro(type);
+
+        my $mro = $!p5.call-simple-args('mro::get_mro', $!name);
+        if $mro eq 'c3' {
+            self.compute_mro(type);
+        }
+        else {
+            self.compute_dfs_mro(type);
+        }
+
         # Set up type checking with cache.
         Metamodel::Primitives.configure_type_checking(type,
             (|self.mro(type).list, Inline::Perl5::WrapperClass),
