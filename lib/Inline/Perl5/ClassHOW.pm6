@@ -254,22 +254,40 @@ class Inline::Perl5::ClassHOW
         use nqp;
         nqp::settypefinalize(type, 1);
 
-        self.add_attribute(type, my $attr := Attribute.new(
-            :name<$!wrapped-perl5-object>,
-            :type(Pointer),
-            :package(type),
-            :has_accessor(1),
-            :container_initializer{
-                my \container = Scalar.CREATE;
-                nqp::bindattr(
-                    container,
-                    Scalar,
-                    '$!descriptor',
-                    ContainerDescriptor.new(:of(Any), :name<$!wrapped-perl5-object>, :default(Any), :dynamic(0)),
-                );
-                container
-            },
-        )) unless any(@!parents[0].^mro.list.map({$_.HOW})) ~~ Inline::Perl5::ClassHOW;
+        unless any(@!parents[0].^mro.list.map({$_.HOW})) ~~ Inline::Perl5::ClassHOW {
+            self.add_attribute(type, Attribute.new(
+                :name<$!inline-perl5>,
+                :type(Any),
+                :package(type),
+                :has_accessor(1),
+                :container_initializer{
+                    my \container = Scalar.CREATE;
+                    nqp::bindattr(
+                        container,
+                        Scalar,
+                        '$!descriptor',
+                        ContainerDescriptor.new(:of(Any), :name<$!inline-perl5>, :default(Any), :dynamic(0)),
+                    );
+                    container
+                },
+            )) ;
+            self.add_attribute(type, Attribute.new(
+                :name<$!wrapped-perl5-object>,
+                :type(Pointer),
+                :package(type),
+                :has_accessor(1),
+                :container_initializer{
+                    my \container = Scalar.CREATE;
+                    nqp::bindattr(
+                        container,
+                        Scalar,
+                        '$!descriptor',
+                        ContainerDescriptor.new(:of(Any), :name<$!wrapped-perl5-object>, :default(Any), :dynamic(0)),
+                    );
+                    container
+                },
+            ));
+        }
 
         $!composed = True;
         my $compiler_services = $*W.get_compiler_services(Match.new) if $*W;
@@ -302,7 +320,7 @@ class Inline::Perl5::ClassHOW
                 my \obj = $p5.p5_sv_rv(obj_ref);
                 $p5.interpreter.p5_sv_refcnt_inc(obj);
                 $p5.interpreter.p5_sv_refcnt_dec(obj_ref);
-                SELF.bless(|@a, |%h, :wrapped-perl5-object(obj))
+                SELF.bless(|@a, |%h, :wrapped-perl5-object(obj), :inline-perl5($p5))
             });
         }
         $*W.add_object(type) if $*W;
@@ -417,7 +435,7 @@ class Inline::Perl5::ClassHOW
     }
 
     method add_wrapper_method(Mu $type, $name, Bool :$local = False) is raw {
-        return if $name eq 'BUILD' | 'TWEAK' | 'wrapped-perl5-object';
+        return if $name eq 'BUILD' | 'TWEAK' | 'wrapped-perl5-object' | 'inline-perl5';
         my $p5 = $!p5;
         my $module = $!name;
 
@@ -432,13 +450,13 @@ class Inline::Perl5::ClassHOW
 
         my $many-args := my sub many-args(Any $self, *@args, *%kwargs) {
             $self.defined
-                ?? $p5.invoke-parent($module, $self.wrapped-perl5-object, False, $name, List.new($self, @args.Slip).flat.Array, %kwargs)
+                ?? $self.inline-perl5.invoke-parent($module, $self.wrapped-perl5-object, False, $name, List.new($self, @args.Slip).flat.Array, %kwargs)
                 !! $p5.invoke($self, $module, $name, |@args.list, |%kwargs)
         };
         $proto.add_dispatchee($many-args);
         my $scalar-many-args := my sub scalar-many-args(Any $self, Scalar:U, *@args, *%kwargs) {
             $self.defined
-                ?? $p5.invoke-parent($module, $self.wrapped-perl5-object, True, $name, [flat $self, |@args], %kwargs)
+                ?? $self.inline-perl5.invoke-parent($module, $self.wrapped-perl5-object, True, $name, [flat $self, |@args], %kwargs)
                 !! $p5.invoke($self, $module, $name, |@args.list, |%kwargs)
         };
         $proto.add_dispatchee($many-args);
@@ -448,7 +466,8 @@ class Inline::Perl5::ClassHOW
             my int32 $retvals;
             my int32 $err;
             my int32 $type;
-            my $av = $!ip5.p5_call_parent_gv(
+            my $p5 := SELF.inline-perl5;
+            my $av = $p5.interpreter.p5_call_parent_gv(
                 $gv,
                 1,
                 $p5.unwrap-perl5-object(SELF),
@@ -464,7 +483,8 @@ class Inline::Perl5::ClassHOW
             my int32 $retvals;
             my int32 $err;
             my int32 $type;
-            my $av = $!ip5.p5_scalar_call_parent_gv(
+            my $p5 := SELF.inline-perl5;
+            my $av = $p5.interpreter.p5_scalar_call_parent_gv(
                 $gv,
                 1,
                 $p5.unwrap-perl5-object(SELF),
@@ -476,15 +496,16 @@ class Inline::Perl5::ClassHOW
             $p5.unpack_return_values($av, $retvals, $type);
         };
         $proto.add_dispatchee($scalar-no-args);
-        my $one-pair-arg := my sub one-pair-arg(Any:D $self, Pair \arg) {
-            $p5.invoke-gv-arg($self.wrapped-perl5-object, $gv, arg)
+        my $one-pair-arg := my sub one-pair-arg(Any:D \SELF, Pair \arg) {
+            SELF.inline-perl5.invoke-gv-arg(SELF.wrapped-perl5-object, $gv, arg)
         };
         $proto.add_dispatchee($one-pair-arg);
         my $one-arg := my sub one-arg(Any:D \SELF, \arg) {
             my int32 $retvals = 0;
             my int32 $err = 0;
             my int32 $type = 0;
-            my $av = $!ip5.p5_call_gv_two_args(
+            my $p5 := SELF.inline-perl5;
+            my $av = $p5.interpreter.p5_call_gv_two_args(
                 $gv,
                 $p5.unwrap-perl5-object(SELF),
                 $p5.p6_to_p5(arg),
@@ -500,7 +521,8 @@ class Inline::Perl5::ClassHOW
             my int32 $retvals = 0;
             my int32 $err = 0;
             my int32 $type = 0;
-            my $av = $!ip5.p5_scalar_call_gv_two_args(
+            my $p5 := SELF.inline-perl5;
+            my $av = $p5.interpreter.p5_scalar_call_gv_two_args(
                 $gv,
                 $p5.unwrap-perl5-object(SELF),
                 $p5.p6_to_p5(arg),
