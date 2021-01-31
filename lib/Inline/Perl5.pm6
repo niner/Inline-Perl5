@@ -325,7 +325,7 @@ multi method p5_to_p6_type(Pointer:D \value, Blessed) {
         my $obj = $!p5.p5_sv_rv(value);
         $!p5.p5_sv_refcnt_inc($obj);
         $!p5.p5_sv_refcnt_dec(value);
-        $class.bless(:wrapped-perl5-object($obj));
+        $class.bless(:wrapped-perl5-object($obj), :inline-perl5(self));
     }
 }
 
@@ -549,8 +549,10 @@ multi method invoke(Pointer $obj, Str $function) {
     self.unpack_return_values($av, $retvals, $type);
 }
 
+has %!gvs;
 method look-up-method(Str $module, Str $name, Bool $local) {
-    $!p5.p5_look_up_package_method($module, $name, $local.Int)
+    %!gvs{$module}{$name} //= $!p5.p5_look_up_package_method($module, $name, $local.Int)
+    #$!p5.p5_look_up_package_method($module, $name, $local.Int)
 }
 
 method stash-name(Pointer $obj) {
@@ -1192,10 +1194,12 @@ method init_data($data) {
 
 method BUILD(:$!default = False, Inline::Perl5::Interpreter :$!p5, Bool :$thread-safe) {
     $Inline::Perl5::thread-safe = True if $thread-safe;
+    %!gvs = Hash.new;
     self.initialize;
 }
 
 method restore_interpreter() {
+    %!gvs = Hash.new;
     if $!default and $default_perl5 {
         $!p5 = $default_perl5.interpreter;
         $!objects = $default_perl5.object_keeper; #TOOD may actually need to merge
@@ -1214,6 +1218,7 @@ method add-raku-block($package, $code, $pos) {
             for $class.^methods(:local) -> $method {
                 next if $method.name eq 'DESTROY';
                 next if $method.name eq 'wrapped-perl5-object';
+                next if $method.name eq 'inline-perl5';
                 next if $method ~~ Inline::Perl5::WrapperMethod;
 
                 $method.does(Inline::Perl5::Attributes)
@@ -1229,6 +1234,7 @@ method add-raku-block($package, $code, $pos) {
 method initialize(Bool :$reinitialize) {
     $!thread-id = $*THREAD.id;
     $!objects = Inline::Language::ObjectKeeper.new;
+    %!gvs = Hash.new;
 
     my &call_method = sub (Int $index, Str $name, Int $context, Pointer $args, Pointer $err) returns Pointer {
         my $p6obj = $!objects.get($index);
@@ -1373,6 +1379,7 @@ method initialize(Bool :$reinitialize) {
             for $class.^methods(:local) -> $method {
                 next if $method.name eq 'DESTROY';
                 next if $method.name eq 'wrapped-perl5-object';
+                next if $method.name eq 'inline-perl5';
 
                 $method.does(Inline::Perl5::Attributes)
                     ?? self.install_wrapper_method($package, $method.name, |$method.attributes)
@@ -1382,6 +1389,7 @@ method initialize(Bool :$reinitialize) {
             for @$symbols -> $name {
                 next if $name eq 'DESTROY';
                 next if $name eq 'wrapped-perl5-object';
+                next if $name eq 'inline-perl5';
                 $class.^add_wrapper_method($name);
             }
 
