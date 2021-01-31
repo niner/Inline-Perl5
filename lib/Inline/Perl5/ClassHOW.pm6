@@ -113,8 +113,20 @@ class Inline::Perl5::ClassHOW
         $list
     }
 
-    method ip5(\type) {
+    method gvs($type?) {
+        %!gvs;
+    }
+
+    method p5($type?) {
+        $!p5;
+    }
+
+    method ip5($type?) {
         $!ip5;
+    }
+
+    method cache($type?) {
+        %!cache;
     }
 
     method replace_ip5(\type, $ip5) {
