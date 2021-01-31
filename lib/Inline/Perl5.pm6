@@ -1,4 +1,4 @@
-unit class Inline::Perl5;
+class Inline::Perl5 {
 
 use MONKEY-SEE-NO-EVAL;
 use Inline::Language::ObjectKeeper;
@@ -7,6 +7,7 @@ use Inline::Perl5::Array;
 use Inline::Perl5::Attributes;
 use Inline::Perl5::Caller;
 use Inline::Perl5::ClassHOW;
+use Inline::Perl5::ClassHOW::ThreadSafe;
 use Inline::Perl5::Hash;
 use Inline::Perl5::Callable;
 use Inline::Perl5::TypeGlob;
@@ -18,8 +19,10 @@ has Bool $!default;
 has %!loaded_modules;
 has @!required_modules;
 has $!objects;
+has $.thread-id;
 
 my $default_perl5;
+our $thread-safe = False;
 
 my constant $broken-rakudo = (
     $*PERL.compiler.name eq 'rakudo'
@@ -878,6 +881,10 @@ method loaded-module($package) {
     %!loaded_modules{$package}
 }
 
+method required-modules() {
+    @!required_modules
+}
+
 class Perl6Callbacks {
     has $.p5;
     method create_extension($package, $body) {
@@ -962,14 +969,32 @@ method import (Str $module, *@args) {
     return ($after ∖ ($before ∖ set @args)).keys;
 }
 
-method restore_modules() {
-    for @!required_modules -> ($module, $version, @args) {
+method !require_modules(@required_modules) {
+    for @required_modules -> ($module, $version, @args) {
         self.call-simple-args('v6::load_module', $module);
         self.invoke($module, 'import', @args);
     }
+}
+
+method require_modules(@required_modules) {
+    self!require_modules(@required_modules);
+    @!required_modules.push: @required_modules;
+}
+
+method restore_modules() {
+    self!require_modules(@!required_modules);
     for %!loaded_modules.values -> $class {
         $class.^replace_ip5($!p5);
     }
+}
+
+method required_modules() {
+    @!required_modules
+}
+
+my Lock $gil .= new;
+method gil() {
+    $gil
 }
 
 method require(Str $module, Num $version?, Bool :$handle) {
@@ -1061,12 +1086,13 @@ method create_wrapper_class(Str $module, $symbols = self.subs_in_module($module)
     }
     @parents[@parents.elems] := Any;
     @parents[@parents.elems] := Mu;
-    %!loaded_modules{$module} := my $class := Inline::Perl5::ClassHOW.new_type(
-        :name($module),
-        :@parents,
-        :p5(self),
-        :ip5($!p5),
-    );
+    %!loaded_modules{$module} := my $class :=
+        ($thread-safe ?? Inline::Perl5::ClassHOW::ThreadSafe !! Inline::Perl5::ClassHOW).new_type(
+            :name($module),
+            :@parents,
+            :p5(self),
+            :ip5($!p5),
+        );
 
     # install methods
     for @$symbols -> $name {
@@ -1164,7 +1190,8 @@ method init_data($data) {
     self.call-simple-args('v6::init_data', $data.encode);
 }
 
-method BUILD(:$!default = False, Inline::Perl5::Interpreter :$!p5) {
+method BUILD(:$!default = False, Inline::Perl5::Interpreter :$!p5, Bool :$thread-safe) {
+    $Inline::Perl5::thread-safe = True if $thread-safe;
     self.initialize;
 }
 
@@ -1200,6 +1227,7 @@ method add-raku-block($package, $code, $pos) {
 }
 
 method initialize(Bool :$reinitialize) {
+    $!thread-id = $*THREAD.id;
     $!objects = Inline::Language::ObjectKeeper.new;
 
     my &call_method = sub (Int $index, Str $name, Int $context, Pointer $args, Pointer $err) returns Pointer {
@@ -1429,6 +1457,17 @@ END {
     $default_perl5.DESTROY if $default_perl5;
 
     p5_terminate unless $inline_perl6_in_use;
+}
+
+}
+
+multi sub EXPORT() {
+    Map.new
+}
+
+multi sub EXPORT('thread-safe') {
+    $Inline::Perl5::thread-safe = True;
+    Map.new
 }
 
 # Perl 5 part of the bridge used by init_callbacks:
