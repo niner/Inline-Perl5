@@ -450,13 +450,13 @@ class Inline::Perl5::ClassHOW
 
         my $many-args := my sub many-args(Any $self, *@args, *%kwargs) {
             $self.defined
-                ?? $self.inline-perl5.invoke-parent($module, $self.wrapped-perl5-object, False, $name, List.new($self, @args.Slip).flat.Array, %kwargs)
+                ?? $p5.invoke-parent($module, $self.wrapped-perl5-object, False, $name, List.new($self, @args.Slip).flat.Array, %kwargs)
                 !! $p5.invoke($self, $module, $name, |@args.list, |%kwargs)
         };
         $proto.add_dispatchee($many-args);
         my $scalar-many-args := my sub scalar-many-args(Any $self, Scalar:U, *@args, *%kwargs) {
             $self.defined
-                ?? $self.inline-perl5.invoke-parent($module, $self.wrapped-perl5-object, True, $name, [flat $self, |@args], %kwargs)
+                ?? $p5.invoke-parent($module, $self.wrapped-perl5-object, True, $name, [flat $self, |@args], %kwargs)
                 !! $p5.invoke($self, $module, $name, |@args.list, |%kwargs)
         };
         $proto.add_dispatchee($many-args);
@@ -466,8 +466,7 @@ class Inline::Perl5::ClassHOW
             my int32 $retvals;
             my int32 $err;
             my int32 $type;
-            my $p5 := SELF.inline-perl5;
-            my $av = $p5.interpreter.p5_call_parent_gv(
+            my $av = $!ip5.p5_call_parent_gv(
                 $gv,
                 1,
                 $p5.unwrap-perl5-object(SELF),
@@ -483,8 +482,7 @@ class Inline::Perl5::ClassHOW
             my int32 $retvals;
             my int32 $err;
             my int32 $type;
-            my $p5 := SELF.inline-perl5;
-            my $av = $p5.interpreter.p5_scalar_call_parent_gv(
+            my $av = $!ip5.p5_scalar_call_parent_gv(
                 $gv,
                 1,
                 $p5.unwrap-perl5-object(SELF),
@@ -497,15 +495,14 @@ class Inline::Perl5::ClassHOW
         };
         $proto.add_dispatchee($scalar-no-args);
         my $one-pair-arg := my sub one-pair-arg(Any:D \SELF, Pair \arg) {
-            SELF.inline-perl5.invoke-gv-arg(SELF.wrapped-perl5-object, $gv, arg)
+            $p5.invoke-gv-arg(SELF.wrapped-perl5-object, $gv, arg)
         };
         $proto.add_dispatchee($one-pair-arg);
         my $one-arg := my sub one-arg(Any:D \SELF, \arg) {
             my int32 $retvals = 0;
             my int32 $err = 0;
             my int32 $type = 0;
-            my $p5 := SELF.inline-perl5;
-            my $av = $p5.interpreter.p5_call_gv_two_args(
+            my $av = $!ip5.p5_call_gv_two_args(
                 $gv,
                 $p5.unwrap-perl5-object(SELF),
                 $p5.p6_to_p5(arg),
@@ -521,8 +518,7 @@ class Inline::Perl5::ClassHOW
             my int32 $retvals = 0;
             my int32 $err = 0;
             my int32 $type = 0;
-            my $p5 := SELF.inline-perl5;
-            my $av = $p5.interpreter.p5_scalar_call_gv_two_args(
+            my $av = $!ip5.p5_scalar_call_gv_two_args(
                 $gv,
                 $p5.unwrap-perl5-object(SELF),
                 $p5.p6_to_p5(arg),
