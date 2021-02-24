@@ -980,7 +980,7 @@ method !require_modules(@required_modules) {
 
 method require_modules(@required_modules) {
     self!require_modules(@required_modules);
-    @!required_modules.push: @required_modules;
+    @!required_modules.append: @required_modules;
 }
 
 method restore_modules() {
@@ -1201,8 +1201,11 @@ method BUILD(:$!default = False, Inline::Perl5::Interpreter :$!p5, Bool :$thread
 method restore_interpreter() {
     %!gvs = Hash.new;
     if $!default and $default_perl5 {
-        $!p5 = $default_perl5.interpreter;
-        $!objects = $default_perl5.object_keeper; #TOOD may actually need to merge
+        unless self === $default_perl5 {
+            $!p5 = $default_perl5.interpreter;
+            $!objects = $default_perl5.object_keeper; #TOOD may actually need to merge
+            $default_perl5.required_modules.append: @!required_modules;
+        }
     }
     else {
         self.initialize(:reinitialize);
