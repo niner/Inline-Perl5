@@ -19,6 +19,7 @@ lib/Inline/Perl5/Attributes.pm6
 lib/Inline/Perl5/Callable.pm6
 lib/Inline/Perl5/Caller.pm6
 lib/Inline/Perl5/ClassHOW.pm6
+lib/Inline/Perl5/ClassHOW/ThreadSafe.pm6
 lib/Inline/Perl5/FindBestDispatchee/Full.pm6
 lib/Inline/Perl5/FindBestDispatchee/Light.pm6
 lib/Inline/Perl5/FindBestDispatchee/Medium.pm6
@@ -60,6 +61,7 @@ t/lib/Foo/Bar/TestV6Sub.pm
 t/lib/HasAutoload.pm
 t/lib/HasInnerPackage.pm
 t/lib/LookForData.pm
+t/lib/NonC3MRO.pm
 t/lib/ObjWithDestructor.pm
 t/lib/P5Import.pm
 t/lib/P5ModuleVersion.pm
@@ -72,6 +74,7 @@ t/lib/TestPerl5Package/Sub.pm
 t/lib/TestV6Directly.pm
 t/lib/UseExport.pm
 t/lib/UseRakuBlock.pm6
+t/lib/WithC3MRO.pm
 t/meta_model.t
 t/modify_array.t
 t/modify_hash.t
