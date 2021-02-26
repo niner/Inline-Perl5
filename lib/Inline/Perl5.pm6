@@ -358,7 +358,7 @@ method compile-to-block-end($perl) {
     $end, @optree[0], self.p5_to_p6(@stash[0])
 }
 
-method runops(Pointer $ops) {
+method runops(Pointer $ops --> Nil) {
     $!p5.p5_runops($ops);
 }
 
