@@ -19,7 +19,7 @@ my $array = array-creator(sub (@array) {
     for @array {
         ok($_);
     }
-    for @array.list {
+    for @array {
         ok($_);
     }
     for @array.pairs {

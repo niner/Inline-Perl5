@@ -21,6 +21,7 @@ is(P5Import::p5_ok(1), 1);
 is(p5_ok(1), 1, "importing subs works");
 is(p5_ok2(1), 1, "importing manually created subs works");
 is(P5Import::import_called(), 1);
+ok(p5_hash_ok({a => 1}), "passing a hash to imported sub works");
 
 my $i = 0;
 for 1, 2 {

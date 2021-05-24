@@ -11,7 +11,7 @@ use TestPerl5Package:from<Perl5>;
 ok(TestPerl5Package.take_string('a string'));
 ok(TestPerl5Package.take_strings('first string', 'second string'));
 ok(TestPerl5Package.take_array($['a string']));
-ok(TestPerl5Package.take_hash(${a => 'a string'}));
+ok(TestPerl5Package.take_hash({a => 'a string'}));
 
 use TestPerl5Package::Sub:from<Perl5>;
 
@@ -19,7 +19,7 @@ use TestPerl5Package::Sub:from<Perl5>;
 ok(TestPerl5Package::Sub.take_string('a string'));
 ok(TestPerl5Package::Sub.take_strings('first string', 'second string'));
 ok(TestPerl5Package::Sub.take_array($['a string']));
-ok(TestPerl5Package::Sub.take_hash(${a => 'a string'}));
+ok(TestPerl5Package::Sub.take_hash({a => 'a string'}));
 
 done-testing;
 

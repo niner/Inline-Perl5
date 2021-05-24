@@ -18,9 +18,9 @@ BEGIN {
 
 use Data::Dumper:from<Perl5>;
 
-my $dumper = Data::Dumper.new([1, 2].item);
+my $dumper = Data::Dumper.new([1, 2]);
 Test::More::is($dumper.Dump.Str, "\$VAR1 = 1;\n \$VAR2 = 2;\n", 'constructor works');
-Test::More::is(Data::Dumper.Dump([1, 2].item).Str, "\$VAR1 = 1;\n \$VAR2 = 2;\n", 'package methods work');
+Test::More::is(Data::Dumper.Dump([1, 2]).Str, "\$VAR1 = 1;\n \$VAR2 = 2;\n", 'package methods work');
 
 # Should be safe to load a module more than once.
 $p5.use('Test::More');

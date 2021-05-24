@@ -31,7 +31,7 @@ sub get_flash() {
 }
  
 sub connect_db() {
-    my $dbh = DBI.connect("dbi:SQLite:dbname={setting('database')}", Any, Any, ${sqlite_unicode => 1}) or
+    my $dbh = DBI.connect("dbi:SQLite:dbname={setting('database')}", Any, Any, {sqlite_unicode => 1}) or
         die %*PERL5<$DBI::errstr>;
  
     return $dbh;
@@ -59,7 +59,7 @@ my &hash-filler = EVAL q:to/PERL5/, :lang<Perl5>;
         }
     }
     PERL5
-hook before_template_render => hash-filler({ ${
+hook before_template_render => hash-filler({ {
         css_url => request.base ~ 'css/style.css',
         login_url => uri_for('/login'),
         logout_url => uri_for('/logout'),
@@ -70,7 +70,7 @@ get '/' => {
     my $sql = 'select id, title, text from entries order by id desc';
     my $sth = $db.prepare($sql) or die $db.errstr;
     $sth.execute or die $sth.errstr;
-    template 'show_entries.tt', ${
+    template 'show_entries.tt', {
         'msg' => get_flash(),
         'add_entry_url' => uri_for('/add'),
         'entries' => $sth.fetchall_hashref('id'),
@@ -111,7 +111,7 @@ any $['get', 'post'], '/login', sub (*@a) {
    }
  
    # display login form
-   template 'login.tt', ${
+   template 'login.tt', {
        'err' => $err,
    };
  

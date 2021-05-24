@@ -89,7 +89,7 @@ class Inline::Perl5::Hash does Iterable does Associative {
     method Capture() {
         self.Hash.Capture
     }
-    method push(*@new) {
+    method push(**@new) {
         self.Hash.push(|@new)
     }
     method append(+@values) {

@@ -418,7 +418,7 @@ multi method unpack_return_values(Pointer:D \av, int32 \count, int32 \type) {
     }
 }
 
-method call(Str $function, *@args, *%args) {
+method call(Str $function, **@args, *%args) {
     my int32 $retvals;
     my int32 $err;
     my int32 $type;
@@ -448,7 +448,7 @@ method call-args(Str $function, Capture \args) {
     self.unpack_return_values($av, $retvals, $type);
 }
 
-method call-simple-args(Str $function, *@args) {
+method call-simple-args(Str $function, **@args) {
     my int32 $retvals;
     my int32 $err;
     my int32 $type;
@@ -467,7 +467,7 @@ method call-simple-args(Str $function, *@args) {
     self.unpack_return_values($av, $retvals, $type);
 }
 
-multi method invoke(Str $package, Str $function, *@args, *%args) {
+multi method invoke(Str $package, Str $function, **@args, *%args) {
     my int32 $retvals;
     my int32 $err;
     my int32 $type;
@@ -483,7 +483,7 @@ multi method invoke(Str $package, Str $function, *@args, *%args) {
     self.unpack_return_values($av, $retvals, $type);
 }
 
-multi method invoke(Any:U $package, Str $base_package, Str $function, *@args, *%args) {
+multi method invoke(Any:U $package, Str $base_package, Str $function, **@args, *%args) {
     my int32 $retvals;
     my int32 $err;
     my int32 $type;
@@ -788,7 +788,7 @@ method scalar-invoke-gv-args(Pointer $obj, Pointer $function, Capture $args) {
     self.unpack_return_values($av, $retvals, $type);
 }
 
-multi method invoke(Pointer $obj, Str $function, *@args, *%args) {
+multi method invoke(Pointer $obj, Str $function, **@args, *%args) {
     my @svs := CArray[Pointer].new();
     my Int $j = 0;
     @svs[$j++] = $obj;
@@ -842,7 +842,7 @@ method invoke-parent(Str $package, Pointer $obj, Bool $context, Str $function, @
     self.unpack_return_values($av, $retvals, $type);
 }
 
-method execute(Pointer $code_ref, *@args) {
+method execute(Pointer $code_ref, **@args) {
     my int32 $retvals;
     my int32 $err;
     my int32 $type;
@@ -951,7 +951,7 @@ method sv_refcnt_dec($obj) {
     $!p5.p5_sv_refcnt_dec($obj);
 }
 
-method install_wrapper_method(Str:D $package, Str $name, *@attributes) {
+method install_wrapper_method(Str:D $package, Str $name, **@attributes) {
     self.call-simple-args('v6::install_p6_method_wrapper', $package, $name, |@attributes);
 }
 
@@ -963,9 +963,9 @@ method variables_in_module(Str $module) {
     self.call-simple-args('v6::variables_in_module', $module)
 }
 
-method import (Str $module, *@args) {
+method import (Str $module, **@args) {
     my $before = set self.subs_in_module('main').list;
-    self.invoke($module, 'import', @args.list);
+    self.invoke($module, 'import', |@args);
     my $after = set self.subs_in_module('main').list;
     return ($after ∖ ($before ∖ set @args)).keys;
 }
@@ -973,7 +973,7 @@ method import (Str $module, *@args) {
 method !require_modules(@required_modules) {
     for @required_modules -> ($module, $version, @args) {
         self.call-simple-args('v6::load_module', $module);
-        self.invoke($module, 'import', @args);
+        self.invoke($module, 'import', |@args);
     }
 }
 
@@ -1026,7 +1026,7 @@ method require(Str $module, Num $version?, Bool :$handle) {
         $class := $created if $package eq $module;
     }
 
-    my &export := sub EXPORT(*@args) {
+    my &export := sub EXPORT(**@args) {
             @import_args = @args;
             if &p5_terminate.^find_method('CALL-ME') { # looks like old rakudo without necessary fixes
                 $*W.do_pragma(Any, 'precompilation', False, []);
@@ -1041,7 +1041,7 @@ method require(Str $module, Num $version?, Bool :$handle) {
                     my $op := $*W.add_phaser(Mu, 'INIT', $block, class :: { method cuid { (^2**128).pick }});
                 }
             }
-            my @symbols = self.import($module, @args.list).map({
+            my @symbols = self.import($module, |@args).map({
                 my $name = $_;
                 my $function = "main::$name";
                 '&' ~ $name => sub (|args) {
@@ -1141,8 +1141,8 @@ method !import_wrapper_class(Str $module, Stash $stash) {
         # install subs like Test::More::ok
         for @$symbols -> $name {
             my $full-name = "{$module}::$name";
-            $class.WHO.BIND-KEY("&$name", sub (*@args) {
-                self.call($full-name, @args.list);
+            $class.WHO.BIND-KEY("&$name", sub (**@args) {
+                self.call($full-name, |@args);
             });
         }
         for @$variables -> $name {
@@ -1160,9 +1160,9 @@ method !import_wrapper_class(Str $module, Stash $stash) {
     return $class;
 }
 
-method use(Str $module, *@args) {
+method use(Str $module, **@args) {
     self.require($module);
-    self.import($module, @args.list);
+    self.import($module, |@args);
 }
 
 submethod DESTROY {

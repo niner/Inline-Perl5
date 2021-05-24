@@ -84,7 +84,7 @@ $p5.run(q/
     }
 /);
 
-ok($p5.call('is_hash_ref', Map.new((a => 1)).item), 'Map arrives as a HashRef');
+ok($p5.call('is_hash_ref', Map.new((a => 1))), 'Map arrives as a HashRef');
 
 $p5.run(q/
     use warnings;

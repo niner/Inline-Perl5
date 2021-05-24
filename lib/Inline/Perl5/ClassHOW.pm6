@@ -315,7 +315,7 @@ class Inline::Perl5::ClassHOW
         nqp::bindattr(self, $?CLASS, '$!composed_repr', nqp::unbox_i(1));
         my $has_new = self.add_wrapper_method(type, 'new');
         unless $has_new {
-            self.add_method(type, 'new', my method new(Any \SELF: *@a, *%h) {
+            self.add_method(type, 'new', my method new(Any \SELF: **@a, *%h) {
                 my \obj_ref = $p5.interpreter.p5_new_blessed_hashref(SELF.^name);
                 my \obj = $p5.p5_sv_rv(obj_ref);
                 $p5.interpreter.p5_sv_refcnt_inc(obj);
@@ -448,16 +448,16 @@ class Inline::Perl5::ClassHOW
         $proto.set_name($name);
         $proto does Inline::Perl5::WrapperMethod;
 
-        my $many-args := my sub many-args(Any $self, *@args, *%kwargs) {
+        my $many-args := my sub many-args(Any $self, **@args, *%kwargs) {
             $self.defined
                 ?? $p5.invoke-parent($module, $self.wrapped-perl5-object, False, $name, List.new($self, @args.Slip).flat.Array, %kwargs)
-                !! $p5.invoke($self, $module, $name, |@args.list, |%kwargs)
+                !! $p5.invoke($self, $module, $name, |@args, |%kwargs)
         };
         $proto.add_dispatchee($many-args);
-        my $scalar-many-args := my sub scalar-many-args(Any $self, Scalar:U, *@args, *%kwargs) {
+        my $scalar-many-args := my sub scalar-many-args(Any $self, Scalar:U, **@args, *%kwargs) {
             $self.defined
                 ?? $p5.invoke-parent($module, $self.wrapped-perl5-object, True, $name, [flat $self, |@args], %kwargs)
-                !! $p5.invoke($self, $module, $name, |@args.list, |%kwargs)
+                !! $p5.invoke($self, $module, $name, |@args, |%kwargs)
         };
         $proto.add_dispatchee($many-args);
 
