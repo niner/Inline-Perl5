@@ -11,7 +11,7 @@ sub configure() {
     run('perl', '-e', 'use v5.20;')
         or die "\nPerl 5 version requirement not met\n";
 
-    run('perl', '-MFilter::Simple', '-e', '')
+    run('perl', '-MFilter::Simple', '-e', '1')
         or die "\nPlease install the Filter::Simple Perl 5 module!\n";
 
     my %vars;
