@@ -6,7 +6,7 @@ Inline::Perl5
 
 # SYNOPSIS
 
-```
+```raku
     use DBI:from<Perl5>;
 
     my $dbh = DBI.connect('dbi:Pg:database=test');
@@ -36,20 +36,20 @@ Raku's use statement allows you to load modules from other languages as well.
 Inline::Perl5 registers as a handler for the Perl5 language. Rakudo will
 automatically load Inline::Perl5 as long as it is installed:
 
-```
+```raku
     use Test::More:from<Perl5>;
 ```
 
 In Raku the :ver adverb is used for requiring a minimum version of a loaded
 module:
 
-```
+```raku
     use Test::More:from<Perl5>:ver<1.001014>;
 ```
 
 Inline::Perl5's use() method maps to Perl 5's use statement:
 
-```
+```raku
     use Inline::Perl5;
     my $p5 = Inline::Perl5.new;
     $p5.use('Test::More');
@@ -57,7 +57,7 @@ Inline::Perl5's use() method maps to Perl 5's use statement:
 
 To load a Perl 5 module from a specific folder:
 
-```
+```raku
     use lib:from<Perl5> 'lib';
     use MyModule:from<Perl5>;
 ```
@@ -66,11 +66,11 @@ To load a Perl 5 module from a specific folder:
 
 Just list the functions or groups you want to import
 
-```
+```raku
     use Digest::SHA1:from<Perl5> <sha1_hex>;
 ```
 
-```
+```raku
     use Data::Random:from<Perl5> <:all>;
 ```
 
@@ -79,7 +79,7 @@ Just list the functions or groups you want to import
 Inline::Perl5 creates wrappers for loaded Perl 5 modules and their functions.
 They can be used as if they were Raku modules:
 
-```
+```raku
     use Test::More:from<Perl5>;
     plan tests => 1;
     ok 'yes', 'looks like a Raku function';
@@ -91,7 +91,7 @@ Inline::Perl5's call($name, \*@args) method allows calling arbitrary Perl 5
 functions. Use a fully qualified name (like "Test::More::ok") if the function
 is not in the "main" namespace.
 
-```
+```raku
     use Inline::Perl5;
     my $p5 = Inline::Perl5.new;
     $p5.call('print', 'Hello World');
@@ -108,7 +108,7 @@ method in scalar context" for how to get around that.
 Creating Perl 5 objects works just the same as in Perl 5: invoke their
 constructor (usually called "new").
 
-```
+```raku
     use Inline::Perl5;
     use Data::Dumper:from<Perl5>;
     my $dumper = Data::Dumper.new;
@@ -116,7 +116,7 @@ constructor (usually called "new").
 
 Or using the low level methods:
 
-```
+```raku
     use Inline::Perl5;
     my $p5 = Inline::Perl5.new;
     $p5.use('Data::Dumper');
@@ -132,7 +132,7 @@ method in scalar context" for how to get around that.
 Once you have a Perl 5 object in a variable it will behave just like a Raku
 object.  You can call methods on it like on any other object.
 
-```
+```raku
     use IO::Compress::Bzip2:from<Perl5>;
     my $bzip2 = IO::Compress::Bzip2.new('/tmp/foo.bz2');
     $bzip2.print($data);
@@ -146,7 +146,7 @@ Perl 5 methods are by default called in list context. If you need to call the
 method in scalar context, you can tell it so explicitly, by passing the
 `Scalar` type object as first argument:
 
-```
+```raku
     use IO::Compress::Bzip2:from<Perl5>;
     my $bzip2 = IO::Compress::Bzip2.new(Scalar, '/tmp/foo.bz2');
     $bzip2.print(Scalar, $data);
@@ -162,7 +162,8 @@ performance in some cases.
 Most objects in Perl 5 are blessed hash references. Some of them don't even
 provide accessor methods but require you to just access the hash fields
 directly. This works the same in Raku:
-```
+
+```raku
     use Foo:from<Perl5>;
     my $foo = Foo.new;
     say $foo<some_attribute>;
@@ -173,14 +174,14 @@ directly. This works the same in Raku:
 Raku's EVAL function supports multiple languages, just like the "use"
 statement. It allows for execution of arbitrary Perl 5 code given as string:
 
-```
+```raku
     EVAL "print 'Hello from Perl 5';", :lang<Perl5>;
 ```
 
 The low level interface to this functionality is Inline::Perl5's run($str)
 method:
 
-```
+```raku
     use Inline::Perl5;
     my $p5 = Inline::Perl5.new;
 
@@ -202,7 +203,7 @@ same as Inline::Perl5's "call" method. It takes the name of the function
 to call and passes on any additional arguments and returns the return value
 of the called Perl 5 function.
 
-```
+```raku
     use Inline::Perl5;
     my $p5 = Inline::Perl5.new;
 
@@ -220,7 +221,7 @@ of the called Perl 5 function.
 Raku objects passed to Perl 5 functions will behave just like any other
 objects in Perl 5, so you can invoke methods using the -> operator.
 
-```
+```raku
     use Inline::Perl5;
     my $p5 = Inline::Perl5.new;
 
@@ -246,7 +247,7 @@ The "run" function in the automatically created "v6" package can be used to
 execute arbitrary Raku code from Perl 5. It returns the value of the last
 evaluated expression in the executed code.
 
-```
+```raku
     use Inline::Perl5;
     my $p5 = Inline::Perl5.new;
 
@@ -264,7 +265,7 @@ mechanisms.
 You can subclass these automatically created classes as if they were original
 Raku classes:
 
-```
+```raku
     use Data::Dumper:from<Perl5>;
     class MyDumper is Data::Dumper {
         has $.bar;
@@ -286,7 +287,7 @@ Inline::Perl5::Perl5Parent role allows can be used for subclassing.
 Pass the Perl 5 package's name as parameter to the role. Pass the Inline::Perl5
 object as named parameter to your classes constructor when creating objects.
 
-```
+```raku
     $p5.run(q:heredoc/PERL5/);
 
     package Foo;
@@ -344,7 +345,7 @@ are [containerized](https://perl6advent.wordpress.com/2017/12/02/):
 Perl 5's exceptions (die) are translated to X::AdHoc exceptions in Raku and
 can be caught like any other Raku exceptions:
 
-```
+```raku
     {
         EVAL "die 'a Perl 5 exception!';", :lang<Perl5>;
         CATCH {
@@ -360,7 +361,7 @@ can be caught like any other Raku exceptions:
 Raku's exceptions (die) are translated to Perl 5 exceptions and
 can be caught like any other Perl 5 exceptions:
 
-```
+```raku
     EVAL q:to:PERL5, :lang<Perl5>;
         use 5.10.0;
         eval {
@@ -376,7 +377,7 @@ Inline::Perl5 creates a virtual module called "v6-inline". By saying
 "use v6-inline;" in a Perl 5 module, you can declare that the rest of the file
 is written in Raku:
 
-```
+```perl
     package Some::Perl5::Module;
 
     use v6-inline;
