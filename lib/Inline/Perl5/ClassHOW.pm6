@@ -2,12 +2,67 @@ use NativeCall;
 
 my &find_best_dispatchee;
 BEGIN {
-    my $compunit = try $*REPO.need(CompUnit::DependencySpecification.new(:short-name<Inline::Perl5::FindBestDispatchee::Full>));
-    $compunit ||= try $*REPO.need(CompUnit::DependencySpecification.new(:short-name<Inline::Perl5::FindBestDispatchee::Medium>));
-    $compunit ||= $*REPO.need(CompUnit::DependencySpecification.new(:short-name<Inline::Perl5::FindBestDispatchee::Light>));
-    $! = Nil; # Avoid trying to serialize an exception
-    &find_best_dispatchee = $compunit.handle.globalish-package<Inline>.WHO<Perl5>.WHO<FindBestDispatchee>.WHO.values[0].WHO<&find_best_dispatchee>;
-    $compunit = Nil; # Avoid trying to serialize a VMContext
+    use MONKEY-SEE-NO-EVAL;
+    for q:to/CODE/,
+            sub find_best_dispatchee_full(\SELF, Mu \capture) {
+                use nqp;
+                my $arity = nqp::captureposelems(capture);
+                my \entry =
+                    nqp::capturenamedshash(capture) || nqp::not_i(nqp::isconcrete(nqp::captureposarg(capture, 0)))
+                        ?? nqp::hllbool(nqp::islt_i($arity, 2)) || (nqp::eqaddr(nqp::captureposarg(capture, 1), Scalar)).not
+                            ?? nqp::getattr(SELF, SELF.WHAT, '&!many-args')
+                            !! nqp::getattr(SELF, SELF.WHAT, '&!scalar-many-args')
+                        !! nqp::hllbool(nqp::iseq_i($arity, 1))
+                            ?? nqp::getattr(SELF, SELF.WHAT, '&!no-args')
+                            !! nqp::hllbool(nqp::iseq_i($arity, 2)) && nqp::istype(nqp::captureposarg(capture, 1), Pair).not
+                                ?? nqp::eqaddr(nqp::captureposarg(capture, 1), Scalar)
+                                    ?? nqp::getattr(SELF, SELF.WHAT, '&!scalar-no-args')
+                                    !! nqp::getattr(SELF, SELF.WHAT, '&!one-arg')
+                                !! nqp::hllbool(nqp::iseq_i($arity, 3)) && nqp::eqaddr(nqp::captureposarg(capture, 1), Scalar)
+                                    ?? nqp::getattr(SELF, SELF.WHAT, '&!scalar-one-arg')
+                                    !! nqp::eqaddr(nqp::captureposarg(capture, 1), Scalar)
+                                        ?? nqp::getattr(SELF, SELF.WHAT, '&!scalar-many-args')
+                                        !! nqp::getattr(SELF, SELF.WHAT, '&!many-args');
+                nqp::scwbdisable();
+                nqp::bindattr(SELF, Routine, '$!dispatch_cache',
+                    nqp::multicacheadd(
+                        nqp::getattr(SELF, Routine, '$!dispatch_cache'),
+                        capture, entry));
+                nqp::scwbenable();
+                entry
+            }
+            CODE
+        q:to/CODE/,
+            sub find_best_dispatchee_medium(\SELF, Mu \capture) {
+                use nqp;
+                nqp::capturenamedshash(capture) || nqp::captureposarg(capture, 0).defined.not
+                    ?? nqp::getattr(SELF, SELF.WHAT, '&!many-args')
+                    !! nqp::captureposelems(capture) == 1
+                        ?? nqp::getattr(SELF, SELF.WHAT, '&!no-args')
+                        !! nqp::captureposelems(capture) == 2 && nqp::captureposarg(capture, 1).isa(Pair).not
+                            ?? nqp::getattr(SELF, SELF.WHAT, '&!one-arg')
+                            !! nqp::getattr(SELF, SELF.WHAT, '&!many-args')
+            }
+            CODE
+        q:to/CODE/
+            sub find_best_dispatchee_light(\SELF, Mu \capture) {
+                use nqp;
+                nqp::getattr(SELF, SELF.WHAT, '&!many-args')
+            }
+            CODE
+    -> $code {
+        # First check if the code compiles at all
+        my $p = Proc::Async.new($*EXECUTABLE, :w);
+        $p.stderr.tap: {;};
+        my $start-promise = $p.start;
+        await $p.print: 'my $sub = ' ~ $code;
+        $p.close-stdin;
+        if (await($start-promise).exitcode == 0) {
+            # It seems to compile without error, so use it!
+            &find_best_dispatchee = EVAL $code;
+            last;
+        }
+    }
 }
 
 role Inline::Perl5::WrapperClass { }
