@@ -459,7 +459,7 @@ class Inline::Perl5::ClassHOW
                 ?? $p5.invoke-parent($module, $self.wrapped-perl5-object, True, $name, [flat $self, |@args], %kwargs)
                 !! $p5.invoke($self, $module, $name, |@args, |%kwargs)
         };
-        $proto.add_dispatchee($many-args);
+        $proto.add_dispatchee($scalar-many-args);
 
         my $defined_type := Metamodel::DefiniteHOW.new_type(:base_type($type), :definite(1));
         my $no-args := my sub no-args(Any:D \SELF) {
