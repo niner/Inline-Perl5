@@ -405,7 +405,6 @@ class Inline::Perl5::ClassHOW
 
     method find_method($type, $name) {
         return if $name eq 'cstr';
-        return if $name eq 'DESTROY';
         # must not be AUTOLOADed and must not call into P5 before the object's fully constructed
         if $name eq 'BUILD' or $name eq 'TWEAK' {
             return %!cache{$name};
