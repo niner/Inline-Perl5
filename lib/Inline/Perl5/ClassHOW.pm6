@@ -403,7 +403,7 @@ class Inline::Perl5::ClassHOW
         return False;
     }
 
-    method find_method($type, $name) is raw {
+    method find_method($type, $name) {
         return if $name eq 'cstr';
         return if $name eq 'DESTROY';
         # must not be AUTOLOADed and must not call into P5 before the object's fully constructed
