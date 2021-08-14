@@ -1401,9 +1401,7 @@ method initialize(Bool :$reinitialize) {
 
     if ($*W) {
         my $block := {
-            my $ps := PseudoStash.new; # Can't just use CALLER:: due to rakudobug
-            self.init_data($ps.AT-KEY('CALLER').WHO.AT-KEY('$=finish'))
-                if $ps.AT-KEY('CALLER').WHO.AT-KEY('$=finish')
+            self.init_data($_) with CALLER::MY::<$=finish>;
         };
         $*W.add_object($block);
         my $op := $*W.add_phaser(Mu, 'ENTER', $block, class :: { method cuid { (^2**128).pick }});
