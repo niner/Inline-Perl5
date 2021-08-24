@@ -1578,7 +1578,7 @@ void post_callback(const I32 ax, SV **sp, I32 items, SV * const args_rv, SV *err
     handle_p6_error(err);
     sv_2mortal(retval);
     sp -= items;
-    return return_retval(ax, sp, retval);
+    return_retval(ax, sp, retval);
 }
 
 XS(p5_call_p6_method) {
@@ -1615,7 +1615,7 @@ XS(p5_call_p6_method) {
 
     declare_cbs;
     SV * retval = cbs->call_p6_method(p6mg->index, name_pv, GIMME_V == G_SCALAR, args_rv, &err);
-    return post_callback(ax, sp, items, args_rv, err, retval);
+    post_callback(ax, sp, items, args_rv, err, retval);
 }
 
 XS(p5_destroy_p5_object) {
@@ -1702,7 +1702,8 @@ XS(p5_call_p6_extension_method) {
             SV * const args_rv = newRV_noinc((SV *) args);
             declare_cbs;
             SV * retval = cbs->call_p6_package_method(package_pv, name_pv, GIMME_V == G_SCALAR, args_rv, &err);
-            return post_callback(ax, sp, items, args_rv, err, retval);
+            post_callback(ax, sp, items, args_rv, err, retval);
+            return;
         }
         else {
             croak("Got a non-reference for obj in p5_call_p6_extension_method?!");
@@ -1716,7 +1717,7 @@ XS(p5_call_p6_extension_method) {
 
     declare_cbs;
     SV * retval = cbs->call_p6_method(p6mg->index, name_pv, GIMME_V == G_SCALAR, args_rv, &err);
-    return post_callback(ax, sp, items, args_rv, err, retval);
+    post_callback(ax, sp, items, args_rv, err, retval);
 }
 
 XS(p5_hash_at_key) {
@@ -1773,7 +1774,7 @@ XS(p5_call_p6_callable) {
 
     declare_cbs;
     SV * retval = cbs->call_p6_callable(SvIV(index), args_rv, &err);
-    return post_callback(ax, sp, items, args_rv, err, retval);
+    post_callback(ax, sp, items, args_rv, err, retval);
 }
 
 XS(p5_load_module) {
