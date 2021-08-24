@@ -857,9 +857,7 @@ SV *p5_call_gv(PerlInterpreter *my_perl, GV *gv, int len, SV *args[], I32 *count
 
         handle_p5_error(err);
         retval = pop_return_values(my_perl, sp, *count, type);
-        SPAGAIN;
 
-        PUTBACK;
         FREETMPS;
         LEAVE;
 
@@ -916,13 +914,11 @@ SV *p5_call_parent_gv(PerlInterpreter *my_perl, GV *gv, int len, SV *args[], I32
 
         handle_p5_error(err);
         retval = pop_return_values(my_perl, sp, *count, type);
-        SPAGAIN;
 
         reset_wrapped_object(my_perl, obj);
         SPAGAIN;
         SvREFCNT_dec(obj);
 
-        PUTBACK;
         FREETMPS;
         LEAVE;
 
@@ -962,7 +958,6 @@ SV *p5_scalar_call_gv(PerlInterpreter *my_perl, GV *gv, int len, SV *args[], I32
 
         handle_p5_error(err);
         retval = pop_return_values(my_perl, sp, *count, type);
-        SPAGAIN;
 
         PUTBACK;
         FREETMPS;
@@ -1004,9 +999,7 @@ SV *p5_scalar_call_parent_gv(PerlInterpreter *my_perl, GV *gv, int len, SV *args
 
         handle_p5_error(err);
         retval = pop_return_values(my_perl, sp, *count, type);
-        SPAGAIN;
 
-        PUTBACK;
         FREETMPS;
         LEAVE;
 
@@ -1038,12 +1031,10 @@ SV *p5_call_gv_two_args(PerlInterpreter *my_perl, GV *gv, SV *arg, SV *arg2, I32
 
         handle_p5_error(err);
         retval = pop_return_values(my_perl, sp, *count, type);
-        SPAGAIN;
 
         reset_wrapped_object(my_perl, arg);
         SPAGAIN;
 
-        PUTBACK;
         FREETMPS;
         LEAVE;
 
@@ -1075,9 +1066,7 @@ SV *p5_scalar_call_gv_two_args(PerlInterpreter *my_perl, GV *gv, SV *arg, SV *ar
 
         handle_p5_error(err);
         retval = pop_return_values(my_perl, sp, *count, type);
-        SPAGAIN;
 
-        PUTBACK;
         FREETMPS;
         LEAVE;
 
@@ -1121,13 +1110,11 @@ SV *p5_call_method(PerlInterpreter *my_perl, SV *obj, I32 context, char *name, i
 
             handle_p5_error(err);
             retval = pop_return_values(my_perl, sp, *count, type);
-            SPAGAIN;
         }
         else {
             ERRSV = newSVpvf("Could not find method \"%s\" of \"%s\" object", name, HvNAME(pkg));
         }
 
-        PUTBACK;
         FREETMPS;
         LEAVE;
 
@@ -1175,7 +1162,6 @@ SV *p5_call_parent_method(PerlInterpreter *my_perl, char *package, SV *parent_ob
 
             handle_p5_error(err);
             retval = pop_return_values(my_perl, sp, *count, type);
-            SPAGAIN;
 
             if (p5_is_live_wrapped_p6_object(my_perl, SvRV(obj))) {
                 reset_wrapped_object(my_perl, obj);
@@ -1184,7 +1170,6 @@ SV *p5_call_parent_method(PerlInterpreter *my_perl, char *package, SV *parent_ob
             }
         }
 
-        PUTBACK;
         FREETMPS;
         LEAVE;
 
