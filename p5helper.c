@@ -919,6 +919,7 @@ SV *p5_call_parent_gv(PerlInterpreter *my_perl, GV *gv, int len, SV *args[], I32
         SPAGAIN;
 
         reset_wrapped_object(my_perl, obj);
+        SPAGAIN;
         SvREFCNT_dec(obj);
 
         PUTBACK;
@@ -1040,6 +1041,7 @@ SV *p5_call_gv_two_args(PerlInterpreter *my_perl, GV *gv, SV *arg, SV *arg2, I32
         SPAGAIN;
 
         reset_wrapped_object(my_perl, arg);
+        SPAGAIN;
 
         PUTBACK;
         FREETMPS;
@@ -1177,6 +1179,7 @@ SV *p5_call_parent_method(PerlInterpreter *my_perl, char *package, SV *parent_ob
 
             if (p5_is_live_wrapped_p6_object(my_perl, SvRV(obj))) {
                 reset_wrapped_object(my_perl, obj);
+                SPAGAIN;
                 SvREFCNT_dec(obj);
             }
         }
