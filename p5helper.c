@@ -1036,8 +1036,6 @@ SV *p5_call_gv_two_args(PerlInterpreter *my_perl, GV *gv, SV *arg, SV *arg2, I32
         SPAGAIN;
 
         handle_p5_error(err);
-        if (*err)
-            fprintf(stderr, "err: %d\n", *err);
         retval = pop_return_values(my_perl, sp, *count, type);
         SPAGAIN;
 
@@ -1074,8 +1072,6 @@ SV *p5_scalar_call_gv_two_args(PerlInterpreter *my_perl, GV *gv, SV *arg, SV *ar
         SPAGAIN;
 
         handle_p5_error(err);
-        if (*err)
-            fprintf(stderr, "err: %d\n", *err);
         retval = pop_return_values(my_perl, sp, *count, type);
         SPAGAIN;
 
