@@ -144,6 +144,20 @@ class Inline::Perl5::ClassHOW::ThreadSafe is Inline::Perl5::ClassHOW {
 
     method compose(Mu \type) {
         callsame;
+        $.cache<Str> := my method Str(\SELF:) {
+            my $p5 = SELF.inline-perl5;
+            my $stringify = $p5.call('overload::Method', SELF, '""');
+            $stringify ?? $stringify(SELF) !! SELF.^name ~ '(' ~ SELF.wrapped-perl5-object.gist ~ ')'
+        }
+        $.cache<Numeric> := my method Numeric(\SELF:) {
+            my $p5 = SELF.inline-perl5;
+            my $numify = $p5.call('overload::Method', SELF, '0+');
+            $numify ?? $numify(SELF) !! SELF.^name ~ '(' ~ SELF.wrapped-perl5-object.gist ~ ')'
+        }
+        $.cache<AT-KEY> := my method AT-KEY(\SELF: Str() \key) {
+            my $p5 = SELF.inline-perl5;
+            $p5.at-key(SELF.wrapped-perl5-object, key)
+        }
         $.cache<DESTROY> := my method DESTROY(\SELF:) {
             my $p5 = SELF.inline-perl5;
             my $obj = SELF.wrapped-perl5-object;
