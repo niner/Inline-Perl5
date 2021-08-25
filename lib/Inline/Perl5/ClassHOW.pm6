@@ -286,6 +286,10 @@ class Inline::Perl5::ClassHOW
             my $stringify = $p5.call('overload::Method', SELF, '""');
             $stringify ?? $stringify(SELF) !! SELF.^name ~ '(' ~ SELF.wrapped-perl5-object.gist ~ ')'
         }
+        %!cache<gist> := my method gist(\SELF:) {
+            my $stringify = $p5.call('overload::Method', SELF, '""');
+            $stringify ?? $stringify(SELF).gist !! SELF.^name ~ '.new()'
+        }
         %!cache<Numeric> := my method Numeric(\SELF:) {
             my $numify = $p5.call('overload::Method', SELF, '0+');
             $numify ?? $numify(SELF) !! SELF.^name ~ '(' ~ SELF.wrapped-perl5-object.gist ~ ')'
