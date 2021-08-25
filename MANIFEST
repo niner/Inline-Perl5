@@ -20,6 +20,7 @@ lib/Inline/Perl5/Callable.pm6
 lib/Inline/Perl5/Caller.pm6
 lib/Inline/Perl5/ClassHOW.pm6
 lib/Inline/Perl5/ClassHOW/ThreadSafe.pm6
+lib/Inline/Perl5/Exception.pm6
 lib/Inline/Perl5/Hash.pm6
 lib/Inline/Perl5/Interpreter.pm6
 lib/Inline/Perl5/Perl5Class.rakumod
