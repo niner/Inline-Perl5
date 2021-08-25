@@ -30,6 +30,9 @@ my $p5 = Inline::Perl5.new();
         sub depart {
             die "foo";
         }
+        sub depart_object {
+            FooException->new("foo exception object");
+        }
     /);
     my $foo = $p5.invoke('Foo', 'depart');
     CATCH {
@@ -57,6 +60,27 @@ my $p5 = Inline::Perl5.new();
         when X::AdHoc {
             ok $_.isa('X::AdHoc'), 'got an exception from method call';
             ok $_.Str() ~~ m/foo/, 'exception message found from method call';
+        }
+    }
+}
+{
+    $p5.run(q/
+        package FooException;
+        sub new { bless { message => @_[1] } }
+        package Foo;
+        sub new {
+            return bless {};
+        }
+        sub depart_object {
+            FooException->new("foo exception object");
+        }
+    /);
+    my $foo = $p5.invoke('Foo', 'new');
+    $foo.depart_object;
+    CATCH {
+        ok 1, 'survived P5 die in method call';
+        when Inline::Perl5::Exception {
+            ok $_.Str().contains('foo exception object'), 'exception message found from method call';
         }
     }
 }

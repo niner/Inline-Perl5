@@ -11,6 +11,7 @@ use Inline::Perl5::ClassHOW::ThreadSafe;
 use Inline::Perl5::Hash;
 use Inline::Perl5::Callable;
 use Inline::Perl5::TypeGlob;
+use Inline::Perl5::Exception;
 
 has Inline::Perl5::Interpreter $!p5;
 has Bool $!external_p5 = False;
@@ -140,6 +141,9 @@ multi method p6_to_p5(Inline::Perl5::Hash:D $value) returns Pointer {
 }
 multi method p6_to_p5(Inline::Perl5::Array:D $value) returns Pointer {
     $!p5.p5_newRV_inc($value.av)
+}
+multi method p6_to_p5(Inline::Perl5::Exception:D $value) returns Pointer {
+    self.p6_to_p5($value.payload)
 }
 multi method p6_to_p5(Positional:D $value) returns Pointer {
     my $av = $!p5.p5_newAV();
@@ -339,12 +343,14 @@ multi method p5_to_p6(Pointer:D \value, \type) {
 }
 
 method handle_p5_exception() is hidden-from-backtrace {
-    if my $error = self.p5_to_p6($!p5.p5_err_sv()) {
-        if $error ~~ Exception {
-            $error.rethrow;
-        }
-        else {
-            die $error;
+    with my $error = self.p5_to_p6($!p5.p5_err_sv()) {
+        if $error.WHAT !=== Str || $error ne '' {
+            if $error ~~ Exception {
+                $error.rethrow;
+            }
+            else {
+                die $error.WHAT === Str ?? $error !! Inline::Perl5::Exception.new(:payload($error));
+            }
         }
     }
 }

@@ -35,6 +35,7 @@
         "Inline::Perl5::Caller":                     "lib/Inline/Perl5/Caller.pm6",
         "Inline::Perl5::ClassHOW":                   "lib/Inline/Perl5/ClassHOW.pm6",
         "Inline::Perl5::ClassHOW::ThreadSafe":       "lib/Inline/Perl5/ClassHOW/ThreadSafe.pm6",
+        "Inline::Perl5::Exception":                  "lib/Inline/Perl5/Exception.pm6",
         "Inline::Perl5::Hash":                       "lib/Inline/Perl5/Hash.pm6",
         "Inline::Perl5::Interpreter":                "lib/Inline/Perl5/Interpreter.pm6",
         "Inline::Perl5::TypeGlob":                   "lib/Inline/Perl5/TypeGlob.pm6",
