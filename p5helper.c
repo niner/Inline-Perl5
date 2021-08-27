@@ -1252,13 +1252,13 @@ int p5_free_wrapped_perl6_obj(pTHX_ SV* obj, MAGIC *mg)
     if (mg) {
         _perl6_magic* const p6mg = (_perl6_magic*) mg->mg_ptr;
         /* need to be extra careful here as PL_modglobal could have been cleaned already */
-        if (p6mg->index != 0) {
+        if (p6mg->index != -1) {
             SV **cbs_entry = hv_fetchs(PL_modglobal, "Inline::Perl5 callbacks", 0);
             if (cbs_entry) {
                 perl6_callbacks *cbs = (perl6_callbacks*)SvIV(*cbs_entry);
                 cbs->free_p6_object(p6mg->index);
             }
-            p6mg->index = 0;
+            p6mg->index = -1;
         }
     }
     return 0;
