@@ -3,9 +3,9 @@ class Inline::Language::ObjectKeeper {
     has $!last_free = -1;
 
     method keep(Any:D $value) returns Int {
-        if $!last_free != -1 {
-            my $index = $!last_free;
-            $!last_free = @!objects.AT-POS($!last_free);
+        my $index = $!last_free;
+        if $index != -1 {
+            $!last_free = @!objects.AT-POS($index);
             @!objects.ASSIGN-POS($index, $value);
             $index
         }
