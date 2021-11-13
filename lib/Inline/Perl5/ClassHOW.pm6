@@ -237,10 +237,12 @@ class Inline::Perl5::ClassHOW
         nqp::bindattr(self, $?CLASS, '%!mro', nqp::hash(
             'all', nqp::hash(
                 'all',      $mro,
+                'all_conc', $mro,
                 'no_roles', $mro,
             ),
             'unhidden' , nqp::hash(
                 'all',      $mro,
+                'all_conc', $mro,
                 'no_roles', $mro,
             ),
         )) if '%!mro' (elem) $?CLASS.^attributes>>.name;
