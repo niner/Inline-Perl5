@@ -249,69 +249,66 @@ my class Undef { };
 my class Blessed { };
 my class TypeGlob { };
 
-# IterationBuffer has the fastest AT-POS
-my constant P5Types = IterationBuffer.new;
-BEGIN P5Types.push: $_ for Any, Blessed, Code, Num, Int, Str, Array, Hash, Inline::Perl5::Hash, Undef, Capture, TypeGlob;
-
 multi method p5_to_p6(Pointer:D \value) {
-    self.p5_to_p6_type(value, P5Types.AT-POS($!p5.p5_get_type(value)))
+    self.p5_to_p6_type(value, $!p5.p5_get_type(value))
 }
 
 multi method p5_to_p6_type(Pointer:U \value, \type --> Any) {
 }
 
-multi method p5_to_p6_type(Pointer:D \value, Int) {
+multi method p5_to_p6_type(Pointer:D \value, 4) {
     $!p5.p5_sv_iv(value);
 }
 
-multi method p5_to_p6_type(Pointer:D \value, Str) {
-    if $!p5.p5_sv_utf8(value) {
-        $!p5.p5_sv_to_char_star(value);
+multi method p5_to_p6_type(Pointer:D \value, 5) {
+    my $p5 := $!p5;
+    if $p5.p5_sv_utf8(value) {
+        $p5.p5_sv_to_char_star(value);
     }
     else {
         my $string_ptr = CArray[CArray[int8]].new;
         $string_ptr[0] = CArray[int8];
-        my $len = $!p5.p5_sv_to_buf(value, $string_ptr);
+        my $len = $p5.p5_sv_to_buf(value, $string_ptr);
         my $string := $string_ptr[0];
         blob8.new(do for ^$len { $string.AT-POS($_) });
     }
 }
 
-multi method p5_to_p6_type(Pointer:D \value, Num) {
+multi method p5_to_p6_type(Pointer:D \value, 3) {
     $!p5.p5_sv_nv(value);
 }
 
-multi method p5_to_p6_type(Pointer:D \value, Array) {
+multi method p5_to_p6_type(Pointer:D \value, 6) {
     self!p5_array_to_writeback_p6_array(value);
 }
 
-multi method p5_to_p6_type(Pointer:D \value, Hash) {
+multi method p5_to_p6_type(Pointer:D \value, 7) {
     self!p5_hash_to_writeback_p6_hash(value);
 }
 
-multi method p5_to_p6_type(Pointer:D \value, Inline::Perl5::Hash) {
+multi method p5_to_p6_type(Pointer:D \value, 8) {
     $!objects.get($!p5.p5_unwrap_p6_hash(value));
 }
 
-multi method p5_to_p6_type(Pointer:D \value, Undef) {
+multi method p5_to_p6_type(Pointer:D \value, 9) {
     Any
 }
 
-multi method p5_to_p6_type(Pointer:D \value, Code) {
+multi method p5_to_p6_type(Pointer:D \value, 2) {
     $!p5.p5_sv_refcnt_inc(value);
     Inline::Perl5::Callable.new(perl5 => self, ptr => value);
 }
 
-multi method p5_to_p6_type(Pointer:D \value, Capture) {
+multi method p5_to_p6_type(Pointer:D \value, 10) {
     self!p5_scalar_ref_to_capture(value);
 }
 
-multi method p5_to_p6_type(Pointer:D \value, Any) {
+multi method p5_to_p6_type(Pointer:D \value, 0) {
     my $type = $!p5.p5_get_type(value);
     die "Unsupported type {value} ($type) in p5_to_p6";
 }
 
-multi method p5_to_p6_type(Pointer:D \value, Blessed) {
+multi method p5_to_p6_type(Pointer:D \value, 1) {
     if $!p5.p5_is_wrapped_p6_object(value) {
         $!objects.get($!p5.p5_unwrap_p6_object(value));
     }
@@ -333,13 +330,9 @@ multi method p5_to_p6_type(Pointer:D \value, Blessed) {
     }
 }
 
-multi method p5_to_p6_type(Pointer:D \value, TypeGlob) {
+multi method p5_to_p6_type(Pointer:D \value, 11) {
     $!p5.p5_sv_refcnt_inc(value);
     Inline::Perl5::TypeGlob.new(:ip5(self), :gv(value))
-}
-
-multi method p5_to_p6(Pointer:D \value, \type) {
-    self.p5_to_p6_type(value, P5Types.AT-POS(type))
 }
 
 method handle_p5_exception() is hidden-from-backtrace {
@@ -415,7 +408,7 @@ multi method unpack_return_values(Pointer:U \av, int32 \count, int32 \type --> N
 
 multi method unpack_return_values(Pointer:D \av, int32 \count, int32 \type) {
     if count == 1 {
-        my \retval = self.p5_to_p6_type(av, P5Types.AT-POS(type));
+        my \retval = self.p5_to_p6_type(av, type);
         $!p5.p5_sv_refcnt_dec(av);
         retval
     }
