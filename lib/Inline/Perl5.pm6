@@ -945,9 +945,9 @@ method init_callbacks {
     }
 }
 
-method sv_refcnt_dec($obj) {
-    return unless $!p5; # Destructor may already have run. Destructors of individual P5 objects no longer work.
-    $!p5.p5_sv_refcnt_dec($obj);
+method sv_refcnt_dec($obj --> Nil) {
+    # Destructor may already have run. Destructors of individual P5 objects no longer work.
+    $!p5.p5_sv_refcnt_dec($obj) if $!p5;
 }
 
 method install_wrapper_method(Str:D $package, Str $name, **@attributes) {
