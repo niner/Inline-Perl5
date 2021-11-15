@@ -25,6 +25,7 @@ lib/Inline/Perl5/Hash.pm6
 lib/Inline/Perl5/Interpreter.pm6
 lib/Inline/Perl5/Perl5Class.rakumod
 lib/Inline/Perl5/TypeGlob.pm6
+lib/X/Inline/Perl5/NoMultiplicity.pm6
 lib/v5-inline.pm6
 p5helper.c
 t/argv.t
