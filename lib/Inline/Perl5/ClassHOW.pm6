@@ -102,6 +102,8 @@ class Inline::Perl5::ClassHOW
     has $!ip5;
     has $!composed;
     has %!gvs;
+    has $!dfs_mro;
+    has $!c3_mro;
 
     my class NQPArray is repr('VMArray') {
         use nqp;
@@ -143,8 +145,7 @@ class Inline::Perl5::ClassHOW
     method init() {
         use nqp;
         nqp::bindattr(self, $?CLASS, '%!attribute_lookup', nqp::hash());
-        nqp::bindattr(self, $?CLASS, '%!mro', nqp::hash()) if '%!mro' (elem) $?CLASS.^attributes>>.name;
-        nqp::bindattr(self, $?CLASS, '@!mro', nqp::list()) if '@!mro' (elem) $?CLASS.^attributes>>.name;
+        nqp::bindattr(self, $?CLASS, '$!dfs_mro', NQPArray.new);
         nqp::bindattr(self, $?CLASS, '@!attributes', nqp::list());
         nqp::bindattr(self, $?CLASS, '@!parents', nqp::list());
         nqp::bindattr(self, $?CLASS, '@!hides', nqp::list());
@@ -154,37 +155,37 @@ class Inline::Perl5::ClassHOW
         $!composed
     }
 
-    method isa(\obj, \type) {
+    method isa(Mu \obj, Mu \type) {
         obj =:= type
     }
 
-    method does(\obj, \type) {
+    method does(Mu \obj, Mu \type) {
         type =:= Inline::Perl5::WrapperClass;
     }
 
-    method role_typecheck_list(\obj) {
+    method role_typecheck_list(Mu \obj) {
         my $list := NQPArray.CREATE;
         $list.push: Inline::Perl5::WrapperClass;
         $list
     }
 
-    method gvs($type?) {
+    method gvs(Mu $type?) {
         %!gvs;
     }
 
-    method p5($type?) {
+    method p5(Mu $type?) {
         $!p5;
     }
 
-    method ip5($type?) {
+    method ip5(Mu $type?) {
         $!ip5;
     }
 
-    method cache($type?) {
+    method cache(Mu $type?) {
         %!cache;
     }
 
-    method replace_ip5(\type, $ip5) {
+    method replace_ip5(Mu \type, $ip5) {
         return if $!ip5 === $ip5;
         $!ip5 = $ip5;
         for %!gvs.kv -> $module, %methods {
@@ -212,11 +213,11 @@ class Inline::Perl5::ClassHOW
             },
         ].FLATTENABLE_LIST;
 
-    method destroyers(\type) {
+    method destroyers(Mu \type) {
         $destroyers
     }
 
-    method compute_dfs_mro(\type) {
+    method compute_dfs_mro(Mu \type) {
         use nqp;
 
         my $mro := NQPArray.new;
@@ -233,19 +234,17 @@ class Inline::Perl5::ClassHOW
             }
         }
 
-        nqp::bindattr(self, $?CLASS, '@!mro', $mro) if '@!mro' (elem) $?CLASS.^attributes>>.name;
-        nqp::bindattr(self, $?CLASS, '%!mro', nqp::hash(
-            'all', nqp::hash(
-                'all',      $mro,
-                'all_conc', $mro,
-                'no_roles', $mro,
-            ),
-            'unhidden' , nqp::hash(
-                'all',      $mro,
-                'all_conc', $mro,
-                'no_roles', $mro,
-            ),
-        )) if '%!mro' (elem) $?CLASS.^attributes>>.name;
+        $!dfs_mro := $mro;
+    }
+
+    method compute_mro(Mu \type) {
+        self.Metamodel::C3MRO::compute_mro(type);
+        $!c3_mro := NQPArray.new;
+        $!c3_mro.push: $_<> for self.Metamodel::C3MRO::mro(type);
+    }
+
+    method mro(Mu \type) is raw {
+        $!p5.call-simple-args('mro::get_mro', $!name) eq 'c3' ?? $!c3_mro !! $!dfs_mro
     }
 
     method compose(Mu \type) {
@@ -416,7 +415,7 @@ class Inline::Perl5::ClassHOW
         $type
     }
 
-    method add_method($type, $name, \meth) is raw {
+    method add_method(Mu $type, $name, \meth) is raw {
         %!cache{$name} := meth;
         push @!local_methods, meth;
         Metamodel::Primitives.install_method_cache($type, %!cache, :!authoritative)
@@ -424,11 +423,11 @@ class Inline::Perl5::ClassHOW
         meth
     }
 
-    method declares_method($type, $name) {
+    method declares_method(Mu $type, $name) {
         %!cache{$name}:exists
     }
 
-    method method_table($type) is raw {
+    method method_table(Mu $type) is raw {
         use nqp;
         my class NQPHash is repr('VMHash') {
             method Map() {
@@ -444,12 +443,12 @@ class Inline::Perl5::ClassHOW
         result
     }
 
-    method submethod_table($type) is raw {
+    method submethod_table(Mu $type) is raw {
         use nqp;
         nqp::hash()
     }
 
-    method methods($type, :$local, :$excl, :$all) {
+    method methods(Mu $type, :$local, :$excl, :$all) {
         $local ?? @!local_methods !! %!cache.values
     }
 
@@ -464,7 +463,7 @@ class Inline::Perl5::ClassHOW
         return False;
     }
 
-    method find_method($type, $name) {
+    method find_method(Mu $type is raw, $name) {
         return if $name eq 'cstr';
         # must not be AUTOLOADed and must not call into P5 before the object's fully constructed
         if $name eq 'BUILD' or $name eq 'TWEAK' {
