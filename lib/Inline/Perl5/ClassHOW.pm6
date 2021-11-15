@@ -104,6 +104,7 @@ class Inline::Perl5::ClassHOW
     has %!gvs;
     has $!dfs_mro;
     has $!c3_mro;
+    has Bool $!use_c3_mro;
 
     my class NQPArray is repr('VMArray') {
         use nqp;
@@ -244,7 +245,7 @@ class Inline::Perl5::ClassHOW
     }
 
     method mro(Mu \type) is raw {
-        $!p5.call-simple-args('mro::get_mro', $!name) eq 'c3' ?? $!c3_mro !! $!dfs_mro
+        $!use_c3_mro ?? $!c3_mro !! $!dfs_mro
     }
 
     method compose(Mu \type) {
@@ -255,9 +256,11 @@ class Inline::Perl5::ClassHOW
 
         my $mro = $!p5.call-simple-args('mro::get_mro', $!name);
         if $mro eq 'c3' {
+            $!use_c3_mro = True;
             self.compute_mro(type);
         }
         else {
+            $!use_c3_mro = False;
             self.compute_dfs_mro(type);
         }
 
