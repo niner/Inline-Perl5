@@ -1166,7 +1166,7 @@ method use(Str $module, **@args) {
 
 submethod DESTROY {
     $!p5.p5_destruct_perl() if $!p5 and not $!external_p5;
-    $!p5 := Inline::Perl5::Interpreter;
+    $!p5 = Inline::Perl5::Interpreter;
 }
 
 
@@ -1200,7 +1200,7 @@ method restore_interpreter() {
     %!gvs = Hash.new;
     if $!default and $default_perl5 {
         unless self === $default_perl5 {
-            $!p5 := $default_perl5.interpreter;
+            $!p5 = $default_perl5.interpreter;
             $!objects = $default_perl5.object_keeper; #TOOD may actually need to merge
             $default_perl5.required_modules.append: @!required_modules;
         }
@@ -1420,7 +1420,7 @@ method initialize(Bool :$reinitialize) {
     }
     else {
         my @args = @*ARGS;
-        $!p5 := Inline::Perl5::Interpreter::p5_init_perl(
+        $!p5 = Inline::Perl5::Interpreter::p5_init_perl(
             @args.elems + 4,
             CArray[Str].new('', '-e', '0', '--', |@args, Str),
             &call_method,
