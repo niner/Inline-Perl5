@@ -18,7 +18,10 @@
         },
         "runtime": {
             "requires": [
-                "perl:from<native>"
+                {
+                    "from" : "bin",
+                    "name" : "perl"
+                }
             ]
         },
 	"test": {
