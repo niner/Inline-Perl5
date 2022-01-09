@@ -400,6 +400,8 @@ expect these modules to be written in Perl 5.
 The oldest rakudo version supported is 2019.03.1.
 The oldest perl version supported is 5.20.0.
 
+[Jan 2022: MacOS on M1 does not build.](https://github.com/niner/Inline-Perl5/issues/171#issuecomment-1007905126)
+
 You will need a perl 5 built with the -fPIC option (position independent
 code). Most distributions build their Perl 5 that way. When you use perlbrew,
 you have to build it as:
