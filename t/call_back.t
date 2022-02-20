@@ -12,15 +12,40 @@ $p5.run(q/
         for (1 .. 100) {
             my @retval = $raku->test('Raku');
             is_deeply \@retval, ['Raku'];
-            my @retval = $raku->test('Raku', 42);
+            @retval = $raku->test('Raku', 42);
             is_deeply \@retval, ['Raku', 42];
+            @retval = $raku->test(['Raku', 42]);
+            is_deeply \@retval, [['Raku', 42]];
+            my $retval = $raku->test(['Raku', 42]);
+            is_deeply $retval, ['Raku', 42];
+            @retval = $raku->multi_value;
+            is_deeply \@retval, [1, 2, [3, 4]];
+            @retval = $raku->array;
+            is_deeply \@retval, [1, 2, [3, 4]];
+            $retval = $raku->array_ref;
+            is_deeply $retval, [1, 2, [3, 4]];
+            @retval = $raku->lists;
+            is_deeply \@retval, [1, 2, [3, 4]];
         }
     };
 /);
 
 class Foo {
     method test(*@args) {
-        return @args;
+        @args
+    }
+    method multi_value() {
+        1, 2, [3, 4]
+    }
+    method array() {
+        [1, 2, [3, 4]]
+    }
+    method array_ref() {
+        $[1, 2, [3, 4]]
+    }
+    method lists() is raw {
+        my @l := 1, 2, [3, 4];
+        @l
     }
 }
 

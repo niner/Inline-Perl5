@@ -145,12 +145,12 @@ multi method p6_to_p5(Inline::Perl5::Array:D $value) returns Pointer {
 multi method p6_to_p5(Inline::Perl5::Exception:D $value) returns Pointer {
     self.p6_to_p5($value.payload)
 }
-multi method p6_to_p5(Positional:D $value) returns Pointer {
+multi method p6_to_p5(Positional:D \value, Bool :$retval) returns Pointer {
     my $av = $!p5.p5_newAV();
-    for @$value -> $item {
+    for value.list -> $item {
         $!p5.p5_av_push($av, self.p6_to_p5($item));
     }
-    $!p5.p5_newRV_inc($av);
+    value.VAR ~~ Scalar || !$retval ?? $!p5.p5_newRV_inc($av) !! $av
 }
 multi method p6_to_p5(IO::Handle:D $value) returns Pointer {
     my $index = $!objects.keep($value);
@@ -1253,7 +1253,7 @@ method initialize(Bool :$reinitialize) {
             }
         }
         my @args := self.p5_array_to_p6_array($args);
-        self.p6_to_p5($p6obj."$name"(|@args.grep({$_ !~~ Pair}).list, |@args.grep(Pair).hash))
+        self.p6_to_p5($p6obj."$name"(|@args.grep({$_ !~~ Pair}).list, |@args.grep(Pair).hash), :retval)
     }
     &call_method does Inline::Perl5::Caller;
 
@@ -1281,7 +1281,7 @@ method initialize(Bool :$reinitialize) {
             fail "No such symbol '$package'" unless %!loaded_modules{$package}:exists;
             $class := %!loaded_modules{$package};
         }
-        self.p6_to_p5($class."$name"(|%named<False>, |%(%named<True>)));
+        self.p6_to_p5($class."$name"(|%named<False>, |%(%named<True>)), :retval);
     }
 
     my &call_callable = sub (Int $index, Pointer $args, Pointer $err) returns Pointer {
@@ -1297,7 +1297,7 @@ method initialize(Bool :$reinitialize) {
                 return Pointer;
             }
         }
-        self.p6_to_p5($!objects.get($index)(|self.p5_array_to_p6_array($args)))
+        self.p6_to_p5($!objects.get($index)(|self.p5_array_to_p6_array($args)), :retval)
     }
 
     my &hash_at_key = sub (Int $index, Str $key) returns Pointer {

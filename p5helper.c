@@ -1525,8 +1525,8 @@ void return_retval(const I32 ax, SV **sp, SV *retval) {
         XSRETURN_EMPTY;
     }
     if (GIMME_V == G_ARRAY) {
-        if (SvROK(retval) && SvTYPE(SvRV(retval)) == SVt_PVAV) {
-            AV* const av = (AV*)SvRV(retval);
+        if (SvTYPE(retval) == SVt_PVAV) {
+            AV* const av = (AV*)retval;
             I32 const len = av_len(av) + 1;
             I32 i;
             for (i = 0; i < len; i++) {
@@ -1541,7 +1541,11 @@ void return_retval(const I32 ax, SV **sp, SV *retval) {
     }
     else {
         if (SvROK(retval) && SvTYPE(SvRV(retval)) == SVt_PVAV) {
-            AV* const av = (AV*)SvRV(retval);
+            XPUSHs(retval);
+            XSRETURN(1);
+        }
+        else if (SvTYPE(retval) == SVt_PVAV) {
+            AV* const av = (AV*)retval;
             XPUSHs(sv_2mortal(av_shift(av)));
             XSRETURN(1);
         }
