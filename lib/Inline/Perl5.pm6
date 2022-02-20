@@ -895,22 +895,22 @@ class Perl6Callbacks {
         Nil
     }
     method run($code) {
-        return EVAL $code;
         CONTROL {
             when CX::Warn {
                 note $_.gist;
                 $_.resume;
             }
         }
+        EVAL $code
     }
     method call(Str $name, @args) {
-        return &::($name)(|@args);
         CONTROL {
             when CX::Warn {
                 note $_.gist;
                 $_.resume;
             }
         }
+        &::($name)(|@args)
     }
     method invoke(Str $package, Str $name, @args) {
         my %named = classify {$_.WHAT =:= Pair}, @args;
@@ -922,16 +922,16 @@ class Perl6Callbacks {
             fail "No such symbol '$package'" unless $!p5.module-loaded($package);
             $class := $!p5.loaded-module($package);
         }
-        return $class."$name"(|%named<False>, |%(%named<True>));
         CONTROL {
             when CX::Warn {
                 note $_.gist;
                 $_.resume;
             }
         }
+        $class."$name"(|%named<False>, |%(%named<True>))
     }
     method create_pair(Any $key, Mu $value) {
-        return $key => $value;
+        $key => $value;
     }
 }
 
