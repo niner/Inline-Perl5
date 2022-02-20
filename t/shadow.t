@@ -19,4 +19,4 @@ for @methods -> $name {
     is($shadow."$name"(), $name);
 }
 
-# vim: ft=perl6
+# vim: ft=raku

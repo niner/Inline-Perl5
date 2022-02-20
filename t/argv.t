@@ -9,4 +9,4 @@ is(EVAL('@ARGV[0]', :lang<Perl5>), 'test1');
 
 done-testing;
 
-# vim: ft=perl6
+# vim: ft=raku

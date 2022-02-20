@@ -37,6 +37,6 @@ ok($destroyed, 'at least one destructor ran');
 
 $p5.DESTROY;
 
-# vim: ft=perl6
+# vim: ft=raku
 
 

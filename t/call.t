@@ -6,7 +6,7 @@ use Inline::Perl5;
 say "1..12";
 
 my $p5 = Inline::Perl5.new();
-say $p5.run('
+say $p5.run: q:to<PERL>;
 use 5.10.0;
 $| = 1;
 
@@ -98,7 +98,7 @@ sub sum {
     my ($self, $a, $b) = @_;
     return $a + $b;
 }
-');
+PERL
 
 $p5.call('test');
 $p5.call('test_int_params', 2, 1);
@@ -171,4 +171,4 @@ else {
 
 $p5.DESTROY;
 
-# vim: ft=perl6
+# vim: ft=raku

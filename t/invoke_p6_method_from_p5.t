@@ -27,4 +27,4 @@ $p5.run(q:to/PERL5/);
     done_testing;
     PERL5
 
-# vim: ft=perl6
+# vim: ft=raku

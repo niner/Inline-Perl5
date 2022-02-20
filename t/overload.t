@@ -44,4 +44,4 @@ isnt((try +$bar) // 0, 42);
 
 done-testing;
 
-# vim: ft=perl6
+# vim: ft=raku

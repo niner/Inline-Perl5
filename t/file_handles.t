@@ -37,4 +37,4 @@ $p5.run(q/
 
 is $p5.call('bar', $filehandle), 'test!';
 
-# vim: ft=perl6
+# vim: ft=raku

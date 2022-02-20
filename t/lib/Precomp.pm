@@ -10,4 +10,4 @@ our sub test-class() {
     Data::Dumper.new($[1, 2])
 }
 
-# vim: ft=perl6
+# vim: ft=raku

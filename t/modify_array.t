@@ -72,4 +72,4 @@ $array.splice: 3, 0, $array.splice: 4, 1;
 
 ok(not EVAL("[1, 2]", :lang<Perl5>).perl.starts-with('$'), 'array not containerized');
 
-# vim: ft=perl6
+# vim: ft=raku

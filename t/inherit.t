@@ -56,5 +56,5 @@ class Qux is Bar {
 
 is(Qux.new.test, 'Raku!!');
 
-# vim: ft=perl6
+# vim: ft=raku
 

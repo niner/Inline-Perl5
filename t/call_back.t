@@ -34,5 +34,5 @@ $p5.run(q/
 
 $p5.DESTROY;
 
-# vim: ft=perl6
+# vim: ft=raku
 

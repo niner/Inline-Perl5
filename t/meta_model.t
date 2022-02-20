@@ -42,4 +42,4 @@ ok $p5obj.^method_table.Map<context>:exists;
 
 done-testing;
 
-# vim: ft=perl6
+# vim: ft=raku

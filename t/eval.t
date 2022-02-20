@@ -28,4 +28,4 @@ $p5.run('
 
 $p5.DESTROY;
 
-# vim: ft=perl6
+# vim: ft=raku

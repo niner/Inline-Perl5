@@ -118,4 +118,4 @@ is($p5.call('test_re', 'foo', /a/), Nil);
 
 $p5.DESTROY;
 
-# vim: ft=perl6
+# vim: ft=raku

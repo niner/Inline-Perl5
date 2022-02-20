@@ -56,4 +56,4 @@ is($bar.can('not_existing').elems, 0);
 
 done-testing;
 
-# vim: ft=perl6
+# vim: ft=raku

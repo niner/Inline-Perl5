@@ -144,4 +144,4 @@ is $p5.call('test_foo', Foo.new), 'foo';
 
 done-testing;
 
-# vim: ft=perl6
+# vim: ft=raku

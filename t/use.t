@@ -38,4 +38,4 @@ Test::More::pass('loaded module more than once');
     }
 }
 
-# vim: ft=perl6
+# vim: ft=raku

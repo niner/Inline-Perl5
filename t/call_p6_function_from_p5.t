@@ -15,4 +15,4 @@ $p5.run(q:to/PERL5/);
 
 say 'ok 2';
 
-# vim: ft=perl6
+# vim: ft=raku

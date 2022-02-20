@@ -10,4 +10,4 @@ done-testing;
 =finish
 Azərbaycan trailing data found in DATA handle
 
-# vim: ft=perl6
+# vim: ft=raku

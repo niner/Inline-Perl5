@@ -37,4 +37,4 @@ is(WithC3MRO.^mro.list.map(*.^name).Str, 'WithC3MRO K1 K2 K3 X U V W Y Any Mu');
 
 done-testing;
 
-# vim: ft=perl6
+# vim: ft=raku

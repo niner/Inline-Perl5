@@ -23,4 +23,4 @@ ok(TestPerl5Package::Sub.take_hash({a => 'a string'}));
 
 done-testing;
 
-# vim: ft=perl6
+# vim: ft=raku

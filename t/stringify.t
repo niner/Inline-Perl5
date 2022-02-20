@@ -71,4 +71,4 @@ ok($p5.call('test_not', Bar));
 
 done-testing;
 
-# vim: ft=perl6
+# vim: ft=raku

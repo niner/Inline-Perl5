@@ -51,4 +51,4 @@ ok(TestV6Directly.new.foo);
 
 done-testing;
 
-# vim: ft=perl6
+# vim: ft=raku

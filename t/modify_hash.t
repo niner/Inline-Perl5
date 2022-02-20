@@ -43,4 +43,4 @@ my $hash = hash-creator(sub (%hash) {
 
 is($hash, {a => 1, b => 2, c => 3, d => 4});
 
-# vim: ft=perl6
+# vim: ft=raku

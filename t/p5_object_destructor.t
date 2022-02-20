@@ -246,4 +246,4 @@ ok($ObjWithDestructor::count < $i, 'at least one destructor ran after nested sub
 
 #done-testing;
 
-# vim: ft=perl6
+# vim: ft=raku

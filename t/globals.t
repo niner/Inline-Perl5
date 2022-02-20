@@ -28,4 +28,4 @@ is EVAL('$Data::Dumper::Maxdepth', :lang<Perl5>), 2;
 
 done-testing;
 
-# vim: ft=perl6
+# vim: ft=raku

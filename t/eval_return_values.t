@@ -11,4 +11,4 @@ is $p5.run('5;'), 5;
 is $p5.run('"Perl 5";'), 'Perl 5';
 $p5.DESTROY;
 
-# vim: ft=perl6
+# vim: ft=raku
