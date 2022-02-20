@@ -266,8 +266,8 @@ multi method p5_to_p6_type(Pointer:D \value, 5) {
         $p5.p5_sv_to_char_star(value);
     }
     else {
-        my $string_ptr = CArray[CArray[int8]].new;
-        $string_ptr[0] = CArray[int8];
+        my $string_ptr = CArray[CArray[uint8]].new;
+        $string_ptr[0] = CArray[uint8];
         my $len = $p5.p5_sv_to_buf(value, $string_ptr);
         my $string := $string_ptr[0];
         blob8.new(do for ^$len { $string.AT-POS($_) });
