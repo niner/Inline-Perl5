@@ -3,7 +3,7 @@
     "name"          : "Inline::Perl5",
     "version"       : "0.59",
     "perl"          : "6.c",
-    "auth"          : "github:niner",
+    "auth"          : "cpan:NINE",
     "authors"       : [ "Stefan Seifert" ],
     "description"   : "Use Perl 5 code in a Raku program",
     "depends" : {
