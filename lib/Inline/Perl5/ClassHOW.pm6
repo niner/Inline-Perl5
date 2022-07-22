@@ -123,7 +123,7 @@ class Inline::Perl5::ClassHOW
 
     my $archetypes := Metamodel::Archetypes.new(
         :nominal(1), :inheritable(1), :augmentable(1) );
-    method archetypes($obj?) {
+    method archetypes($?) {
         $archetypes
     }
 
