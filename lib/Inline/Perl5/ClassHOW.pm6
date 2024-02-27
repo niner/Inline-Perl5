@@ -214,7 +214,7 @@ class Inline::Perl5::ClassHOW
             },
         ].FLATTENABLE_LIST;
 
-    method destroyers(Mu \type) {
+    method destroyers(Mu $XXX?) {
         $destroyers
     }
 
@@ -426,11 +426,11 @@ class Inline::Perl5::ClassHOW
         meth
     }
 
-    method declares_method(Mu $type, $name) {
+    method declares_method(Mu $XXX, $name) {
         %!cache{$name}:exists
     }
 
-    method method_table(Mu $type) is raw {
+    method method_table(Mu $XXX?) is raw {
         use nqp;
         my class NQPHash is repr('VMHash') {
             method Map() {
@@ -446,12 +446,12 @@ class Inline::Perl5::ClassHOW
         result
     }
 
-    method submethod_table(Mu $type) is raw {
+    method submethod_table(Mu $XXX?) is raw {
         use nqp;
         nqp::hash()
     }
 
-    method methods(Mu $type, :$local, :$excl, :$all) {
+    method methods(Mu $XXX?, :$local, :$excl, :$all) {
         $local ?? @!local_methods !! %!cache.values
     }
 
@@ -462,7 +462,7 @@ class Inline::Perl5::ClassHOW
         return False;
     }
 
-    method accepts_type(Mu $, Mu \check) {
+    method accepts_type(Mu $XXX, Mu \check) {
         return False;
     }
 
@@ -597,7 +597,7 @@ class Inline::Perl5::ClassHOW
         self.add_method($type, $name, $proto)
     }
 
-    method lang-rev-before(Mu \type, $rev) {
+    method lang-rev-before(Mu $XXX, $rev) {
         1
     }
 }
