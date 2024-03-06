@@ -436,6 +436,14 @@ and test with
 and install with
 
     make install
+    
+Users on the "M1" ARM architecture found on newer macs may experience issues
+trying to install `Inline::Perl5` using Perl which has been compiled without
+[Xcode](https://developer.apple.com/xcode/) installed the machine. Switching to
+system Perl and then installing `Inline::Perl` should fix the problem.
+Alternatively, download and install Xcode and compile Perl with the options
+noted above and then install `Inline::Perl` with the newly compiled version
+of Perl.
 
 # AUTHOR
 
