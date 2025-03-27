@@ -281,8 +281,9 @@ class Inline::Perl5::ClassHOW
             }
         }
         else {
-            for <BUILDALL bless can defined isa sink WHICH WHERE WHY ACCEPTS> {
-                %!cache{$_} := Mu.^method_table{$_};
+            for <BUILDALL bless can defined isa sink WHICH WHERE WHY ACCEPTS POPULATE> {
+                %!cache{$_} := Mu.^method_table{$_}
+                  if Mu.^method_table{$_}:exists;
             }
         }
 
