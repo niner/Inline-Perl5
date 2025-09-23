@@ -437,6 +437,11 @@ and install with
 
     make install
 
+If you use rakubrew, you may need to update your PERL5LIB path before using zef install Inline::Perl5:
+
+    perldoc -l strict       #locates your perl5 lib path eg. /Users/me/perl-darwin-arm64/lib/5.36.0/strict.pm
+    export PERL5LIB=/Users/me/perl-darwin-arm64/lib/5.36.0:$PERL5LIB
+
 # AUTHOR
 
 Stefan Seifert <nine@detonation.org>
