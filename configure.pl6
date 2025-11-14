@@ -45,10 +45,12 @@ sub install() {
 
     # workaround for missing proper handling of libraries in Distribution::Path
     my $p5helper = p5helper;
-    $dist.meta<files> = (
-        |$dist.meta<files>.grep(* ne $p5helper.Str),
-        {'resources/libraries/p5helper' => $p5helper},
-    );
+    my %new-meta = $dist.meta.Hash;
+    %new-meta<files> = [
+        |%new-meta<files>.grep(* ne $p5helper.Str),
+        {'resources/libraries/p5helper' => $p5helper.Str},
+    ];
+    $dist = Distribution::Hash.new(%new-meta, :prefix($*CWD));
 
     $repo.install($dist);
     say "Installed successfully.";
