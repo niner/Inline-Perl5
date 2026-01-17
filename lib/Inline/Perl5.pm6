@@ -26,8 +26,8 @@ my $default_perl5;
 our $thread-safe = False;
 
 my constant $broken-rakudo = (
-    $*PERL.compiler.name eq 'rakudo'
-    and $*PERL.compiler.version before v2020.05.1.261.g.169.f.63.d.90
+    $*RAKU.compiler.name eq 'rakudo'
+    and $*RAKU.compiler.version before v2020.05.1.261.g.169.f.63.d.90
 );
 
 # I'd like to call this from Inline::Perl5::Interpreter
