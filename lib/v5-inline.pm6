@@ -1,5 +1,6 @@
 use QAST:from<NQP>;
 use Inline::Perl5;
+use experimental :rakuast;
 
 sub EXPORT(|) {
     my role Perl5Slang {
@@ -10,16 +11,24 @@ sub EXPORT(|) {
                     '{' ~ substr(self.target, $pos)
                 );
 
-            my @pads := $*W.context.blocks;
-            my $pad := @pads[*-2];
             for $stash.pairs {
                 my $name = '&' ~ $_.key;
                 my $gv = $_.value;
                 my $sub := sub (|args) {
                     $p5.call-gv-args($gv.gv, args)
                 };
-                $*PACKAGE.WHO.BIND-KEY($name, $sub);
-                $ = $*W.install_lexical_symbol($pad, $name, $sub);
+                if $*W {
+                    $*PACKAGE.WHO.BIND-KEY($name, $sub);
+                    my @pads := $*W.context.blocks;
+                    $ = $*W.install_lexical_symbol(@pads[*-2], $name, $sub);
+                }
+                else {
+                    $*R.current-package.WHO.BIND-KEY($name, $sub);
+                    $*R.outer-scope.merge-generated-lexical-declaration(
+                        RakuAST::VarDeclaration::Implicit::Constant.new(:$name, :value($sub)),
+                        :resolver($*R),
+                    );
+                }
             }
 
             $remainder++;
@@ -27,13 +36,18 @@ sub EXPORT(|) {
             self.'!cursor_pass'(self.target.chars - $remainder);
             self
         }
+        # Each frontend calls only its own spelling of the proto.
         token statement_control {
+            :my $*P5CODE;
+            <.p5code>
+        }
+        token statement-control {
             :my $*P5CODE;
             <.p5code>
         }
     }
 
-    my Mu $MAIN-grammar := %*LANG<MAIN>;
+    my Mu $MAIN-grammar := $*LANG.slang_grammar('MAIN');
     my $grammar := $MAIN-grammar.HOW.mixin($MAIN-grammar, Perl5Slang);
 
     $*LANG.define_slang(
@@ -53,6 +67,23 @@ sub EXPORT(|) {
                     ),
                     QAST::WVal.new(:value($optree))
                 );
+            }
+            # RakuAST::Constant puts the optree in the serialization context
+            # itself. A statement control has to hand back a statement.
+            method statement-control(Mu $/) {
+                my $runops = RakuAST::ApplyPostfix.new(
+                    operand => RakuAST::ApplyPostfix.new(
+                        operand => RakuAST::Constant.new(Inline::Perl5),
+                        postfix => RakuAST::Call::Method.new(
+                            name => RakuAST::Name.from-identifier('default_perl5'),
+                        ),
+                    ),
+                    postfix => RakuAST::Call::Method.new(
+                        name => RakuAST::Name.from-identifier('runops'),
+                        args => RakuAST::ArgList.new(RakuAST::Constant.new($*P5CODE)),
+                    ),
+                );
+                self.attach: $/, RakuAST::Statement::Expression.new(:expression($runops));
             }
         });
 
