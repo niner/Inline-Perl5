@@ -129,6 +129,15 @@ class Inline::Perl5::ClassHOW
 
     submethod BUILD(:$!p5, :$!ip5) { }
 
+    # The name may arrive as a raw VM string; the Raku parameter boxes it so
+    # $!name is always a Str. The rest mirrors Metamodel::Naming.
+    method set_name(Mu $obj, $name) {
+        use nqp;
+        nqp::bindattr(self, $?CLASS, '$!name', $name);
+        nqp::bindattr(self, $?CLASS, '$!shortname', nqp::null());
+        nqp::setdebugtypename($obj, $name);
+    }
+
     method new_type(:$name, :@parents, :$p5, :$ip5) is raw {
         my $how = self.new(:p5($p5 // $*P5), :ip5($ip5 // $*IP5));
         my $type := Metamodel::Primitives.create_type($how);

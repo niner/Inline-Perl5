@@ -1,6 +1,7 @@
 class Inline::Perl5 {
 
 use MONKEY-SEE-NO-EVAL;
+use experimental :rakuast;
 use Inline::Language::ObjectKeeper;
 use Inline::Perl5::Interpreter;
 use Inline::Perl5::Array;
@@ -24,11 +25,6 @@ has $.thread-id;
 
 my $default_perl5;
 our $thread-safe = False;
-
-my constant $broken-rakudo = (
-    $*PERL.compiler.name eq 'rakudo'
-    and $*PERL.compiler.version before v2020.05.1.261.g.169.f.63.d.90
-);
 
 # I'd like to call this from Inline::Perl5::Interpreter
 # But it raises an error in the END { ... } call
@@ -997,6 +993,17 @@ method gil() {
     $gil
 }
 
+# A phaser node is called through its meta-object, so one that reports a
+# closure runs that closure. The blorst only satisfies the constructor.
+my class InitPhaser is RakuAST::StatementPrefix::Phaser::Init {
+    has $.code is rw;
+    method meta-object() { $!code }
+}
+my class EnterPhaser is RakuAST::StatementPrefix::Phaser::Enter {
+    has $.code is rw;
+    method meta-object() { $!code }
+}
+
 method require(Str $module, Num $version?, Bool :$handle) {
     my @import_args;
     push @!required_modules, ($module, $version, @import_args);
@@ -1027,18 +1034,24 @@ method require(Str $module, Num $version?, Bool :$handle) {
 
     my &export := sub EXPORT(**@args) {
             @import_args = @args;
-            if &p5_terminate.^find_method('CALL-ME') { # looks like old rakudo without necessary fixes
-                $*W.do_pragma(Any, 'precompilation', False, []);
-            }
-            else {
+            # FIXME only add once per compilation unit!
+            if $*W {
                 if $*W.is_precompilation_mode {
-                    my $block := { # FIXME only add once per compilation unit!
+                    my $block := {
                         self.restore_interpreter;
                         self.restore_modules;
                     };
                     $*W.add_object($block);
                     my $op := $*W.add_phaser(Mu, 'INIT', $block, class :: { method cuid { (^2**128).pick }});
                 }
+            }
+            elsif $*CU && $*CU.precompilation-mode {
+                my $phaser = InitPhaser.new(RakuAST::Block.new);
+                $phaser.code = {
+                    self.restore_interpreter;
+                    self.restore_modules;
+                };
+                $*CU.add-init-phaser($phaser);
             }
             my @symbols = self.import($module, |@args).map({
                 my $name = $_;
@@ -1335,6 +1348,17 @@ method initialize(Bool :$reinitialize) {
                     };
                     $*W.throw(self.MATCH(), nqp::split("::", $type_str), |%opts);
                 }
+                # RakuAST spelling of the same hook. The exception reports from
+                # the high water mark, which a rule may have cleared to -1.
+                method typed-panic($type_str, *%opts) {
+                    my $offset = self.'!highwater'();
+                    if $type_str eq "X::Syntax::Confused" and $offset >= 0
+                        and substr(self.orig, $offset, 1) eq q<}> {
+                        $*pos = $offset;
+                        return self;
+                    };
+                    $*R.panic(self.build-exception($type_str, |%opts));
+                }
             }
         );
         $compiler
@@ -1362,9 +1386,17 @@ method initialize(Bool :$reinitialize) {
         my $compiler := lenient-raku-compiler;
 
         use nqp;
-        my $context := CORE::; # workaround for rakudo versions that won't give a result without outer_ctx
-        my $outer_ctx := $broken-rakudo ?? nqp::getattr($context, PseudoStash, '$!ctx') !! Nil;
-        my $compiled := $compiler.compile($code, :need_result($package eq 'main' ?? 0 !! 1), :$outer_ctx);
+        # An outer context makes the compile an EVAL nested in the unit being
+        # compiled, so that unit can serialize the result. The setting's
+        # context reaches the setting and leaks no other lexicals. $*R only
+        # exists while the RakuAST frontend is compiling.
+        my $outer_ctx := $*R ?? $*R.setting !! Nil;
+        my $compiled := do {
+            # An exception escaping the native callback aborts without its
+            # Raku message, so report a compile error before it does.
+            CATCH { default { note .gist; .rethrow } }
+            $compiler.compile($code, :need_result($package eq 'main' ?? 0 !! 1), :$outer_ctx);
+        }
         nqp::forceouterctx(
             nqp::getattr($compiled, ForeignCode, '$!do'), $outer_ctx
         ) if $outer_ctx;
@@ -1404,6 +1436,13 @@ method initialize(Bool :$reinitialize) {
         };
         $*W.add_object($block);
         my $op := $*W.add_phaser(Mu, 'ENTER', $block, class :: { method cuid { (^2**128).pick }});
+    }
+    elsif $*CU {
+        my $phaser = EnterPhaser.new(RakuAST::Block.new);
+        $phaser.code = {
+            self.init_data($_) with CALLER::MY::<$=finish>;
+        };
+        $*CU.add-enter-phaser($phaser);
     }
 
     if not $reinitialize and $!p5.defined {
