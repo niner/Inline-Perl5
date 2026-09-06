@@ -7,6 +7,27 @@ sub MAIN(:$test, :$install is copy) {
     install() if $install;
 }
 
+sub get_cc() {
+    if $*DISTRO.is-win {
+        my $cc = $*VM.config<cc> // $*VM.config<nativecall.cc> // 'cc';
+        my $result = run $cc, "--version", :out;
+        if  $result.exitcode != 0 {
+            my $result2 = run "perl", "--version", :out;
+            if $result2.exitcode != 0 {
+                die "perl not found. Please install perl first.";
+            }
+            my $result3 = run "perl", "-MConfig", "-e", 'print $Config{cc}', :out;
+            if $result3.exitcode == 0 {
+                $cc = $result3.out.get;
+            }
+        }
+        return $cc;
+    }
+    else {
+        return $*VM.config<cc> // $*VM.config<nativecall.cc> // 'cc';
+    }
+}
+
 sub configure() {
     run('perl', '-e', 'use v5.20;')
         or die "\nPerl 5 version requirement not met\n";
@@ -15,7 +36,8 @@ sub configure() {
         or die "\nPlease install the Filter::Simple Perl 5 module!\n";
 
     my %vars;
-    %vars<CC> = $*VM.config<cc> // $*VM.config<nativecall.cc> // 'cc';
+    #%vars<CC> = $*VM.config<cc> // $*VM.config<nativecall.cc> // 'cc';
+    %vars<CC> = get_cc();
     %vars<p5helper> = p5helper().Str;
     %vars<perlopts> = run(<perl -MExtUtils::Embed -e ccopts -e ldopts>, :out).out.lines.join('');
     %vars<EXECUTABLE> = $*EXECUTABLE;
